@@ -93,6 +93,7 @@ export function ProfileTeamTab() {
   const [actionMsg, setActionMsg] = useState("");
   const [addingContact, setAddingContact] = useState(false);
   const [teamIdCopied, setTeamIdCopied] = useState(false);
+  const [inviteSending, setInviteSending] = useState(false);
 
   const teamId = teamView?.teamId ?? profile.team.teamId ?? profile.account.accountId;
   const teamCreatedAt =
@@ -198,6 +199,86 @@ export function ProfileTeamTab() {
     }
   }
 
+  async function handleInviteMember() {
+    if (!newMemberEmail || !newMemberName) return;
+    if (displayMembers.filter((m) => m.status !== "pending").length >= teamLimit) {
+      alert(`Your plan allows up to ${teamLimit} team members.`);
+      return;
+    }
+    setInviteSending(true);
+    setActionMsg("");
+    try {
+      const res = await fetch("/api/team/members/invite", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teamId,
+          orgName,
+          inviteeEmail: newMemberEmail.trim(),
+          inviteeName: newMemberName.trim(),
+          role: "editor",
+        }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Could not send invite");
+
+      const member: TeamMember = {
+        id: `tm_${Date.now()}`,
+        name: newMemberName.trim(),
+        email: newMemberEmail.trim().toLowerCase(),
+        role: "editor",
+        shareProfile: true,
+        invitedAt: new Date().toISOString(),
+        status: "pending",
+      };
+      const next = [...profile.team.members.filter((m) => m.email !== member.email), member];
+      await updateProfile({ team: { ...profile.team, members: next, enabled: true, teamId } });
+      setNewMemberEmail("");
+      setNewMemberName("");
+      setActionMsg("Request sent — they will appear on your team once they accept.");
+    } catch (err) {
+      setActionMsg(err instanceof Error ? err.message : "Invite failed");
+    } finally {
+      setInviteSending(false);
+    }
+  }
+
+  async function handleLeaveTeam() {
+    if (!teamId || isOwner) return;
+    if (!window.confirm(`Leave ${orgName}?`)) return;
+    try {
+      const res = await fetch("/api/team/leave", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ teamId }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Could not leave team");
+      await refreshTeam();
+      setActionMsg(`You left ${orgName}.`);
+    } catch (err) {
+      setActionMsg(err instanceof Error ? err.message : "Could not leave team");
+    }
+  }
+
+  async function switchActiveTeam(nextTeamId: string) {
+    const membership = (profile.team.memberships ?? []).find((m) => m.teamId === nextTeamId);
+    if (!membership) return;
+    await updateProfile({
+      team: {
+        ...profile.team,
+        teamId: membership.teamId,
+        orgName: membership.orgName,
+        ownerEmail: membership.ownerEmail,
+        ownerName: membership.ownerName,
+        myRole: membership.myRole,
+      },
+    });
+    await refreshTeam();
+  }
+
   return (
     <div className="profile-panel card">
       <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", marginBottom: "0.75rem" }}>
@@ -254,6 +335,29 @@ export function ProfileTeamTab() {
               </div>
             )}
           </dl>
+          {!isOwner && onTeam && teamAllowed && (
+            <button type="button" className="btn btn-secondary btn-sm" style={{ marginTop: "0.75rem" }} onClick={() => void handleLeaveTeam()}>
+              Leave team
+            </button>
+          )}
+        </div>
+      )}
+
+      {(profile.team.memberships ?? []).length > 1 && (
+        <div className="team-memberships-switcher" style={{ marginBottom: "1rem" }}>
+          <p className="field-help" style={{ marginBottom: "0.5rem" }}>Your teams</p>
+          <div className="portal-type-chips">
+            {(profile.team.memberships ?? []).map((m) => (
+              <button
+                key={m.teamId}
+                type="button"
+                className={`portal-type-chip${profile.team.teamId === m.teamId ? " active" : ""}`}
+                onClick={() => void switchActiveTeam(m.teamId)}
+              >
+                {m.orgName}
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -324,30 +428,10 @@ export function ProfileTeamTab() {
                       <button
                         type="button"
                         className="btn btn-secondary"
-                        onClick={() => {
-                          if (!newMemberEmail || !newMemberName) return;
-                          if (displayMembers.length >= teamLimit) {
-                            alert(`Your plan allows up to ${teamLimit} team members.`);
-                            return;
-                          }
-                          const member: TeamMember = {
-                            id: `tm_${Date.now()}`,
-                            name: newMemberName,
-                            email: newMemberEmail,
-                            role: "editor",
-                            shareProfile: true,
-                            invitedAt: new Date().toISOString(),
-                          };
-                          const next = [...profile.team.members.filter((m) => m.email !== member.email), member];
-                          void updateProfile({ team: { ...profile.team, members: next, enabled: true, teamId } }).then(() => {
-                            void pushRosterMembers(next);
-                          });
-                          setNewMemberEmail("");
-                          setNewMemberName("");
-                          setActionMsg("Team member added — ready to email from any document or packet.");
-                        }}
+                        disabled={inviteSending || !newMemberEmail || !newMemberName}
+                        onClick={() => void handleInviteMember()}
                       >
-                        Invite Member
+                        {inviteSending ? "Sending…" : "Invite Member"}
                       </button>
                     </div>
                   )}
@@ -385,7 +469,10 @@ export function ProfileTeamTab() {
               profile={profile}
               selfEmail={selfEmail}
             />
-            {isOwner && teamAllowed && profile.team.enabled && !m.isYou && (
+            {m.status === "pending" && (
+              <span className="share-inbox-badge" style={{ marginLeft: "0.5rem" }}>Request sent</span>
+            )}
+            {isOwner && teamAllowed && profile.team.enabled && !m.isYou && m.status !== "pending" && (
               <button
                 type="button"
                 className="line-item-remove"

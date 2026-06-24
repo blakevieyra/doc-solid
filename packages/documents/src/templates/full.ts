@@ -33,6 +33,8 @@ export const FULL_TEMPLATES: Record<string, TemplateSection[]> = {
     section("payment", "Payment Instructions", [
       { id: "paymentMethods", label: "Accepted Payment Methods", type: "textarea", placeholder: "Check, ACH, credit card, etc." },
       { id: "bankDetails", label: "Bank / Wire Details", type: "textarea" },
+      { id: "lateFees", label: "Late Payment / Interest Terms", type: "textarea", placeholder: "e.g. 1.5% per month on overdue balances" },
+      { id: "taxNotice", label: "Tax Notice", type: "textarea", placeholder: "Sales tax, 1099 reporting, or tax-exempt status if applicable" },
       FIELD_BLUEPRINTS.notes,
     ]),
   ],

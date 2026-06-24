@@ -75,6 +75,17 @@ export interface TeamMember {
   shareProfile: boolean;
   invitedAt: string;
   acceptedAt?: string;
+  /** Pending until the invitee accepts */
+  status?: "pending" | "active";
+}
+
+export interface TeamMembership {
+  teamId: string;
+  orgName: string;
+  ownerEmail: string;
+  ownerName?: string;
+  myRole: TeamRole;
+  joinedAt: string;
 }
 
 export interface TeamSettings {
@@ -90,6 +101,8 @@ export interface TeamSettings {
   members: TeamMember[];
   shareBusinessProfile: boolean;
   shareOrganizationProfile: boolean;
+  /** Other teams this user belongs to (supports multiple memberships) */
+  memberships?: TeamMembership[];
 }
 
 export interface AccountSettings {
@@ -244,6 +257,7 @@ export const DEFAULT_PROFILE: UserProfile = {
     members: [],
     shareBusinessProfile: true,
     shareOrganizationProfile: true,
+    memberships: [],
   },
   account: {
     email: "",

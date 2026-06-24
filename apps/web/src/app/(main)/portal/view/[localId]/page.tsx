@@ -161,23 +161,18 @@ function SavedDocumentPageContent() {
           <p className="editor-desc">{meta.name} · {documentNumber}</p>
         )}
         <div className="editor-actions portal-view-actions">
-          {signHref && relatedShare?.shareType === "signature_request" && (
+          {signHref && relatedShare?.shareType === "signature_request" && !isCompletedShare && (
             <Link href={signHref} className="btn btn-primary">
-              {isCompletedShare || docStatus === "FINAL" ? "Sign again" : "Sign document"}
+              Sign document
             </Link>
           )}
-          {signHref && relatedShare?.shareType === "review_request" && (
+          {signHref && relatedShare?.shareType === "review_request" && !isCompletedShare && (
             <Link href={signHref} className="btn btn-primary">
               Review & comment
             </Link>
           )}
           {!isSharedPreview && (
             <>
-              {(docStatus === "FINAL" || docStatus === "ARCHIVED") && (
-                <Link href={`/documents/${templateId}?localId=${localId}`} className="btn btn-primary">
-                  Sign again
-                </Link>
-              )}
               <Link href={`/documents/${templateId}?localId=${localId}`} className="btn btn-secondary">
                 Edit this copy
               </Link>

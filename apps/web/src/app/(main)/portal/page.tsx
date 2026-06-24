@@ -40,7 +40,6 @@ import type { DocumentShare } from "@/lib/team/invites";
 import { isShareRecipient, isShareSender } from "@/lib/team/invites";
 import {
   getShareAuditLabel,
-  keepShare,
   shareWasReturnedBy,
 } from "@/lib/team/share-document";
 import { loadSharesForUser } from "@/lib/team/shares-sync";
@@ -336,22 +335,15 @@ export default function PortalPage() {
       !returnedByMe &&
       (s.shareType === "signature_request" || s.shareType === "review_request");
     const primaryLabel = archived
-      ? s.shareType === "signature_request"
-        ? "Sign again"
-        : s.shareType === "review_request"
-          ? "Review again"
-          : "Open"
+      ? "View"
       : s.shareType === "signature_request"
         ? "Sign"
         : s.shareType === "review_request"
           ? "Review"
           : "Open";
-    const primaryHref = signHref ?? (canOpen ? previewHref : null);
-
-    function handleKeep() {
-      keepShare(s.id, { email: userEmail, name: userName });
-      refreshShares();
-    }
+    const primaryHref = archived
+      ? (canOpen ? previewHref : null)
+      : (signHref ?? (canOpen ? previewHref : null));
 
     return (
       <li
@@ -417,11 +409,6 @@ export default function PortalPage() {
                   Returned
                 </span>
               ) : null}
-              {!archived && (
-                <button type="button" className="btn btn-secondary btn-sm" onClick={handleKeep}>
-                  Keep
-                </button>
-              )}
             </div>
         </div>
 

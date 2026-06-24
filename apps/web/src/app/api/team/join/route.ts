@@ -127,14 +127,16 @@ export async function POST(req: NextRequest) {
 
   await saveTeamRoster(roster);
 
-  await syncOwnerProfile(invite, roster, {
-    email,
-    name: auth.user.name,
-    role: email === roster.ownerEmail ? "owner" : role,
-    joinedAt: now,
-  });
+    await syncOwnerProfile(invite, roster, {
+      email,
+      name: auth.user.name,
+      role: email === roster.ownerEmail ? "owner" : role,
+      joinedAt: now,
+    });
 
-  return NextResponse.json({ team: toTeamView(roster, email) });
+    await syncJoinerProfile(auth.user.id, roster, email === roster.ownerEmail ? "owner" : role);
+
+    return NextResponse.json({ team: toTeamView(roster, email) });
 }
 
 function memberKey(email: string): string {
@@ -198,4 +200,52 @@ async function syncOwnerProfile(
   };
 
   await saveUserProfile(owner.id, next);
+}
+
+async function syncJoinerProfile(
+  userId: string,
+  roster: TeamRoster,
+  myRole: TeamRole
+): Promise<void> {
+  const profile = await getUserProfile(userId);
+  if (!profile) return;
+
+  const membership = {
+    teamId: roster.teamId,
+    orgName: roster.orgName,
+    ownerEmail: roster.ownerEmail,
+    ownerName: roster.ownerName,
+    myRole,
+    joinedAt: new Date().toISOString(),
+  };
+
+  const memberships = profile.team.memberships ?? [];
+  const without = memberships.filter((m) => m.teamId !== roster.teamId);
+
+  const rosterMembers: TeamMember[] = roster.members.map((m) => ({
+    id: memberKey(m.email),
+    email: m.email,
+    name: m.name,
+    role: m.role,
+    shareProfile: true,
+    invitedAt: m.joinedAt,
+    acceptedAt: m.joinedAt,
+    status: "active",
+  }));
+
+  await saveUserProfile(userId, {
+    ...profile,
+    team: {
+      ...profile.team,
+      enabled: true,
+      teamId: roster.teamId,
+      orgName: roster.orgName,
+      ownerEmail: roster.ownerEmail,
+      ownerName: roster.ownerName,
+      myRole,
+      members: rosterMembers,
+      memberships: [membership, ...without],
+    },
+    updatedAt: new Date().toISOString(),
+  });
 }

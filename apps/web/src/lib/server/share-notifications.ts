@@ -3,7 +3,7 @@ import type { DocumentShare } from "@/lib/team/invites";
 
 export interface ServerNotification {
   id: string;
-  type: "share";
+  type: "share" | "team";
   title: string;
   message: string;
   link?: string;
@@ -91,4 +91,15 @@ export async function fanOutShareNotifications(
 
 export async function getServerNotifications(email: string): Promise<ServerNotification[]> {
   return readNotifications(email);
+}
+
+export async function pushServerNotification(
+  email: string,
+  notif: Omit<ServerNotification, "read">
+): Promise<void> {
+  const key = email.trim().toLowerCase();
+  if (!key) return;
+  const existing = await readNotifications(key);
+  if (existing.some((n) => n.id === notif.id)) return;
+  await writeNotifications(key, [{ ...notif, read: false }, ...existing]);
 }

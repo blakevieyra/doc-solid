@@ -19,6 +19,7 @@ export interface TeamMemberDisplay {
   role: TeamRole;
   joinedAt: string;
   isYou: boolean;
+  status?: "pending" | "active";
 }
 
 export function mergeTeamMemberDisplays(
@@ -64,6 +65,7 @@ export function profileMembersToDisplay(profile: UserProfile, selfEmail: string)
     role: m.role,
     joinedAt: m.acceptedAt ?? m.invitedAt,
     isYou: m.email.toLowerCase() === selfEmail.toLowerCase(),
+    status: m.status ?? (m.acceptedAt ? "active" : "pending"),
   }));
 }
 

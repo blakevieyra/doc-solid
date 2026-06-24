@@ -116,7 +116,12 @@ function normalizeProfile(raw: Partial<UserProfile>): UserProfile {
     organization: { ...base.organization, ...raw.organization },
     security: { ...base.security, ...raw.security },
     subscription: { ...base.subscription, ...raw.subscription },
-    team: { ...base.team, ...raw.team, members: raw.team?.members ?? base.team.members },
+    team: {
+      ...base.team,
+      ...raw.team,
+      members: raw.team?.members ?? base.team.members,
+      memberships: raw.team?.memberships ?? base.team.memberships,
+    },
     account: { ...base.account, ...raw.account },
     preferences: { ...base.preferences, ...raw.preferences },
     signature: { ...base.signature, ...raw.signature },

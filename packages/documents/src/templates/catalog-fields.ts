@@ -334,21 +334,37 @@ const contractParties: ArchetypeBuilder = (meta) => [
   section("parties", "Parties", [
     FIELD_BLUEPRINTS.businessName,
     FIELD_BLUEPRINTS.businessAddress,
+    FIELD_BLUEPRINTS.businessPhone,
+    FIELD_BLUEPRINTS.businessEmail,
+    FIELD_BLUEPRINTS.taxId,
     { id: "counterpartyName", label: "Other Party Name", type: "text", required: true },
     { id: "counterpartyAddress", label: "Other Party Address", type: "address" },
+    { id: "counterpartyContact", label: "Other Party Contact / Title", type: "text" },
   ]),
   section("terms", meta.name, [
     { id: "effectiveDate", label: "Effective Date", type: "date", required: true },
     { id: "termEnd", label: "End / Expiration Date", type: "date" },
     { id: "scope", label: "Scope & Purpose", type: "textarea", required: true },
+    { id: "deliverables", label: "Deliverables / Obligations", type: "textarea" },
     { id: "compensation", label: "Compensation / Consideration", type: "textarea" },
+    { id: "paymentTerms", label: "Payment Terms", type: "text", defaultFromProfile: "preferences.defaultPaymentTerms" },
     { id: "specialTerms", label: "Special Terms", type: "textarea", required: true },
     FIELD_BLUEPRINTS.notes,
+  ]),
+  section("legal", "Legal & Compliance", [
+    { id: "termination", label: "Termination Conditions", type: "textarea", required: true },
+    { id: "confidentiality", label: "Confidentiality", type: "textarea" },
+    { id: "liabilityLimitation", label: "Limitation of Liability", type: "textarea" },
+    { id: "indemnification", label: "Indemnification", type: "textarea" },
+    { id: "governingLaw", label: "Governing Law (State/Jurisdiction)", type: "text", required: true, placeholder: "e.g. State of California" },
+    { id: "disputeResolution", label: "Dispute Resolution", type: "text", placeholder: "e.g. Binding arbitration in [County, State]" },
+    { id: "notices", label: "Notices (How official notices are delivered)", type: "textarea" },
   ]),
   section("signatures", "Signatures", [
     FIELD_BLUEPRINTS.signature,
     { id: "counterSignature", label: "Other Party Signature", type: "signature", required: true },
     FIELD_BLUEPRINTS.signatureDate,
+    { id: "counterSignatureDate", label: "Other Party Date", type: "date" },
   ]),
 ];
 
