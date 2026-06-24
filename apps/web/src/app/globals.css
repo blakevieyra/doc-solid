@@ -17,9 +17,9 @@
   --warning: #d97706;
   --radius: 12px;
   --shadow: 0 1px 3px rgba(26, 39, 68, 0.06), 0 8px 24px rgba(26, 39, 68, 0.06);
-  --header-logo-height: 64px;
-  --header-logo-max-width: 220px;
-  --header-bar-min-height: 72px;
+  --header-logo-height: 80px;
+  --header-logo-max-width: 260px;
+  --header-bar-min-height: 88px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1122,7 +1122,7 @@ a.quick-action-card { text-decoration: none; color: inherit; }
 .brand-logo-lg .brand-wordmark { font-size: 2rem; }
 .brand-logo-xl .brand-wordmark { font-size: 2.375rem; }
 .brand-logo-2xl .brand-wordmark { font-size: 2.75rem; }
-.brand-logo-sm .brand-logo-img { height: 72px; max-height: 72px; }
+.brand-logo-sm .brand-logo-img { height: 80px; max-height: 80px; }
 .brand-logo-xs .brand-logo-img { height: 24px; max-height: 24px; }
 .brand-logo-md .brand-logo-img { height: 100px; max-height: 100px; }
 .brand-logo-lg .brand-logo-img { height: 132px; max-height: 132px; }
@@ -1207,7 +1207,15 @@ a.quick-action-card { text-decoration: none; color: inherit; }
   display: flex; justify-content: space-between; align-items: center; gap: 1rem;
   padding: 0.875rem; border: 1px solid var(--border); border-radius: 8px; flex-wrap: wrap;
 }
-.share-inbox-item strong { display: block; font-size: 0.9rem; }
+.share-inbox-badge-archived { background: #e2e8f0; color: #475569; }
+.share-inbox-subtitle { font-size: 0.8125rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin: 0 0 0.5rem; }
+.share-inbox-subtitle-archived { margin-top: 1.25rem; }
+.share-archived-hint { margin: 0 0 0.5rem; font-size: 0.8125rem; }
+.share-inbox-item-archived { opacity: 0.92; }
+.portal-type-index-head { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+.portal-type-chip-fav { border-color: #fcd34d; background: #fffbeb; }
+.portal-type-chip-fav.active { background: #f59e0b; color: #fff; border-color: #f59e0b; }
+.packets-toggle-meta { font-weight: 500; color: var(--text-muted); font-size: 0.8125rem; }
 .share-inbox-main { flex: 1; min-width: 0; }
 .share-activity-toggle {
   display: inline-block; margin-top: 0.35rem; padding: 0; border: none; background: none;
@@ -1263,9 +1271,9 @@ a.quick-action-card { text-decoration: none; color: inherit; }
     gap: 0.5rem;
   }
   :root {
-    --header-logo-height: 52px;
-    --header-logo-max-width: 180px;
-    --header-bar-min-height: 64px;
+    --header-logo-height: 64px;
+    --header-logo-max-width: 200px;
+    --header-bar-min-height: 76px;
   }
   .auth-logo .brand-logo-img,
   .brand-logo-xl .brand-logo-img { height: 120px; max-height: 120px; }

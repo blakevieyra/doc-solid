@@ -12,7 +12,7 @@ export function BrandLogo({
   showWordmark?: boolean;
   className?: string;
 }) {
-  const heights = { xs: 24, sm: 72, md: 100, lg: 132, xl: 160, "2xl": 192 };
+  const heights = { xs: 24, sm: 80, md: 100, lg: 132, xl: 160, "2xl": 192 };
   const h = heights[size];
 
   const inner = (

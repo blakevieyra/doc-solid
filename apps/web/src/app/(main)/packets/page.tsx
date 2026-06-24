@@ -63,7 +63,7 @@ export default function PacketsPage() {
   const [showEmail, setShowEmail] = useState(false);
   const [msg, setMsg] = useState("");
   const [showAddPanel, setShowAddPanel] = useState(false);
-  const [showContentsPanel, setShowContentsPanel] = useState(true);
+  const [showContentsPanel, setShowContentsPanel] = useState(false);
 
   const packets = getPackets(profile);
   const favorites = getFavoriteTemplateIds(profile);
@@ -196,7 +196,7 @@ export default function PacketsPage() {
                   <button
                     type="button"
                     className={`packets-list-item${activePacket?.id === p.id ? " active" : ""}`}
-                    onClick={() => { setActivePacketId(p.id); setMsg(""); setShowContentsPanel(true); }}
+                    onClick={() => { setActivePacketId(p.id); setMsg(""); }}
                   >
                     <span className="packets-list-order" aria-hidden="true">{index + 1}</span>
                     <span className="packets-list-item-body">

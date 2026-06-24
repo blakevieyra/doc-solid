@@ -211,6 +211,24 @@ function DocumentEditorPageContent() {
           if (val) initial[field.id] = val;
         }
       }
+
+      const fullForGate: DocumentTypeDefinition = { ...meta!, sections: template!.sections };
+      for (const section of template!.sections) {
+        for (const field of section.fields) {
+          if (field.type !== "signature") continue;
+          if (!initial[field.id]) continue;
+          if (!shouldAutofillOwnerSignatureForEditor(field, {
+            isDocumentOwner: !editLocalId || !docOwnerId || docOwnerId === userId,
+            signingMode,
+            docCategory: meta?.category,
+          })) continue;
+          const gate = canApplyOwnerSignature(fullForGate, initial);
+          if (!gate.ok) {
+            delete initial[field.id];
+          }
+        }
+      }
+
       setValues((prev) => ({ ...initial, ...prev }));
       if (nextNumber) setAssignedNumber(nextNumber);
       setInitialized(true);
@@ -270,6 +288,16 @@ function DocumentEditorPageContent() {
         !isSignatureFilled(prev[fieldId]) &&
         isSignatureFilled(value)
       ) {
+        const isOwnerSig = isOwnerSignatureField(field, meta!.category);
+        if (isOwnerSig && !signingMode) {
+          const gate = canApplyOwnerSignature(fullTemplate, next);
+          if (!gate.ok) {
+            window.alert(
+              `Complete required fields before signing: ${gate.missing.map((m) => m.label).join(", ")}`
+            );
+            return prev;
+          }
+        }
         next = stampSignatureLock(fieldId, next, { email: userEmail, name: userName });
       }
       return next;

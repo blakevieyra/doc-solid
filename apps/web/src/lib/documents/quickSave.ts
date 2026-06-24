@@ -8,6 +8,7 @@ import type { UserProfile } from "@/lib/profile/types";
 import { getProfileFieldValue } from "@/lib/profile/storage";
 import { canUseFeature } from "@/lib/subscription/plans";
 import { canCreateDocumentThisMonth } from "@/lib/documents/limits";
+import { canApplyOwnerSignature } from "@/lib/documents/completeness";
 import { pushCloudDocument } from "@/lib/documents/cloud-sync";
 import { commitDocumentNumber, peekNextDocumentNumber } from "@/lib/documents/sequencing";
 import { shouldAutofillOwnerSignature } from "@/lib/profile/signature";
@@ -54,6 +55,16 @@ export async function quickSaveTemplate(params: {
         val = getProfileFieldValue(params.profile, "signature.owner");
       }
       if (val) values[field.id] = val;
+    }
+  }
+
+  const fullMeta = { ...meta, sections: template.sections };
+  for (const section of template.sections) {
+    for (const field of section.fields) {
+      if (field.type !== "signature" || !values[field.id]) continue;
+      if (!canApplyOwnerSignature(fullMeta, values).ok) {
+        delete values[field.id];
+      }
     }
   }
 

@@ -32,9 +32,9 @@ export function getSignatureLockMeta(
   return null;
 }
 
-/** A signature is locked once it has a valid signed value. */
+/** A signature is locked once the owner/recipient formally signed (metadata stamped). */
 export function isSignatureLocked(fieldId: string, values: Record<string, string>): boolean {
-  return isSignatureFilled(values[fieldId]);
+  return getSignatureLockMeta(fieldId, values) !== null;
 }
 
 export function stampSignatureLock(
