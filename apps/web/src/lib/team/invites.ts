@@ -187,3 +187,24 @@ export function getShareById(id: string): DocumentShare | null {
 export function getSharesForEmail(email: string): DocumentShare[] {
   return loadShares().filter((s) => s.toEmail.toLowerCase() === email.toLowerCase());
 }
+
+export function getSentSharesForEmail(email: string): DocumentShare[] {
+  return loadShares().filter((s) => s.fromEmail.toLowerCase() === email.toLowerCase());
+}
+
+/** Inbox (to you) and sent (from you) shares for the signed-in user. */
+export function getSharesForUser(email: string): DocumentShare[] {
+  const key = email.trim().toLowerCase();
+  if (!key) return [];
+  return loadShares().filter(
+    (s) => s.toEmail.trim().toLowerCase() === key || s.fromEmail.trim().toLowerCase() === key
+  );
+}
+
+export function isShareRecipient(share: DocumentShare, email: string): boolean {
+  return share.toEmail.trim().toLowerCase() === email.trim().toLowerCase();
+}
+
+export function isShareSender(share: DocumentShare, email: string): boolean {
+  return share.fromEmail.trim().toLowerCase() === email.trim().toLowerCase();
+}

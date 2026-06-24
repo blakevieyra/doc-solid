@@ -1,5 +1,5 @@
 import type { DocumentShare, ShareAuditEvent } from "./invites";
-import { getSharesForEmail, loadShares } from "./invites";
+import { getSharesForUser, loadShares } from "./invites";
 
 function persistAllShares(shares: DocumentShare[]): void {
   if (typeof window === "undefined") return;
@@ -81,7 +81,14 @@ export async function loadSharesForRecipient(
   email: string,
   authMode: "local" | "server"
 ): Promise<DocumentShare[]> {
-  const local = getSharesForEmail(email);
+  return loadSharesForUser(email, authMode);
+}
+
+export async function loadSharesForUser(
+  email: string,
+  authMode: "local" | "server"
+): Promise<DocumentShare[]> {
+  const local = getSharesForUser(email);
   if (authMode !== "server" || !email) return local;
 
   try {

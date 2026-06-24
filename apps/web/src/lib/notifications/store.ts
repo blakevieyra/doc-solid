@@ -33,14 +33,19 @@ export function getUnreadCount(): number {
   return load().filter((n) => !n.read).length;
 }
 
-export function addNotification(n: Omit<AppNotification, "id" | "read" | "createdAt">): AppNotification {
+export function addNotification(
+  n: Omit<AppNotification, "id" | "read" | "createdAt"> & { id?: string; createdAt?: string }
+): AppNotification {
   const item: AppNotification = {
     ...n,
-    id: `notif_${Date.now()}`,
+    id: n.id ?? `notif_${Date.now()}`,
     read: false,
-    createdAt: new Date().toISOString(),
+    createdAt: n.createdAt ?? new Date().toISOString(),
   };
-  save([item, ...load()]);
+  const existing = load();
+  const duplicate = existing.find((e) => e.id === item.id);
+  if (duplicate) return duplicate;
+  save([item, ...existing]);
   return item;
 }
 

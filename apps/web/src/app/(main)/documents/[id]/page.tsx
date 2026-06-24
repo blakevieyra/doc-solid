@@ -46,6 +46,7 @@ import {
 } from "@/lib/documents/signature-lock";
 import { getShareById } from "@/lib/team/invites";
 import { completeShareSigning, markShareOpened, returnShareCorrection } from "@/lib/team/share-document";
+import { useNotifications } from "@/components/NotificationProvider";
 import { peekNextDocumentNumber } from "@/lib/documents/sequencing";
 import { ensureDocumentNumber, resolveDocumentNumber } from "@/lib/documents/document-number";
 import { snapshotBrandingIntoValues } from "@/lib/profile/document-branding";
@@ -63,6 +64,7 @@ function DocumentEditorPageContent() {
   const template = useMemo(() => (meta ? generateTemplate(meta) : null), [meta]);
   const { profile, documentProfile, autofill, updateProfile } = useProfile();
   const { session, authMode } = useAuth();
+  const { notify } = useNotifications();
   const [values, setValues] = useState<Record<string, string>>({});
   const [assignedNumber, setAssignedNumber] = useState<string | null>(null);
   const [numberFieldId, setNumberFieldId] = useState<string | null>(null);
@@ -302,6 +304,18 @@ function DocumentEditorPageContent() {
     setSaved(false);
   }
 
+  async function finishShareSigning(fieldData: Record<string, string>) {
+    if (!shareId) return;
+    const share = getShareById(shareId);
+    await completeShareSigning(shareId, fieldData, { email: userEmail, name: userName });
+    notify({
+      type: "share",
+      title: "Document returned",
+      message: `"${share?.documentTitle ?? "Document"}" was signed and returned to ${share?.fromName ?? "the sender"}.`,
+    });
+    router.push("/portal");
+  }
+
   async function handleSave() {
     if (!meta) return;
     const storage = new IndexedDBStorage();
@@ -341,8 +355,7 @@ function DocumentEditorPageContent() {
       setDocStatus(updated.status);
 
       if (signingMode && shareId) {
-        completeShareSigning(shareId, fieldData, { email: userEmail, name: userName });
-        router.push("/portal");
+        await finishShareSigning(fieldData);
       }
       return;
     }
@@ -367,8 +380,7 @@ function DocumentEditorPageContent() {
       setSavedLocalId(doc.localId);
       setSaved(true);
       setDocStatus(doc.status);
-      completeShareSigning(shareId, fieldData, { email: userEmail, name: userName });
-      router.push("/portal");
+      await finishShareSigning(fieldData);
       return;
     }
 
@@ -445,7 +457,13 @@ function DocumentEditorPageContent() {
       window.alert("Describe what needs to be corrected before returning to the sender.");
       return;
     }
-    returnShareCorrection(shareId, correctionComment, { email: userEmail, name: userName });
+    const share = getShareById(shareId);
+    await returnShareCorrection(shareId, correctionComment, { email: userEmail, name: userName });
+    notify({
+      type: "share",
+      title: "Returned to sender",
+      message: `"${share?.documentTitle ?? "Document"}" was returned to ${share?.fromName ?? "the sender"}.`,
+    });
     setCorrectionSent(true);
     setTimeout(() => router.push("/portal"), 1200);
   }

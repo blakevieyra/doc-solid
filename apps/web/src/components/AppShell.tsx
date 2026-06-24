@@ -54,6 +54,16 @@ export function AppShell({
     router.push("/login");
   }
 
+  function formatNotificationTime(iso: string): string {
+    return new Date(iso).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  }
+
   return (
     <div className="app-shell">
       <header className="app-header">
@@ -110,6 +120,9 @@ export function AppShell({
                           <button type="button" onClick={() => { markAsRead(n.id); if (n.link) router.push(n.link); setNotifOpen(false); }}>
                             <strong>{n.title}</strong>
                             <span>{n.message}</span>
+                            <time className="notif-time" dateTime={n.createdAt}>
+                              {formatNotificationTime(n.createdAt)}
+                            </time>
                           </button>
                         </li>
                       ))}

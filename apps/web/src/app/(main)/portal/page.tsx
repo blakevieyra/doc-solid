@@ -37,12 +37,14 @@ import { useAuth } from "@/components/AuthProvider";
 import { useProfile } from "@/components/ProfileProvider";
 
 import type { DocumentShare } from "@/lib/team/invites";
+import { isShareRecipient, isShareSender } from "@/lib/team/invites";
 import {
   getShareAuditLabel,
   keepShare,
   shareWasReturnedBy,
 } from "@/lib/team/share-document";
-import { loadSharesForRecipient } from "@/lib/team/shares-sync";
+import { loadSharesForUser } from "@/lib/team/shares-sync";
+import { processShareNotifications } from "@/lib/notifications/share-events";
 
 const FAVORITES_FILTER = "__favorites__";
 
@@ -57,7 +59,7 @@ type PortalFilter =
 
 import { syncDocumentsFromCloud } from "@/lib/documents/cloud-sync";
 
-import { PortalCompliancePanel, PortalScanButton } from "@/components/PortalCompliancePanel";
+import { PortalScanButton } from "@/components/PortalCompliancePanel";
 
 import { AISecurityScanModal } from "@/components/AISecurityScanModal";
 import { DocumentAuditTrail } from "@/components/DocumentAuditTrail";
@@ -152,14 +154,22 @@ export default function PortalPage() {
     const email = session?.email ?? "";
 
     if (email) {
-      void loadSharesForRecipient(email, authMode ?? "local").then(setShares);
+      void loadSharesForUser(email, authMode ?? "local").then((loaded) => {
+        setShares(loaded);
+        processShareNotifications(loaded, email);
+      });
     }
 
   }, [session?.email, session?.userId, authMode, profile.account.accountId]);
 
   function refreshShares() {
     const email = session?.email ?? "";
-    if (email) void loadSharesForRecipient(email, authMode ?? "local").then(setShares);
+    if (email) {
+      void loadSharesForUser(email, authMode ?? "local").then((loaded) => {
+        setShares(loaded);
+        processShareNotifications(loaded, email);
+      });
+    }
   }
 
 
@@ -210,14 +220,34 @@ export default function PortalPage() {
     [documents, query, domain, category, templateId, status, portalFilter, favoriteTemplateIds]
   );
 
+  const inboxShares = useMemo(
+    () => shares.filter((s) => isShareRecipient(s, userEmail)),
+    [shares, userEmail]
+  );
+
+  const sentShares = useMemo(
+    () => shares.filter((s) => isShareSender(s, userEmail)),
+    [shares, userEmail]
+  );
+
   const activeShares = useMemo(
-    () => shares.filter((s) => !s.completedAt),
-    [shares]
+    () => inboxShares.filter((s) => !s.completedAt),
+    [inboxShares]
   );
 
   const archivedShares = useMemo(
-    () => shares.filter((s) => Boolean(s.completedAt)),
-    [shares]
+    () => inboxShares.filter((s) => Boolean(s.completedAt)),
+    [inboxShares]
+  );
+
+  const sentActiveShares = useMemo(
+    () => sentShares.filter((s) => !s.completedAt),
+    [sentShares]
+  );
+
+  const sentCompletedShares = useMemo(
+    () => sentShares.filter((s) => Boolean(s.completedAt)),
+    [sentShares]
   );
 
   const waitingSigShares = useMemo(
@@ -247,7 +277,10 @@ export default function PortalPage() {
 
   const showSharedSection =
     portalFilter === "waiting_signature" ||
-    (shares.length > 0 && (portalFilter === "all" || portalFilter === "ARCHIVED"));
+    (inboxShares.length > 0 && (portalFilter === "all" || portalFilter === "ARCHIVED"));
+
+  const showSentSection =
+    sentShares.length > 0 && (portalFilter === "all" || portalFilter === "ARCHIVED");
 
   const showFileGrid = portalFilter !== "waiting_signature";
 
@@ -433,6 +466,81 @@ export default function PortalPage() {
     );
   }
 
+  function renderSentShareItem(s: DocumentShare) {
+    const rowExpanded = expandedShares[s.id] === true;
+    const auditLog = s.auditLog ?? [];
+    const latestAudit = auditLog[auditLog.length - 1];
+    const canOpen = Boolean(s.documentTemplateId && s.fieldDataSnapshot);
+    const previewHref = `/portal/view/${s.documentId}?shareId=${s.id}`;
+    const isCompleted = Boolean(s.completedAt);
+
+    return (
+      <li
+        key={s.id}
+        className={`share-inbox-item share-inbox-item-row share-inbox-item-sent${rowExpanded ? " expanded" : ""}`}
+      >
+        <div className="share-inbox-row">
+          <button
+            type="button"
+            className="share-inbox-expand"
+            onClick={() => setExpandedShares((prev) => ({ ...prev, [s.id]: !rowExpanded }))}
+            aria-expanded={rowExpanded}
+            aria-label={rowExpanded ? "Collapse details" : "Expand details"}
+          >
+            {rowExpanded ? "▾" : "▸"}
+          </button>
+
+          <div className="share-inbox-summary">
+            <span className="share-inbox-title-line">
+              <strong>{s.documentTitle}</strong>
+              {isCompleted ? (
+                <span className="share-inbox-badge share-inbox-badge-archived">Signed & returned</span>
+              ) : (
+                <span className="share-inbox-badge">Awaiting response</span>
+              )}
+            </span>
+            <span className="share-inbox-oneline">
+              To {s.toName} · {new Date(s.createdAt).toLocaleDateString()}
+              {latestAudit ? ` · ${getShareAuditLabel(latestAudit)}` : ""}
+            </span>
+          </div>
+
+          <div className="share-inbox-actions">
+            {canOpen ? (
+              <Link href={previewHref} className="btn btn-primary btn-sm">
+                {isCompleted ? "View signed copy" : "View status"}
+              </Link>
+            ) : (
+              <span className="btn btn-primary btn-sm" style={{ opacity: 0.45, pointerEvents: "none" }}>
+                Unavailable
+              </span>
+            )}
+          </div>
+        </div>
+
+        {rowExpanded && (
+          <div className="share-inbox-details">
+            {s.message && <p className="field-help">{s.message}</p>}
+            {isCompleted && s.completedAt && (
+              <p className="field-help">
+                Completed {new Date(s.completedAt).toLocaleString()}
+              </p>
+            )}
+            {latestAudit && (
+              <p className="doc-audit-latest">
+                <strong>{getShareAuditLabel(latestAudit)}</strong>
+                {" · "}
+                {new Date(latestAudit.timestamp).toLocaleString()}
+                {latestAudit.actorName ? ` · ${latestAudit.actorName}` : ""}
+                {latestAudit.details ? ` — ${latestAudit.details}` : ""}
+              </p>
+            )}
+          </div>
+        )}
+      </li>
+    );
+  }
+
 
 
   return (
@@ -524,14 +632,38 @@ export default function PortalPage() {
         </section>
       )}
 
+      {showSentSection && (
+        <section className="portal-shares card portal-shares-sent" style={{ marginBottom: "1.5rem", padding: "1.25rem" }}>
+          <h2 className="section-title" style={{ marginTop: 0 }}>Sent to your team</h2>
+          <p className="field-help" style={{ marginBottom: "0.75rem" }}>
+            Track signature requests you sent. You&apos;ll get a notification when they sign or return a document.
+          </p>
+
+          {sentActiveShares.length > 0 && (
+            <>
+              <h3 className="share-inbox-subtitle">Awaiting signature</h3>
+              <ul className="share-inbox-list">
+                {sentActiveShares.map((s) => renderSentShareItem(s))}
+              </ul>
+            </>
+          )}
+
+          {sentCompletedShares.length > 0 && (
+            <>
+              <h3 className="share-inbox-subtitle share-inbox-subtitle-archived">Completed & returned</h3>
+              <ul className="share-inbox-list">
+                {sentCompletedShares.map((s) => renderSentShareItem(s))}
+              </ul>
+            </>
+          )}
+        </section>
+      )}
+
       {portalFilter === "waiting_signature" && waitingSigShares.length > 0 && (
         <p className="field-help" style={{ marginBottom: "1rem" }}>
           Select a document above to sign or preview. Your saved files are hidden while this filter is active.
         </p>
       )}
-
-      <PortalCompliancePanel documents={documents} />
-
 
 
       {(usedTemplateIds.length > 0 || favoriteTemplateIds.length > 0) && showFileGrid && (

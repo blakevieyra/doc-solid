@@ -24,13 +24,13 @@ export function ReturnShareModal({ share, onClose, onReturned }: ReturnShareModa
   const userEmail = session?.email ?? profile.account.email ?? "";
   const userName = session?.name ?? profile.account.displayName ?? "Recipient";
 
-  function handleReturn() {
+  async function handleReturn() {
     setError("");
     if (!comment.trim()) {
       setError("Describe the problem before returning to the sender.");
       return;
     }
-    const updated = returnShareCorrection(share.id, comment, { email: userEmail, name: userName });
+    const updated = await returnShareCorrection(share.id, comment, { email: userEmail, name: userName });
     if (!updated) {
       setError("Could not return this document. Try again.");
       return;

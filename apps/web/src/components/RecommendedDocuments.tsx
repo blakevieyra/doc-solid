@@ -60,17 +60,15 @@ export function RecommendedDocuments({
             className={`card recommended-doc-card${enableActions ? " recommended-doc-card-with-actions" : ""}`}
           >
             {enableActions && (
-              <div className="recommended-doc-actions">
-                <FavoriteButton
-                  active={isFavorite(profile, doc.id)}
-                  size="sm"
-                  onToggle={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    void handleToggleFavorite(doc.id);
-                  }}
-                />
-              </div>
+              <FavoriteButton
+                active={isFavorite(profile, doc.id)}
+                size="sm"
+                onToggle={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  void handleToggleFavorite(doc.id);
+                }}
+              />
             )}
             <Link href={`/documents/${doc.id}`} className="recommended-doc-link">
               <strong>{doc.name}</strong>

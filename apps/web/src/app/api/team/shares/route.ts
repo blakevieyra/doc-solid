@@ -3,6 +3,7 @@ import { kvGet, kvSet } from "@/lib/server/kv";
 import { requireAuth } from "@/lib/server/session";
 import { enforceRateLimit, rejectIfBodyTooLarge } from "@/lib/server/rate-limit";
 import type { DocumentShare, ShareAuditEvent } from "@/lib/team/invites";
+import { fanOutShareNotifications } from "@/lib/server/share-notifications";
 
 export const runtime = "nodejs";
 
@@ -17,8 +18,12 @@ function inboxKey(email: string) {
   return `shares:inbox:${email.trim().toLowerCase()}`;
 }
 
-async function readInbox(email: string): Promise<string[]> {
-  const raw = await kvGet(inboxKey(email));
+function sentKey(email: string) {
+  return `shares:sent:${email.trim().toLowerCase()}`;
+}
+
+async function readIdList(key: string): Promise<string[]> {
+  const raw = await kvGet(key);
   if (!raw) return [];
   try {
     return JSON.parse(raw) as string[];
@@ -27,8 +32,8 @@ async function readInbox(email: string): Promise<string[]> {
   }
 }
 
-async function writeInbox(email: string, ids: string[]): Promise<void> {
-  await kvSet(inboxKey(email), JSON.stringify(ids.slice(0, MAX_INBOX)), SHARE_TTL_SEC);
+async function writeIdList(key: string, ids: string[]): Promise<void> {
+  await kvSet(key, JSON.stringify(ids.slice(0, MAX_INBOX)), SHARE_TTL_SEC);
 }
 
 async function readShare(id: string): Promise<DocumentShare | null> {
@@ -59,11 +64,17 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ shares: [] });
   }
 
-  const ids = await readInbox(email);
+  const inboxIds = await readIdList(inboxKey(email));
+  const sentIds = await readIdList(sentKey(email));
+  const allIds = [...new Set([...inboxIds, ...sentIds])];
+
   const shares: DocumentShare[] = [];
-  for (const id of ids) {
+  for (const id of allIds) {
     const share = await readShare(id);
-    if (share && share.toEmail.trim().toLowerCase() === email) {
+    if (!share) continue;
+    const isRecipient = share.toEmail.trim().toLowerCase() === email;
+    const isSender = share.fromEmail.trim().toLowerCase() === email;
+    if (isRecipient || isSender) {
       shares.push(share);
     }
   }
@@ -92,17 +103,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Valid share is required" }, { status: 400 });
     }
 
-    const senderEmail = auth.user.email?.trim().toLowerCase();
-    if (senderEmail && share.fromEmail.trim().toLowerCase() !== senderEmail) {
-      return NextResponse.json({ error: "Sender email mismatch" }, { status: 403 });
+    const userEmail = auth.user.email?.trim().toLowerCase() ?? "";
+    const isSender = share.fromEmail.trim().toLowerCase() === userEmail;
+    const isRecipient = share.toEmail.trim().toLowerCase() === userEmail;
+    const existing = await readShare(share.id);
+
+    if (existing) {
+      if (!isSender && !isRecipient) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    } else if (!isSender) {
+      return NextResponse.json({ error: "Only the sender can create a new share" }, { status: 403 });
     }
 
     await writeShare(share);
 
     const recipient = share.toEmail.trim().toLowerCase();
-    const inbox = await readInbox(recipient);
-    const nextInbox = [share.id, ...inbox.filter((id) => id !== share.id)];
-    await writeInbox(recipient, nextInbox);
+    const sender = share.fromEmail.trim().toLowerCase();
+
+    const recipientInbox = await readIdList(inboxKey(recipient));
+    await writeIdList(inboxKey(recipient), [share.id, ...recipientInbox.filter((id) => id !== share.id)]);
+
+    const senderSent = await readIdList(sentKey(sender));
+    await writeIdList(sentKey(sender), [share.id, ...senderSent.filter((id) => id !== share.id)]);
+
+    await fanOutShareNotifications(existing, share);
 
     return NextResponse.json({ share });
   } catch {
@@ -130,35 +155,40 @@ export async function PATCH(req: NextRequest) {
       completedAt?: string | null;
       signedAt?: string | null;
       fieldDataSnapshot?: Record<string, string>;
+      share?: DocumentShare;
     };
 
-    if (!body.shareId) {
+    if (!body.shareId && !body.share?.id) {
       return NextResponse.json({ error: "shareId is required" }, { status: 400 });
     }
 
-    const share = await readShare(body.shareId);
-    if (!share) {
+    const shareId = body.shareId ?? body.share!.id;
+    const existing = await readShare(shareId);
+    if (!existing) {
       return NextResponse.json({ error: "Share not found" }, { status: 404 });
     }
 
     const userEmail = auth.user.email?.trim().toLowerCase() ?? "";
-    const isRecipient = share.toEmail.trim().toLowerCase() === userEmail;
-    const isSender = share.fromEmail.trim().toLowerCase() === userEmail;
+    const isRecipient = existing.toEmail.trim().toLowerCase() === userEmail;
+    const isSender = existing.fromEmail.trim().toLowerCase() === userEmail;
     if (!isRecipient && !isSender) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const updated: DocumentShare = {
-      ...share,
-      ...(body.completedAt !== undefined ? { completedAt: body.completedAt ?? undefined } : {}),
-      ...(body.signedAt !== undefined ? { signedAt: body.signedAt ?? undefined } : {}),
-      ...(body.fieldDataSnapshot ? { fieldDataSnapshot: body.fieldDataSnapshot } : {}),
-      auditLog: body.auditEvent
-        ? [...(share.auditLog ?? []), body.auditEvent]
-        : share.auditLog,
-    };
+    const updated: DocumentShare = body.share
+      ? { ...existing, ...body.share, id: existing.id, createdAt: existing.createdAt }
+      : {
+          ...existing,
+          ...(body.completedAt !== undefined ? { completedAt: body.completedAt ?? undefined } : {}),
+          ...(body.signedAt !== undefined ? { signedAt: body.signedAt ?? undefined } : {}),
+          ...(body.fieldDataSnapshot ? { fieldDataSnapshot: body.fieldDataSnapshot } : {}),
+          auditLog: body.auditEvent
+            ? [...(existing.auditLog ?? []), body.auditEvent]
+            : existing.auditLog,
+        };
 
     await writeShare(updated);
+    await fanOutShareNotifications(existing, updated);
     return NextResponse.json({ share: updated });
   } catch {
     return NextResponse.json({ error: "Failed to update share" }, { status: 500 });

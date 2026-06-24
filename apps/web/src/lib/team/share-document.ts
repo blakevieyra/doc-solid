@@ -60,10 +60,11 @@ export async function saveShareWithDocument(
   return updated;
 }
 
-function syncShareToServer(shareId: string): DocumentShare | null {
+async function syncShareToServer(shareId: string): Promise<DocumentShare | null> {
   const share = getShareById(shareId);
-  if (share) void pushShareToServer(share);
-  return share;
+  if (!share) return null;
+  await pushShareToServer(share);
+  return getShareById(shareId) ?? share;
 }
 
 export function markShareOpened(shareId: string, viewer: { email: string; name: string }): void {
@@ -79,11 +80,11 @@ export function markShareOpened(shareId: string, viewer: { email: string; name: 
   syncShareToServer(shareId);
 }
 
-export function completeShareSigning(
+export async function completeShareSigning(
   shareId: string,
   fieldData: Record<string, string>,
   signer: { email: string; name: string }
-): DocumentShare | null {
+): Promise<DocumentShare | null> {
   const share = getShareById(shareId);
   if (!share) return null;
 
@@ -120,11 +121,11 @@ export function completeShareSigning(
   return syncShareToServer(shareId);
 }
 
-export function returnShareCorrection(
+export async function returnShareCorrection(
   shareId: string,
   comment: string,
   reviewer: { email: string; name: string }
-): DocumentShare | null {
+): Promise<DocumentShare | null> {
   const trimmed = comment.trim();
   if (!trimmed) return null;
   recordShareAudit(shareId, "correction_requested", {
@@ -135,10 +136,10 @@ export function returnShareCorrection(
   return syncShareToServer(shareId);
 }
 
-export function keepShare(
+export async function keepShare(
   shareId: string,
   keeper: { email: string; name: string }
-): DocumentShare | null {
+): Promise<DocumentShare | null> {
   const share = getShareById(shareId);
   if (!share || share.completedAt) return null;
 
