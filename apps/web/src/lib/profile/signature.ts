@@ -150,6 +150,7 @@ const COUNTERPARTY_SIGNATURE_IDS = new Set([
   "customerSignature",
   "recipientSignature",
   "borrowerSignature",
+  "supervisorSignature",
 ]);
 
 export function isOwnerSignatureField(

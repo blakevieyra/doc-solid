@@ -5,8 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useProfile } from "@/components/ProfileProvider";
 import { useAuth } from "@/components/AuthProvider";
 import { getEmailRecipients } from "@/lib/team/recipients";
-import { roleLabel } from "@/lib/team/display";
-import type { TeamRole } from "@/lib/profile/types";
+import { TeamMemberPickerRow } from "@/components/TeamMemberPickerRow";
 
 interface EmailRecipientPickerProps {
   canEmailOthers: boolean;
@@ -109,23 +108,12 @@ export function EmailRecipientPicker({
           <ul className="team-share-list">
             {recipients.map((r) => (
               <li key={r.id}>
-                <label className="security-toggle">
-                  <input
-                    type="checkbox"
-                    checked={selectedEmails.some((e) => e.toLowerCase() === r.email.toLowerCase())}
-                    onChange={() => toggle(r.email)}
-                    disabled={!canEmailOthers}
-                  />
-                  <div>
-                    <strong>{r.name}</strong>
-                    <span>
-                      {r.email}
-                      {r.source === "team" && r.role
-                        ? ` · ${roleLabel(r.role as TeamRole)}`
-                        : " · Doc Solid contact"}
-                    </span>
-                  </div>
-                </label>
+                <TeamMemberPickerRow
+                  recipient={r}
+                  checked={selectedEmails.some((e) => e.toLowerCase() === r.email.toLowerCase())}
+                  disabled={!canEmailOthers}
+                  onToggle={() => toggle(r.email)}
+                />
               </li>
             ))}
           </ul>

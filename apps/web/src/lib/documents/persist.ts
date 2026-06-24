@@ -72,6 +72,29 @@ export async function archiveSavedDocument(
   return updated;
 }
 
+export async function unarchiveSavedDocument(
+  localId: string,
+  actor?: DocumentActor
+): Promise<LocalDocument | null> {
+  const storage = new IndexedDBStorage();
+  const doc = await storage.getDocument(localId);
+  if (!doc) return null;
+  if (doc.status !== "ARCHIVED") return doc;
+
+  const updated = appendDocumentAudit(
+    {
+      ...doc,
+      status: "FINAL",
+      updatedAt: new Date().toISOString(),
+    },
+    "unarchived",
+    actor,
+    "Restored from archive"
+  );
+  await storage.saveDocument(updated);
+  return updated;
+}
+
 export async function deleteSavedDocument(localId: string): Promise<boolean> {
   const storage = new IndexedDBStorage();
   const doc = await storage.getDocument(localId);

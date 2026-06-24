@@ -31,6 +31,7 @@ const COUNTERPARTY_SIGNATURE_IDS = new Set([
   "customerSignature",
   "recipientSignature",
   "borrowerSignature",
+  "supervisorSignature",
 ]);
 
 const ORG_FIELD_IDS = new Set([

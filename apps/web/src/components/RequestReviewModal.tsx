@@ -7,6 +7,8 @@ import { useAuth } from "./AuthProvider";
 import { useNotifications } from "./NotificationProvider";
 import { saveShareWithDocument } from "@/lib/team/share-document";
 import { recordDocumentShareAudit } from "@/lib/documents/share-audit";
+import { TeamMemberPickerRow } from "@/components/TeamMemberPickerRow";
+import { getEmailRecipients } from "@/lib/team/recipients";
 import { canUseFeature } from "@/lib/subscription/plans";
 
 export interface RequestReviewModalProps {
@@ -14,8 +16,6 @@ export interface RequestReviewModalProps {
   documentId: string;
   onClose: () => void;
 }
-
-type Recipient = { email: string; name: string; source: "team" | "contact" };
 
 export function RequestReviewModal({
   documentTitle,
@@ -33,20 +33,10 @@ export function RequestReviewModal({
   const selfEmail = (session?.email ?? profile.account.email ?? "").toLowerCase();
   const teamAllowed = canUseFeature(profile.subscription, "teamSharing");
 
-  const recipients = useMemo(() => {
-    const map = new Map<string, Recipient>();
-    for (const m of profile.team.members) {
-      if (m.email.toLowerCase() === selfEmail) continue;
-      map.set(m.email.toLowerCase(), { email: m.email, name: m.name, source: "team" });
-    }
-    for (const c of profile.library?.contacts ?? []) {
-      if (c.email.toLowerCase() === selfEmail) continue;
-      if (!map.has(c.email.toLowerCase())) {
-        map.set(c.email.toLowerCase(), { email: c.email, name: c.name, source: "contact" });
-      }
-    }
-    return Array.from(map.values());
-  }, [profile.team.members, profile.library?.contacts, selfEmail]);
+  const recipients = useMemo(
+    () => getEmailRecipients(profile, selfEmail),
+    [profile, selfEmail]
+  );
 
   function toggle(email: string) {
     setSelected((prev) =>
@@ -119,21 +109,13 @@ export function RequestReviewModal({
           <>
             <ul className="team-share-list">
               {recipients.map((r) => (
-                <li key={r.email}>
-                  <label className="security-toggle">
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(r.email)}
-                      onChange={() => toggle(r.email)}
-                      disabled={!teamAllowed}
-                    />
-                    <div>
-                      <strong>{r.name}</strong>
-                      <span>
-                        {r.email} · {r.source === "team" ? "Team" : "Contact"}
-                      </span>
-                    </div>
-                  </label>
+                <li key={r.id}>
+                  <TeamMemberPickerRow
+                    recipient={r}
+                    checked={selected.includes(r.email)}
+                    disabled={!teamAllowed}
+                    onToggle={() => toggle(r.email)}
+                  />
                 </li>
               ))}
             </ul>

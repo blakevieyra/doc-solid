@@ -69,7 +69,9 @@ export function ProfileAccountTab({ onNavigate }: ProfileAccountTabProps) {
           <option value="business">Business</option>
           <option value="individual">Individual</option>
           <option value="organization">Organization</option>
-          <option value="mixed">Mixed (all types)</option>
+          {profile.profileType === "mixed" && (
+            <option value="mixed">Mixed (please choose one type)</option>
+          )}
         </select>
       </div>
       <Field

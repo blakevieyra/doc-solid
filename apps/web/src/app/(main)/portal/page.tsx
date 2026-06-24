@@ -63,7 +63,7 @@ import { ReturnShareModal } from "@/components/ReturnShareModal";
 import { SendToContactModal } from "@/components/SendToContactModal";
 import { AddToPacketModal } from "@/components/AddToPacketModal";
 import { canUseFeature } from "@/lib/subscription/plans";
-import { archiveSavedDocument, updateSavedDocumentFields } from "@/lib/documents/persist";
+import { archiveSavedDocument, unarchiveSavedDocument, updateSavedDocumentFields } from "@/lib/documents/persist";
 import { getFavoriteTemplateIds } from "@/lib/documents/favorites";
 import { createDocumentAuditEvent } from "@/lib/documents/audit";
 
@@ -270,6 +270,16 @@ export default function PortalPage() {
     const updated = await archiveSavedDocument(doc.localId, actor);
     if (updated) {
       setDocuments((prev) => prev.map((d) => (d.localId === updated.localId ? updated : d)));
+    }
+    setArchivingId(null);
+  }
+
+  async function handleUnarchiveDocument(doc: LocalDocument) {
+    setArchivingId(doc.localId);
+    const updated = await unarchiveSavedDocument(doc.localId, actor);
+    if (updated) {
+      setDocuments((prev) => prev.map((d) => (d.localId === updated.localId ? updated : d)));
+      if (portalFilter === "ARCHIVED") setPortalFilter("FINAL");
     }
     setArchivingId(null);
   }
@@ -759,6 +769,17 @@ export default function PortalPage() {
                       onClick={() => void handleArchiveDocument(doc)}
                     >
                       {archivingId === doc.localId ? "Archiving…" : "Archive"}
+                    </button>
+                  )}
+
+                  {doc.status === "ARCHIVED" && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      disabled={archivingId === doc.localId}
+                      onClick={() => void handleUnarchiveDocument(doc)}
+                    >
+                      {archivingId === doc.localId ? "Restoring…" : "Unarchive"}
                     </button>
                   )}
 

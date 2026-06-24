@@ -6,6 +6,8 @@ export interface EmailRecipient {
   id: string;
   email: string;
   name: string;
+  username?: string;
+  avatarUrl?: string | null;
   source: RecipientSource;
   role?: string;
 }
@@ -22,6 +24,8 @@ export function getEmailRecipients(profile: UserProfile, selfEmail: string): Ema
       id: m.id,
       email: m.email,
       name: m.name,
+      username: m.username,
+      avatarUrl: m.avatarUrl,
       source: "team",
       role: m.role,
     });
@@ -35,6 +39,8 @@ export function getEmailRecipients(profile: UserProfile, selfEmail: string): Ema
         id: c.id,
         email: c.email,
         name: c.name,
+        username: c.username,
+        avatarUrl: c.avatarUrl,
         source: "contact",
       });
     }

@@ -8,6 +8,7 @@ export type DocumentAuditEventType =
   | "signed"
   | "opened"
   | "archived"
+  | "unarchived"
   | "returned"
   | "emailed";
 

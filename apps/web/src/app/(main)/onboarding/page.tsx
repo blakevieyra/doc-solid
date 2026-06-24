@@ -27,14 +27,14 @@ function readStoredStep(): number {
 }
 
 function validateInfoStep(profileType: ProfileType, profile: UserProfile): string | null {
-  if (profileType === "business" || profileType === "mixed") {
+  if (profileType === "business") {
     if (!profile.business.name.trim()) return "Business name is required.";
     if (!profile.business.industry) return "Please select your industry.";
   }
-  if (profileType === "individual" || profileType === "mixed") {
+  if (profileType === "individual") {
     if (!profile.personal.fullName.trim()) return "Full name is required.";
   }
-  if (profileType === "organization" || profileType === "mixed") {
+  if (profileType === "organization") {
     if (!profile.organization.name.trim()) return "Organization name is required.";
   }
   return null;
@@ -238,7 +238,6 @@ export default function OnboardingPage() {
                 { id: "business" as ProfileType, title: "Business", desc: "Invoices, contracts, HR, operations" },
                 { id: "individual" as ProfileType, title: "Individual", desc: "Resume, lease, personal finance" },
                 { id: "organization" as ProfileType, title: "Organization", desc: "Nonprofits, clubs, associations" },
-                { id: "mixed" as ProfileType, title: "All of the above", desc: "Use business, personal, and org profiles" },
               ]).map((opt) => (
                 <button
                   key={opt.id}
@@ -269,7 +268,7 @@ export default function OnboardingPage() {
             <h1>Your information</h1>
             <p className="onboarding-lead">This auto-fills across all your documents. You can edit anytime in Profile.</p>
             <div className="onboarding-form-grid">
-              {(selectedProfileType === "business" || selectedProfileType === "mixed") && (
+              {selectedProfileType === "business" && (
                 <FormBlock title="Business">
                   <Input label="Business Name *" value={profile.business.name} onChange={(v) => updateProfile({ business: { ...profile.business, name: v } })} />
                   <IndustrySelect
@@ -284,16 +283,18 @@ export default function OnboardingPage() {
                   <AddressFields address={profile.business.address} onChange={(a) => updateProfile({ business: { ...profile.business, address: a } })} />
                 </FormBlock>
               )}
-              {(selectedProfileType === "individual" || selectedProfileType === "mixed") && (
+              {selectedProfileType === "individual" && (
                 <FormBlock title="Personal">
                   <Input label="Full Name *" value={profile.personal.fullName} onChange={(v) => updateProfile({ personal: { ...profile.personal, fullName: v } })} />
+                  <Input label="Username (optional)" value={profile.personal.username} onChange={(v) => updateProfile({ personal: { ...profile.personal, username: v.replace(/^@/, "") } })} />
+                  <p className="field-help">Shown when teammates search for you (@handle)</p>
                   <Input label="Professional Title" value={profile.personal.title} onChange={(v) => updateProfile({ personal: { ...profile.personal, title: v } })} />
                   <Input label="Email" type="email" value={profile.personal.email} onChange={(v) => updateProfile({ personal: { ...profile.personal, email: v } })} />
                   <Input label="Phone" type="tel" value={profile.personal.phone} onChange={(v) => updateProfile({ personal: { ...profile.personal, phone: v } })} />
                   <AddressFields address={profile.personal.address} onChange={(a) => updateProfile({ personal: { ...profile.personal, address: a } })} />
                 </FormBlock>
               )}
-              {(selectedProfileType === "organization" || selectedProfileType === "mixed") && (
+              {selectedProfileType === "organization" && (
                 <FormBlock title="Organization">
                   <Input label="Organization Name *" value={profile.organization.name} onChange={(v) => updateProfile({ organization: { ...profile.organization, name: v } })} />
                   <Textarea label="Mission Statement" value={profile.organization.mission} onChange={(v) => updateProfile({ organization: { ...profile.organization, mission: v } })} />
@@ -302,9 +303,7 @@ export default function OnboardingPage() {
                 </FormBlock>
               )}
             </div>
-            {((profile.business.industry && (selectedProfileType === "business" || selectedProfileType === "mixed")) ||
-              selectedProfileType === "individual" ||
-              selectedProfileType === "organization") && recommended.length > 0 && (
+            {recommended.length > 0 && (
               <RecommendedDocuments
                 documents={recommended}
                 heading={recHeading}

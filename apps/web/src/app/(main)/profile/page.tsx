@@ -283,7 +283,14 @@ export default function ProfilePage() {
 
           {tab === "personal" && (
             <div className="profile-panel card">
+              <LogoUploader
+                label="Profile Photo (optional)"
+                value={profile.personal.photo}
+                onChange={(photo) => updateProfile({ personal: { ...profile.personal, photo } })}
+              />
               <Field label="Full Name" value={profile.personal.fullName} onChange={(v) => updateProfile({ personal: { ...profile.personal, fullName: v } })} />
+              <Field label="Username (optional)" value={profile.personal.username} onChange={(v) => updateProfile({ personal: { ...profile.personal, username: v.replace(/^@/, "") } })} />
+              <p className="field-help">Teammates see @username when adding or searching for you</p>
               <Field label="Professional Title" value={profile.personal.title} onChange={(v) => updateProfile({ personal: { ...profile.personal, title: v } })} />
               <Field label="Email" type="email" value={profile.personal.email} onChange={(v) => updateProfile({ personal: { ...profile.personal, email: v } })} />
               <Field label="Phone" type="tel" value={profile.personal.phone} onChange={(v) => updateProfile({ personal: { ...profile.personal, phone: v } })} />

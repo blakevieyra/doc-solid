@@ -1,5 +1,6 @@
 import {
   generateTemplate,
+  auditTemplateCompliance,
   type DocumentTypeDefinition,
   type TemplateField,
 } from "@doc-solid/documents";
@@ -58,6 +59,7 @@ export function auditDocumentCompleteness(
 ): DocumentAuditResult {
   const template = generateTemplate(meta);
   const missingFields: MissingField[] = [];
+  const templateIssues = auditTemplateCompliance(template);
 
   for (const sec of template.sections) {
     for (const field of sec.fields) {
@@ -85,7 +87,10 @@ export function auditDocumentCompleteness(
     filledRequired,
     missingFields,
     isComplete,
-    complianceNotes: categoryComplianceNotes(meta),
+    complianceNotes: [
+      ...categoryComplianceNotes(meta),
+      ...templateIssues.map((issue) => `Form structure: ${issue.detail}`),
+    ],
     readinessLabel,
   };
 }

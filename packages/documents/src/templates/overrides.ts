@@ -303,6 +303,57 @@ export const TEMPLATE_OVERRIDES: Record<string, TemplateSection[]> = {
       { id: "totalHours", label: "Total Hours", type: "number", required: true },
     ]),
     section("signatures", "Signatures", [
+      {
+        id: "employeeSignature",
+        label: "Employee Signature",
+        type: "signature",
+        required: true,
+        ownerSignature: true,
+        defaultFromProfile: "signature.owner",
+      },
+      FIELD_BLUEPRINTS.signatureDate,
+      {
+        id: "supervisorSignature",
+        label: "Supervisor Signature",
+        type: "signature",
+        required: true,
+      },
+    ]),
+  ],
+
+  "business-plan": [
+    section("company", "Company Overview", [
+      FIELD_BLUEPRINTS.businessName,
+      { id: "legalStructure", label: "Legal Structure", type: "text", required: true },
+      { id: "foundingDate", label: "Founded / Planned Start", type: "text" },
+      FIELD_BLUEPRINTS.businessAddress,
+    ]),
+    section("executive-summary", "Executive Summary", [
+      { id: "executiveSummary", label: "Executive Summary", type: "textarea", required: true },
+    ]),
+    section("products", "Products & Services", [
+      { id: "productsServices", label: "Products & Services", type: "textarea", required: true },
+      { id: "competitiveAdvantage", label: "Competitive Advantage", type: "textarea", required: true },
+    ]),
+    section("market", "Market Analysis", [
+      { id: "targetMarket", label: "Target Market", type: "textarea", required: true },
+      { id: "marketSize", label: "Market Size & Trends", type: "textarea", required: true },
+      { id: "competition", label: "Competition", type: "textarea" },
+    ]),
+    section("operations", "Operations & Management", [
+      { id: "managementTeam", label: "Management Team", type: "textarea", required: true },
+      { id: "operationsPlan", label: "Operations Plan", type: "textarea", required: true },
+    ]),
+    section("marketing", "Marketing & Sales", [
+      { id: "marketingStrategy", label: "Marketing Strategy", type: "textarea", required: true },
+      { id: "salesStrategy", label: "Sales Strategy", type: "textarea" },
+    ]),
+    section("financials", "Financial Projections", [
+      { id: "startupCosts", label: "Startup Costs / Funding Needs", type: "textarea", required: true },
+      { id: "revenueProjections", label: "Revenue Projections", type: "textarea", required: true },
+      { id: "breakEven", label: "Break-even Analysis", type: "textarea" },
+    ]),
+    section("signatures", "Authorization", [
       FIELD_BLUEPRINTS.signature,
       FIELD_BLUEPRINTS.signatureDate,
     ]),

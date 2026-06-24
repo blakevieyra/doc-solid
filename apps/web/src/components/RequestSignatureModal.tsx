@@ -12,6 +12,7 @@ import { recordDocumentShareAudit } from "@/lib/documents/share-audit";
 import { getEmailRecipients } from "@/lib/team/recipients";
 import { canUseFeature } from "@/lib/subscription/plans";
 import { emptyCounterpartySignatureFields } from "@/lib/documents/signature-access";
+import { TeamMemberPickerRow } from "@/components/TeamMemberPickerRow";
 
 export interface RequestSignatureModalProps {
   documentTitle: string;
@@ -176,18 +177,12 @@ export function RequestSignatureModal({
             <ul className="team-share-list">
               {members.map((m) => (
                 <li key={m.id}>
-                  <label className="security-toggle">
-                    <input
-                      type="checkbox"
-                      checked={selectedMembers.includes(m.email)}
-                      onChange={() => toggleMember(m.email)}
-                      disabled={!teamAllowed}
-                    />
-                    <div>
-                      <strong>{m.name}</strong>
-                      <span>{m.email} · {m.source === "team" ? "Team" : "Contact"}</span>
-                    </div>
-                  </label>
+                  <TeamMemberPickerRow
+                    recipient={m}
+                    checked={selectedMembers.includes(m.email)}
+                    disabled={!teamAllowed}
+                    onToggle={() => toggleMember(m.email)}
+                  />
                 </li>
               ))}
             </ul>

@@ -57,6 +57,7 @@ export function emptyCounterpartySignatureFields(
       if (field.type !== "signature") continue;
       if (!isCounterpartySignatureField(field, template.category)) continue;
       if (isSignatureLocked(field.id, values)) continue;
+      if (isSignatureFilled(values[field.id])) continue;
       fields.push(field);
     }
   }

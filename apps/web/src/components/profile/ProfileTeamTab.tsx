@@ -7,6 +7,7 @@ import { useProfile } from "@/components/ProfileProvider";
 import { createInvite } from "@/lib/team/invites";
 import { fetchTeamView, syncTeamRoster, type TeamView } from "@/lib/team/roster-client";
 import { roleLabel, mergeTeamMemberDisplays, profileMembersToDisplay, contactsToDisplay } from "@/lib/team/display";
+import { TeamMemberIdentity } from "@/components/TeamMemberPickerRow";
 import { canUseFeature, maxTeamMembers } from "@/lib/subscription/plans";
 import type { AppContact, TeamMember, TeamRole, UserProfile } from "@/lib/profile/types";
 
@@ -372,16 +373,17 @@ export function ProfileTeamTab() {
       <ul className="team-member-list">
         {displayMembers.map((m) => (
           <li key={m.id} className={`team-member-row${m.isYou ? " team-member-row-you" : ""}`}>
-            <div>
-              <strong>
-                {m.name}
-                {m.isYou && <span className="team-you-badge">You</span>}
-              </strong>
-              <span>
-                {m.email} · {roleLabel(m.role)}
-                {m.joinedAt && ` · Joined ${formatJoined(m.joinedAt)}`}
-              </span>
-            </div>
+            <TeamMemberIdentity
+              recipient={{
+                name: m.name,
+                email: m.email,
+                username: m.username,
+                avatarUrl: m.avatarUrl,
+                source: "team",
+                role: m.role,
+              }}
+              badge={m.isYou ? <span className="team-you-badge">You</span> : undefined}
+            />
             {isOwner && teamAllowed && profile.team.enabled && !m.isYou && (
               <button
                 type="button"
@@ -428,10 +430,15 @@ export function ProfileTeamTab() {
       <ul className="team-member-list">
         {(profile.library?.contacts ?? []).map((c) => (
           <li key={c.id} className="team-member-row">
-            <div>
-              <strong>{c.name}</strong>
-              <span>{c.email}</span>
-            </div>
+            <TeamMemberIdentity
+              recipient={{
+                name: c.name,
+                email: c.email,
+                username: c.username,
+                avatarUrl: c.avatarUrl,
+                source: "contact",
+              }}
+            />
             <button
               type="button"
               className="line-item-remove"
@@ -471,6 +478,8 @@ export function ProfileTeamTab() {
                 registered?: boolean;
                 email?: string;
                 name?: string;
+                username?: string;
+                avatarUrl?: string | null;
                 error?: string;
               };
               if (!data.registered || !data.email) {
@@ -488,6 +497,8 @@ export function ProfileTeamTab() {
                 id: `ct_${Date.now()}`,
                 email: data.email,
                 name: data.name ?? data.email.split("@")[0] ?? data.email,
+                username: data.username,
+                avatarUrl: data.avatarUrl ?? null,
                 addedAt: new Date().toISOString(),
               };
 
@@ -495,6 +506,8 @@ export function ProfileTeamTab() {
                 id: `tm_${Date.now()}`,
                 email: data.email,
                 name: contact.name,
+                username: data.username,
+                avatarUrl: data.avatarUrl ?? null,
                 role: "editor",
                 shareProfile: true,
                 invitedAt: new Date().toISOString(),

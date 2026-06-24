@@ -12,6 +12,7 @@ import { saveShareWithDocument } from "@/lib/team/share-document";
 import { recordDocumentShareAudit } from "@/lib/documents/share-audit";
 import { canUseFeature } from "@/lib/subscription/plans";
 import { emptyCounterpartySignatureFields } from "@/lib/documents/signature-access";
+import { TeamMemberPickerRow } from "@/components/TeamMemberPickerRow";
 
 export type SendToContactMode = "share" | "signature";
 
@@ -180,20 +181,12 @@ export function SendToContactModal({
             <ul className="team-share-list">
               {recipients.map((r) => (
                 <li key={r.id}>
-                  <label className="security-toggle">
-                    <input
-                      type="checkbox"
-                      checked={selected.includes(r.email)}
-                      onChange={() => toggle(r.email)}
-                      disabled={!teamAllowed}
-                    />
-                    <div>
-                      <strong>{r.name}</strong>
-                      <span>
-                        {r.email} · {r.source === "team" ? "Team" : "Contact"}
-                      </span>
-                    </div>
-                  </label>
+                  <TeamMemberPickerRow
+                    recipient={r}
+                    checked={selected.includes(r.email)}
+                    disabled={!teamAllowed}
+                    onToggle={() => toggle(r.email)}
+                  />
                 </li>
               ))}
             </ul>

@@ -397,7 +397,6 @@ const DOCUMENT_ARCHETYPE: Record<string, ArchetypeBuilder> = {
   "scope-of-work": projectReport,
   "project-status-report": projectReport,
   "project-charter": projectReport,
-  "business-plan": projectReport,
   "change-order": projectReport,
   "marketing-plan": projectReport,
   "rfp-response": projectReport,

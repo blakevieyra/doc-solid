@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, isDatabaseConfigured } from "@doc-solid/database";
+import { isDatabaseConfigured } from "@doc-solid/database";
 import { requireAuth } from "@/lib/server/session";
+import { loadPublicIdentityForEmail } from "@/lib/server/public-identity";
 
 export const runtime = "nodejs";
 
@@ -21,12 +22,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Enter a valid email address" }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: normalized },
-      select: { email: true, name: true },
-    });
-
-    if (!user) {
+    const identity = await loadPublicIdentityForEmail(normalized);
+    if (!identity) {
       return NextResponse.json({
         registered: false,
         error: "No Doc Solid account found for this email. They must sign up before you can add them as a contact.",
@@ -35,8 +32,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       registered: true,
-      email: user.email,
-      name: user.name?.trim() || user.email.split("@")[0],
+      email: identity.email,
+      name: identity.name,
+      username: identity.username,
+      avatarUrl: identity.avatarUrl,
     });
   } catch {
     return NextResponse.json({ error: "Lookup failed" }, { status: 500 });

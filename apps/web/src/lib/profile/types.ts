@@ -28,6 +28,10 @@ export interface BusinessProfile {
 export interface PersonalProfile {
   fullName: string;
   title: string;
+  /** Optional @handle shown on team lists and when others add you as a contact */
+  username: string;
+  /** Optional profile photo (data URL) for individuals */
+  photo: string | null;
   address: Address;
   phone: string;
   email: string;
@@ -65,6 +69,8 @@ export interface TeamMember {
   id: string;
   email: string;
   name: string;
+  username?: string;
+  avatarUrl?: string | null;
   role: TeamRole;
   shareProfile: boolean;
   invitedAt: string;
@@ -146,6 +152,8 @@ export interface AppContact {
   id: string;
   email: string;
   name: string;
+  username?: string;
+  avatarUrl?: string | null;
   addedAt: string;
 }
 
@@ -183,7 +191,7 @@ export const EMPTY_ADDRESS: Address = {
 
 export const DEFAULT_PROFILE: UserProfile = {
   version: 1,
-  profileType: "mixed",
+  profileType: "business",
   onboardingComplete: false,
   business: {
     name: "",
@@ -199,6 +207,8 @@ export const DEFAULT_PROFILE: UserProfile = {
   personal: {
     fullName: "",
     title: "",
+    username: "",
+    photo: null,
     address: { ...EMPTY_ADDRESS },
     phone: "",
     email: "",

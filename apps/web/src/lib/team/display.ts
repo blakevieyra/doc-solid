@@ -14,6 +14,8 @@ export interface TeamMemberDisplay {
   id: string;
   email: string;
   name: string;
+  username?: string;
+  avatarUrl?: string | null;
   role: TeamRole;
   joinedAt: string;
   isYou: boolean;
@@ -36,6 +38,8 @@ export function mergeTeamMemberDisplays(
         id: m.id || prev?.id || `tm_${key.replace(/[^a-z0-9]/g, "_")}`,
         email: m.email,
         name: m.name || prev?.name || m.email,
+        username: m.username || prev?.username,
+        avatarUrl: m.avatarUrl ?? prev?.avatarUrl ?? null,
         role: m.role === "owner" || prev?.role === "owner" ? "owner" : m.role || prev?.role || "editor",
         joinedAt: prev?.joinedAt && prev.joinedAt <= m.joinedAt ? prev.joinedAt : m.joinedAt,
         isYou: key === self,
@@ -55,6 +59,8 @@ export function profileMembersToDisplay(profile: UserProfile, selfEmail: string)
     id: m.id,
     email: m.email,
     name: m.name,
+    username: m.username,
+    avatarUrl: m.avatarUrl,
     role: m.role,
     joinedAt: m.acceptedAt ?? m.invitedAt,
     isYou: m.email.toLowerCase() === selfEmail.toLowerCase(),
@@ -66,6 +72,8 @@ export function contactsToDisplay(contacts: AppContact[], selfEmail: string): Te
     id: c.id,
     email: c.email,
     name: c.name,
+    username: c.username,
+    avatarUrl: c.avatarUrl,
     role: "editor" as TeamRole,
     joinedAt: c.addedAt,
     isYou: c.email.toLowerCase() === selfEmail.toLowerCase(),
@@ -77,6 +85,8 @@ export function teamMembersToDisplay(members: TeamMember[], selfEmail: string): 
     id: m.id,
     email: m.email,
     name: m.name,
+    username: m.username,
+    avatarUrl: m.avatarUrl,
     role: m.role,
     joinedAt: m.acceptedAt ?? m.invitedAt,
     isYou: m.email.toLowerCase() === selfEmail.toLowerCase(),
