@@ -866,23 +866,22 @@ export default function PortalPage() {
 
                   <Link href={`/portal/view/${doc.localId}`} className="btn btn-primary btn-sm">Open</Link>
 
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setSendTarget({ doc, mode: "share" })}
+                  >
+                    Send
+                  </button>
+
                   {teamSharing && (
-                    <>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => setSendTarget({ doc, mode: "share" })}
-                      >
-                        Send
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn-secondary btn-sm"
-                        onClick={() => setSendTarget({ doc, mode: "signature" })}
-                      >
-                        Sign
-                      </button>
-                    </>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setSendTarget({ doc, mode: "signature" })}
+                    >
+                      Sign
+                    </button>
                   )}
 
                   <button
