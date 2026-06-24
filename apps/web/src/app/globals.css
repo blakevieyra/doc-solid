@@ -17,9 +17,9 @@
   --warning: #d97706;
   --radius: 12px;
   --shadow: 0 1px 3px rgba(26, 39, 68, 0.06), 0 8px 24px rgba(26, 39, 68, 0.06);
-  --header-logo-height: 24px;
-  --header-logo-max-width: 100px;
-  --header-bar-min-height: 48px;
+  --header-logo-height: 64px;
+  --header-logo-max-width: 220px;
+  --header-bar-min-height: 72px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1208,6 +1208,13 @@ a.quick-action-card { text-decoration: none; color: inherit; }
   padding: 0.875rem; border: 1px solid var(--border); border-radius: 8px; flex-wrap: wrap;
 }
 .share-inbox-item strong { display: block; font-size: 0.9rem; }
+.share-inbox-main { flex: 1; min-width: 0; }
+.share-activity-toggle {
+  display: inline-block; margin-top: 0.35rem; padding: 0; border: none; background: none;
+  font-size: 0.75rem; font-weight: 600; color: var(--brand-blue); cursor: pointer;
+}
+.share-activity-toggle:hover { text-decoration: underline; }
+.share-resend-hint { margin-top: 0.35rem; color: #b45309; }
 .share-inbox-badge {
   display: inline-block; font-size: 0.625rem; font-weight: 700; text-transform: uppercase;
   letter-spacing: 0.04em; padding: 0.15rem 0.45rem; border-radius: 4px;
@@ -1256,9 +1263,9 @@ a.quick-action-card { text-decoration: none; color: inherit; }
     gap: 0.5rem;
   }
   :root {
-    --header-logo-height: 22px;
-    --header-logo-max-width: 88px;
-    --header-bar-min-height: 44px;
+    --header-logo-height: 52px;
+    --header-logo-max-width: 180px;
+    --header-bar-min-height: 64px;
   }
   .auth-logo .brand-logo-img,
   .brand-logo-xl .brand-logo-img { height: 120px; max-height: 120px; }
@@ -1855,7 +1862,24 @@ a.quick-action-card { text-decoration: none; color: inherit; }
 .packets-toolbar { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
 .packets-delete-btn { margin-left: 0.25rem; }
 .packets-msg { margin-bottom: 0.75rem; }
-.packets-contents-card { padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+.packets-contents-panel { margin-bottom: 1rem; }
+.packets-toggle-meta { font-weight: 500; color: var(--text-muted); font-size: 0.8125rem; }
+
+.signing-layout {
+  display: grid;
+  grid-template-columns: 1fr min(360px, 34%);
+  gap: 1.25rem;
+  align-items: start;
+}
+.signing-document { padding: 0; overflow: hidden; }
+.signing-document .doc-preview-sheet { border: none; box-shadow: none; }
+.signing-panel { padding: 1.25rem; position: sticky; top: 1rem; }
+.signing-panel-actions { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; }
+
+@media (max-width: 900px) {
+  .signing-layout { grid-template-columns: 1fr; }
+  .signing-panel { position: static; }
+}
 .packets-section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; }
 .packets-section-head h3 { font-size: 1rem; font-weight: 700; margin: 0; }
 .packets-empty-items { color: var(--text-muted); font-size: 0.875rem; margin: 0; }

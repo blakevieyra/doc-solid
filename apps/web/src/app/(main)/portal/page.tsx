@@ -74,6 +74,7 @@ export default function PortalPage() {
   const [status, setStatus] = useState("all");
 
   const [scanDoc, setScanDoc] = useState<LocalDocument | null>(null);
+  const [expandedShares, setExpandedShares] = useState<Record<string, boolean>>({});
 
 
 
@@ -189,10 +190,18 @@ export default function PortalPage() {
 
           <ul className="share-inbox-list">
 
-            {shares.map((s) => (
+            {shares.map((s) => {
+              const activityOpen = expandedShares[s.id] ?? false;
+              const activityCount = s.auditLog?.length ?? 0;
+              const canPreview = Boolean(s.documentTemplateId && s.fieldDataSnapshot);
+              const previewHref = `/portal/view/${s.documentId}?shareId=${s.id}`;
+              const signHref = s.documentTemplateId
+                ? `/documents/${s.documentTemplateId}?localId=${s.documentId}&sign=1&shareId=${s.id}`
+                : null;
 
+              return (
               <li key={s.id} className="share-inbox-item">
-                <div>
+                <div className="share-inbox-main">
                   <strong>{s.documentTitle}</strong>
                   {s.shareType === "signature_request" && (
                     <span className="share-inbox-badge">Signature requested</span>
@@ -202,7 +211,17 @@ export default function PortalPage() {
                   )}
                   <span>From {s.fromName} · {new Date(s.createdAt).toLocaleDateString()}</span>
                   {s.message && <p className="field-help">{s.message}</p>}
-                  {s.auditLog && s.auditLog.length > 0 && (
+                  {activityCount > 0 && (
+                    <button
+                      type="button"
+                      className="share-activity-toggle"
+                      onClick={() => setExpandedShares((prev) => ({ ...prev, [s.id]: !activityOpen }))}
+                      aria-expanded={activityOpen}
+                    >
+                      Activity ({activityCount}) {activityOpen ? "▾" : "▸"}
+                    </button>
+                  )}
+                  {activityOpen && s.auditLog && s.auditLog.length > 0 && (
                     <ul className="share-audit-log">
                       {s.auditLog.map((event, i) => (
                         <li key={`${event.type}-${event.timestamp}-${i}`}>
@@ -215,23 +234,37 @@ export default function PortalPage() {
                       ))}
                     </ul>
                   )}
+                  {!canPreview && (
+                    <p className="field-help share-resend-hint">
+                      This share has no saved document snapshot. Ask {s.fromName} to re-send it.
+                    </p>
+                  )}
                 </div>
-                <Link
-                  href={`/documents/${s.documentTemplateId ?? "invoice"}?localId=${s.documentId}&sign=1&shareId=${s.id}`}
-                  className="btn btn-primary btn-sm"
-                >
-                  {s.shareType === "signature_request"
-                    ? "Sign document"
-                    : s.shareType === "review_request"
-                      ? "Review document"
-                      : "Open"}
-                </Link>
-                <Link href={`/portal/view/${s.documentId}`} className="btn btn-secondary btn-sm">
-                  Preview
-                </Link>
+                {signHref ? (
+                  <Link href={signHref} className="btn btn-primary btn-sm">
+                    {s.shareType === "signature_request"
+                      ? "Sign document"
+                      : s.shareType === "review_request"
+                        ? "Review document"
+                        : "Open"}
+                  </Link>
+                ) : (
+                  <span className="btn btn-primary btn-sm" style={{ opacity: 0.45, pointerEvents: "none" }}>
+                    Unavailable
+                  </span>
+                )}
+                {canPreview ? (
+                  <Link href={previewHref} className="btn btn-secondary btn-sm">
+                    Preview
+                  </Link>
+                ) : (
+                  <span className="btn btn-secondary btn-sm" style={{ opacity: 0.45, pointerEvents: "none" }}>
+                    Preview
+                  </span>
+                )}
               </li>
-
-            ))}
+              );
+            })}
 
           </ul>
 

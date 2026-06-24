@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { IndexedDBStorage } from "@doc-solid/storage";
 import { generateTemplate, getDocumentById } from "@doc-solid/documents";
 import { AppShell } from "@/components/AppShell";
@@ -16,10 +16,12 @@ import { useProfile } from "@/components/ProfileProvider";
 import { exportDocumentPdf, documentPdfFilename } from "@/lib/pdf/exportDocument";
 import { canUseFeature } from "@/lib/subscription/plans";
 import { updateSavedDocumentFields } from "@/lib/documents/persist";
-import { loadShares } from "@/lib/team/invites";
+import { loadShares, getShareById } from "@/lib/team/invites";
 
-export default function SavedDocumentPage() {
+function SavedDocumentPageContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
+  const shareId = searchParams?.get("shareId");
   const localId = params?.localId as string | undefined;
   const { profile, documentProfile } = useProfile();
   const [loading, setLoading] = useState(true);
@@ -33,6 +35,7 @@ export default function SavedDocumentPage() {
   const [showRequestReview, setShowRequestReview] = useState(false);
   const [showAiScan, setShowAiScan] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [shareContext, setShareContext] = useState<ReturnType<typeof getShareById>>(null);
 
   const cleanPdf = canUseFeature(profile.subscription, "pdfClean");
 
@@ -44,6 +47,18 @@ export default function SavedDocumentPage() {
       setLoading(false);
       return;
     }
+
+    const shareFromQuery = shareId ? getShareById(shareId) : null;
+    if (shareFromQuery?.fieldDataSnapshot && shareFromQuery.documentTemplateId) {
+      setShareContext(shareFromQuery);
+      setTitle(shareFromQuery.documentTitle);
+      setTemplateId(shareFromQuery.documentTemplateId);
+      setValues(shareFromQuery.fieldDataSnapshot);
+      setDocStatus(shareFromQuery.completedAt ? "FINAL" : "DRAFT");
+      setLoading(false);
+      return;
+    }
+
     const storage = new IndexedDBStorage();
     storage.getDocument(localId).then((doc) => {
       if (doc) {
@@ -58,6 +73,7 @@ export default function SavedDocumentPage() {
 
       const share = loadShares().find((s) => s.documentId === localId);
       if (share?.fieldDataSnapshot && share.documentTemplateId) {
+        setShareContext(share);
         setTitle(share.documentTitle);
         setTemplateId(share.documentTemplateId);
         setValues(share.fieldDataSnapshot);
@@ -65,7 +81,7 @@ export default function SavedDocumentPage() {
       }
       setLoading(false);
     });
-  }, [localId]);
+  }, [localId, shareId]);
 
   async function handleRedact(redacted: Record<string, string>) {
     setValues(redacted);
@@ -122,43 +138,61 @@ export default function SavedDocumentPage() {
   }
 
   const fullTemplate = { ...meta, sections: template.sections };
-  const relatedShare = loadShares().find((s) => s.documentId === localId);
+  const relatedShare = shareContext ?? loadShares().find((s) => s.documentId === localId);
+  const isSharedPreview = Boolean(relatedShare?.fieldDataSnapshot);
+  const signHref = relatedShare?.documentTemplateId
+    ? `/documents/${relatedShare.documentTemplateId}?localId=${localId}&sign=1&shareId=${relatedShare.id}`
+    : null;
 
   return (
     <AppShell wide>
       <div className="editor-header">
         <Link href="/portal" className="back-link">← Back to portal</Link>
         <h1 className="editor-title">{title || meta.name}</h1>
-        {documentNumber && (
+        {isSharedPreview && (
+          <p className="editor-desc">
+            Document as sent by {relatedShare?.fromName}
+            {relatedShare?.shareType === "signature_request" ? " — read-only preview" : ""}
+          </p>
+        )}
+        {documentNumber && !isSharedPreview && (
           <p className="editor-desc">{meta.name} · {documentNumber}</p>
         )}
         <div className="editor-actions portal-view-actions">
-          <Link
-            href={`/documents/${templateId}?localId=${localId}&sign=1${relatedShare ? `&shareId=${relatedShare.id}` : ""}`}
-            className="btn btn-primary"
-          >
-            Sign assigned fields
-          </Link>
-          <Link href={`/documents/${templateId}?localId=${localId}`} className="btn btn-secondary">
-            Edit this copy
-          </Link>
-          <Link href={`/documents/${templateId}`} className="btn btn-secondary">
-            Edit as new copy
-          </Link>
-          <button type="button" className="btn btn-secondary" onClick={() => setShowRequestReview(true)}>
-            Request Review
-          </button>
+          {signHref && relatedShare?.shareType === "signature_request" && (
+            <Link href={signHref} className="btn btn-primary">
+              Sign document
+            </Link>
+          )}
+          {signHref && relatedShare?.shareType === "review_request" && (
+            <Link href={signHref} className="btn btn-primary">
+              Review & comment
+            </Link>
+          )}
+          {!isSharedPreview && (
+            <>
+              <Link href={`/documents/${templateId}?localId=${localId}`} className="btn btn-secondary">
+                Edit this copy
+              </Link>
+              <Link href={`/documents/${templateId}`} className="btn btn-secondary">
+                Edit as new copy
+              </Link>
+              <button type="button" className="btn btn-secondary" onClick={() => setShowRequestReview(true)}>
+                Request Review
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => setShowEmail(true)}>
+                Email Document
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => setShowRequestSig(true)}>
+                Request Signature
+              </button>
+            </>
+          )}
           <button type="button" className="btn btn-secondary" onClick={handlePdfExport} disabled={exporting}>
             {exporting ? "Exporting…" : "Download PDF"}
           </button>
           <button type="button" className="btn btn-secondary" onClick={handlePrint}>
             Print
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => setShowEmail(true)}>
-            Email Document
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => setShowRequestSig(true)}>
-            Request Signature
           </button>
         </div>
       </div>
@@ -167,8 +201,16 @@ export default function SavedDocumentPage() {
         meta={fullTemplate}
         values={values}
         status={docStatus}
-        onScanRedact={() => setShowAiScan(true)}
-        onMarkFinal={handleMarkFinal}
+        onScanRedact={isSharedPreview ? () => {} : () => setShowAiScan(true)}
+        onMarkFinal={
+          isSharedPreview
+            ? undefined
+            : async () => {
+                if (!localId) return;
+                const updated = await updateSavedDocumentFields(localId, values, { status: "FINAL" });
+                if (updated) setDocStatus("FINAL");
+              }
+        }
       />
 
       <div className="doc-preview-sheet">
@@ -212,5 +254,17 @@ export default function SavedDocumentPage() {
         />
       )}
     </AppShell>
+  );
+}
+
+export default function SavedDocumentPage() {
+  return (
+    <Suspense fallback={
+      <AppShell wide>
+        <p>Loading document...</p>
+      </AppShell>
+    }>
+      <SavedDocumentPageContent />
+    </Suspense>
   );
 }

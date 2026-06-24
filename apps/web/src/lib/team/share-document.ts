@@ -106,6 +106,21 @@ export function completeShareSigning(
   return updated;
 }
 
+export function returnShareCorrection(
+  shareId: string,
+  comment: string,
+  reviewer: { email: string; name: string }
+): DocumentShare | null {
+  const trimmed = comment.trim();
+  if (!trimmed) return null;
+  recordShareAudit(shareId, "correction_requested", {
+    actorEmail: reviewer.email,
+    actorName: reviewer.name,
+    details: trimmed,
+  });
+  return getShareById(shareId);
+}
+
 export function getShareAuditLabel(event: ShareAuditEvent): string {
   switch (event.type) {
     case "sent":
@@ -118,6 +133,8 @@ export function getShareAuditLabel(event: ShareAuditEvent): string {
       return "Signed";
     case "completed":
       return "Completed";
+    case "correction_requested":
+      return "Correction requested";
     default:
       return event.type;
   }

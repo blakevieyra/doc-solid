@@ -63,6 +63,7 @@ export default function PacketsPage() {
   const [showEmail, setShowEmail] = useState(false);
   const [msg, setMsg] = useState("");
   const [showAddPanel, setShowAddPanel] = useState(false);
+  const [showContentsPanel, setShowContentsPanel] = useState(true);
 
   const packets = getPackets(profile);
   const favorites = getFavoriteTemplateIds(profile);
@@ -195,7 +196,7 @@ export default function PacketsPage() {
                   <button
                     type="button"
                     className={`packets-list-item${activePacket?.id === p.id ? " active" : ""}`}
-                    onClick={() => { setActivePacketId(p.id); setMsg(""); }}
+                    onClick={() => { setActivePacketId(p.id); setMsg(""); setShowContentsPanel(true); }}
                   >
                     <span className="packets-list-order" aria-hidden="true">{index + 1}</span>
                     <span className="packets-list-item-body">
@@ -280,16 +281,26 @@ export default function PacketsPage() {
 
               {msg && <p className="field-error packets-msg">{msg}</p>}
 
-              <section className="card packets-contents-card">
-                <div className="packets-section-head">
-                  <h3>What&apos;s in this packet</h3>
-                  <span className="field-help">{totalItems} item{totalItems !== 1 ? "s" : ""}</span>
-                </div>
+              <section className="card packets-add-panel packets-contents-panel">
+                <button
+                  type="button"
+                  className="packets-add-toggle"
+                  onClick={() => setShowContentsPanel((v) => !v)}
+                  aria-expanded={showContentsPanel}
+                >
+                  <span>
+                    What&apos;s in this packet
+                    <span className="packets-toggle-meta"> · {totalItems} item{totalItems !== 1 ? "s" : ""}</span>
+                  </span>
+                  <span className="packets-add-toggle-icon">{showContentsPanel ? "−" : "+"}</span>
+                </button>
 
-                {totalItems === 0 ? (
-                  <p className="packets-empty-items">Nothing added yet. Use the panel below to add favorites or files from My Files.</p>
-                ) : (
-                  <ul className="packets-unified-list">
+                {showContentsPanel && (
+                  <div className="packets-add-body">
+                    {totalItems === 0 ? (
+                      <p className="packets-empty-items">Nothing added yet. Use the panel below to add favorites or files from My Files.</p>
+                    ) : (
+                      <ul className="packets-unified-list">
                     {orderedItems.map((item, index) => {
                       if (item.type === "template") {
                         const meta = getDocumentById(item.id);
@@ -393,7 +404,9 @@ export default function PacketsPage() {
                         </li>
                       );
                     })}
-                  </ul>
+                      </ul>
+                    )}
+                  </div>
                 )}
               </section>
 

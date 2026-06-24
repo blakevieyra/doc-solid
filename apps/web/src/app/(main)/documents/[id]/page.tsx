@@ -46,7 +46,7 @@ import {
   stampSignatureLock,
 } from "@/lib/documents/signature-lock";
 import { getShareById } from "@/lib/team/invites";
-import { completeShareSigning, markShareOpened } from "@/lib/team/share-document";
+import { completeShareSigning, markShareOpened, returnShareCorrection } from "@/lib/team/share-document";
 import { commitDocumentNumber, peekNextDocumentNumber } from "@/lib/documents/sequencing";
 import { snapshotBrandingIntoValues } from "@/lib/profile/document-branding";
 import { useMediaQuery } from "@/lib/useMediaQuery";
@@ -77,8 +77,14 @@ function DocumentEditorPageContent() {
   const [docStatus, setDocStatus] = useState<"DRAFT" | "FINAL" | "ARCHIVED">("DRAFT");
   const [docOwnerId, setDocOwnerId] = useState<string | null>(null);
   const [assignedFieldIds, setAssignedFieldIds] = useState<string[]>([]);
+  const [correctionComment, setCorrectionComment] = useState("");
+  const [correctionSent, setCorrectionSent] = useState(false);
   const isMobileEditor = useMediaQuery("(max-width: 768px)");
   const [mobilePane, setMobilePane] = useState<"form" | "preview">("form");
+
+  useEffect(() => {
+    if (signingMode) setMobilePane("preview");
+  }, [signingMode]);
 
   const cleanPdf = canUseFeature(profile.subscription, "pdfClean");
 
@@ -121,6 +127,17 @@ function DocumentEditorPageContent() {
     async function initEditor() {
       const share = shareId ? getShareById(shareId) : null;
       const snapshot = share?.fieldDataSnapshot as Record<string, string> | undefined;
+
+      if (signingMode && shareId && share?.documentTemplateId === id && snapshot) {
+        const allFieldIds = template!.sections.flatMap((s) => s.fields.map((f) => f.id));
+        setNumberFieldId(getNumberFieldId(allFieldIds));
+        setValues(snapshot);
+        if (share?.signatureFieldIds?.length) {
+          setAssignedFieldIds(share.signatureFieldIds);
+        }
+        setInitialized(true);
+        return;
+      }
 
       if (editLocalId && id) {
         const storage = new IndexedDBStorage();
@@ -218,7 +235,16 @@ function DocumentEditorPageContent() {
   const userId = session?.userId ?? null;
   const userEmail = session?.email ?? profile.account.email ?? "";
   const userName = session?.name ?? profile.account.displayName ?? profile.personal.fullName ?? "";
-  const isDocumentOwner = !savedLocalId || !docOwnerId || docOwnerId === userId;
+  const activeShare = shareId ? getShareById(shareId) : null;
+  const isRecipientSigning = Boolean(
+    signingMode &&
+    shareId &&
+    activeShare &&
+    activeShare.toEmail.toLowerCase() === userEmail.toLowerCase()
+  );
+  const isDocumentOwner = isRecipientSigning
+    ? false
+    : !savedLocalId || !docOwnerId || docOwnerId === userId;
 
   const signatureAccessCtx = {
     isDocumentOwner,
@@ -397,17 +423,43 @@ function DocumentEditorPageContent() {
     }
   }
 
+  async function handleReturnCorrection() {
+    if (!shareId || !correctionComment.trim()) {
+      window.alert("Describe what needs to be corrected before returning to the sender.");
+      return;
+    }
+    returnShareCorrection(shareId, correctionComment, { email: userEmail, name: userName });
+    setCorrectionSent(true);
+    setTimeout(() => router.push("/portal"), 1200);
+  }
+
+  const signingSignatureFields = signingMode
+    ? fullTemplate.sections.flatMap((section) =>
+        section.fields
+          .filter((field) => {
+            if (field.type !== "signature") return false;
+            return resolveSignatureFieldAccess(field, signatureAccessCtx) === "counterparty-sign";
+          })
+          .map((field) => ({ section, field }))
+      )
+    : [];
+
   return (
     <AppShell wide>
       <div className="editor-header">
         <Link
-          href={editLocalId ? `/portal/view/${editLocalId}` : "/documents"}
+          href={signingMode ? "/portal" : editLocalId ? `/portal/view/${editLocalId}` : "/documents"}
           className="back-link"
         >
-          {editLocalId ? "← Back to saved document" : "← Back to library"}
+          {signingMode ? "← Back to My Files" : editLocalId ? "← Back to saved document" : "← Back to library"}
         </Link>
-        <h1 className="editor-title">{meta.name}</h1>
-        <p className="editor-desc">{meta.description}</p>
+        <h1 className="editor-title">{signingMode ? (activeShare?.documentTitle ?? meta.name) : meta.name}</h1>
+        <p className="editor-desc">
+          {signingMode
+            ? "Review the complete document below. Only your assigned signature field(s) can be edited."
+            : meta.description}
+        </p>
+        {!signingMode && (
         <div className="editor-badges">
           <span className={`badge badge-${meta.priority}`}>{meta.priority}</span>
           {assignedNumber && (
@@ -416,8 +468,10 @@ function DocumentEditorPageContent() {
           {!cleanPdf && <span className="badge badge-common">Free — watermarked PDF</span>}
           <span className="editor-sources">Sources: {meta.primaryResources.join(" · ")}</span>
         </div>
+        )}
       </div>
 
+      {!signingMode && (
       <DocumentComplianceBar
         meta={fullTemplate}
         values={values}
@@ -432,22 +486,110 @@ function DocumentEditorPageContent() {
             : undefined
         }
       />
-
-      {signingMode && (
-        <div className="card signature-signing-banner">
-          <strong>Signing mode</strong>
-          <p className="field-help">
-            Review the completed document below, sign your assigned field(s), then save to return it
-            with a timestamped audit log.
-          </p>
-          {assignedFieldIds.length > 0 && (
-            <p className="field-help">
-              Your signature field(s): {assignedFieldIds.join(", ")}
-            </p>
-          )}
-        </div>
       )}
 
+      {signingMode && (
+        <>
+          {!activeShare?.fieldDataSnapshot && (
+            <div className="card signature-signing-banner">
+              <strong>Document snapshot missing</strong>
+              <p className="field-help">
+                Ask the sender to re-send this document so you can view the filled version and sign.
+              </p>
+            </div>
+          )}
+
+          <div className="signing-layout">
+            <div className={`signing-document card${isMobileEditor && mobilePane !== "preview" ? " editor-pane-hidden" : ""}`}>
+              <div className="preview-toolbar no-print">
+                <span>Document sent to you</span>
+              </div>
+              <div className="doc-preview-sheet">
+                <DocumentPreview meta={fullTemplate} values={values} profile={documentProfile} />
+              </div>
+            </div>
+
+            <aside className={`signing-panel card${isMobileEditor && mobilePane !== "form" ? " editor-pane-hidden" : ""}`}>
+              <h2 className="section-title" style={{ marginTop: 0 }}>Your signature</h2>
+              <p className="field-help">
+                Complete the field(s) below, or return a correction note to the sender.
+              </p>
+
+              {signingSignatureFields.length === 0 ? (
+                <p className="field-help">No signature fields were assigned on this request.</p>
+              ) : (
+                signingSignatureFields.map(({ field }) => (
+                  <FieldInput
+                    key={field.id}
+                    field={field}
+                    value={values[field.id] ?? ""}
+                    onChange={(v) => setField(field.id, v)}
+                    profile={profile}
+                    docCategory={meta.category}
+                    onSaveSignature={(sig) => updateProfile({ signature: sig })}
+                    signatureAccessCtx={signatureAccessCtx}
+                  />
+                ))
+              )}
+
+              <div className="field-group" style={{ marginTop: "1rem" }}>
+                <label htmlFor="correction-comment">Return with correction (optional)</label>
+                <textarea
+                  id="correction-comment"
+                  rows={4}
+                  value={correctionComment}
+                  onChange={(e) => setCorrectionComment(e.target.value)}
+                  placeholder="Explain what needs to be changed before you can sign…"
+                />
+              </div>
+
+              {correctionSent && (
+                <p className="field-success">Correction sent to {activeShare?.fromName}. Returning to My Files…</p>
+              )}
+
+              <div className="signing-panel-actions">
+                <button type="button" className="btn btn-primary btn-block" onClick={() => void handleSave()}>
+                  {counterpartyGate.ok ? "Complete & return signed document" : "Save signature progress"}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-block"
+                  onClick={() => void handleReturnCorrection()}
+                  disabled={!correctionComment.trim() || correctionSent}
+                >
+                  Return for correction
+                </button>
+              </div>
+            </aside>
+          </div>
+
+          {isMobileEditor && (
+            <div className="editor-mobile-tabs no-print" role="tablist" aria-label="Signing view">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mobilePane === "preview"}
+                className={`editor-mobile-tab${mobilePane === "preview" ? " active" : ""}`}
+                onClick={() => setMobilePane("preview")}
+              >
+                Document
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mobilePane === "form"}
+                className={`editor-mobile-tab${mobilePane === "form" ? " active" : ""}`}
+                onClick={() => setMobilePane("form")}
+              >
+                Sign
+              </button>
+            </div>
+          )}
+        </>
+      )}
+
+      {!signingMode && (
+      <>
       {isMobileEditor && (
         <div className="editor-mobile-tabs no-print" role="tablist" aria-label="Document editor">
           <button
@@ -478,33 +620,17 @@ function DocumentEditorPageContent() {
             <span className="autofill-badge">Auto-filled from profile</span>
           </div>
           {template.sections.map((section) => {
-            const visibleFields = signingMode
-              ? section.fields.filter((field) => {
-                  if (field.type !== "signature") return true;
-                  const access = resolveSignatureFieldAccess(field, signatureAccessCtx);
-                  return (
-                    access === "counterparty-sign" ||
-                    access === "locked" ||
-                    access === "readonly-pending" ||
-                    (access === "owner-sign" && isSignatureLocked(field.id, values))
-                  );
-                })
-              : section.fields;
-
-            if (visibleFields.length === 0) return null;
+            if (section.fields.length === 0) return null;
 
             return (
             <div key={section.id} className="editor-section">
               <h3 className="section-title">{section.title}</h3>
               {section.description && <p className="field-help section-desc">{section.description}</p>}
-              {visibleFields.map((field) => {
+              {section.fields.map((field) => {
                 const sigAccess =
                   field.type === "signature"
                     ? resolveSignatureFieldAccess(field, signatureAccessCtx)
                     : null;
-                const readOnly =
-                  signingMode &&
-                  (field.type !== "signature" || sigAccess !== "counterparty-sign");
 
                 return (
                 <FieldInput
@@ -519,15 +645,12 @@ function DocumentEditorPageContent() {
                   docCategory={meta.category}
                   onSaveSignature={(sig) => updateProfile({ signature: sig })}
                   signingBlocked={
-                    sigAccess === "counterparty-sign"
-                      ? false
-                      : sigAccess === "owner-sign"
-                        ? !signingGate.ok
-                        : undefined
+                    sigAccess === "owner-sign"
+                      ? !signingGate.ok
+                      : undefined
                   }
                   missingPrerequisites={sigAccess === "owner-sign" ? signingGate.missing : undefined}
                   signatureAccessCtx={signatureAccessCtx}
-                  readOnly={readOnly}
                 />
                 );
               })}
@@ -536,17 +659,13 @@ function DocumentEditorPageContent() {
           })}
           <div className="editor-actions">
             <button type="button" className="btn btn-primary" onClick={handleSave}>
-              {signingMode
-                ? counterpartyGate.ok
-                  ? "Complete & return signed document"
-                  : "Save signature progress"
-                : saved
-                  ? editLocalId
-                    ? "Updated ✓"
-                    : "Saved ✓"
-                  : editLocalId
-                    ? "Save changes"
-                    : "Save to Portal"}
+              {saved
+                ? editLocalId
+                  ? "Updated ✓"
+                  : "Saved ✓"
+                : editLocalId
+                  ? "Save changes"
+                  : "Save to Portal"}
             </button>
             <button type="button" className="btn btn-secondary" onClick={handlePdfExport} disabled={exporting}>
               {exporting ? "Exporting..." : cleanPdf ? "Download PDF" : "Download PDF (watermarked)"}
@@ -581,7 +700,7 @@ function DocumentEditorPageContent() {
             >
               Team Inbox
             </button>
-            {savedLocalId && !signingMode && (
+            {savedLocalId && (
               <button type="button" className="btn btn-danger" onClick={() => void handleDelete()}>
                 Delete
               </button>
@@ -641,6 +760,8 @@ function DocumentEditorPageContent() {
           </div>
         </div>
       </div>
+      </>
+      )}
     </AppShell>
   );
 }

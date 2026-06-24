@@ -66,7 +66,7 @@ export default function HomePage() {
     <div className="landing-page">
       <header className="landing-header">
         <div className="container landing-header-inner">
-          <BrandLogo href="/" size="xs" />
+          <BrandLogo href="/" size="sm" />
           <nav className="landing-nav">
             <Link href="/help">Help</Link>
             <a href="#faq">FAQ</a>

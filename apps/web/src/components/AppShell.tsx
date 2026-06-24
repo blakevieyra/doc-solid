@@ -58,14 +58,14 @@ export function AppShell({
     <div className="app-shell">
       <header className="app-header">
         <div className="container app-header-inner" ref={headerRef}>
-          <BrandLogo href="/documents" size="xs" />
+          <BrandLogo href="/documents" size="sm" />
 
           <nav className={`app-nav${menuOpen ? " open" : ""}`} aria-label="Main">
             <Link href="/documents" onClick={() => setMenuOpen(false)}>Documents</Link>
             <Link href="/packets" onClick={() => setMenuOpen(false)}>Packets</Link>
             <Link href="/portal" onClick={() => setMenuOpen(false)}>My Files</Link>
-            <Link href="/profile" onClick={() => setMenuOpen(false)}>Profile</Link>
             <Link href="/team" onClick={() => setMenuOpen(false)}>Team</Link>
+            <Link href="/profile" onClick={() => setMenuOpen(false)}>Profile</Link>
             <Link href="/help" onClick={() => setMenuOpen(false)}>Help</Link>
             {menuOpen && (
               <div className="mobile-nav-footer">
