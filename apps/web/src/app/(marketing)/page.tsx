@@ -17,53 +17,60 @@ import {
   IconTeam,
 } from "@/components/landing/FeatureIcons";
 
-const FEATURES = [
-  {
-    icon: IconBuilder,
-    title: "Custom Builder",
-    desc: "Start from 120+ templates or build your own forms with text, dates, tables, and signatures.",
-  },
-  {
-    icon: IconAutofill,
-    title: "Auto-Fill Profile",
-    desc: "Save your business or personal info once — it fills every document automatically.",
-  },
-  {
-    icon: IconPdf,
-    title: "Print, PDF & Email",
-    desc: "Generate clean, professional PDFs ready to print or attach to email.",
-  },
-  {
-    icon: IconTeam,
-    title: "Team Sharing",
-    desc: "Invite colleagues, join teams, and send completed documents to members instantly.",
-  },
-  {
-    icon: IconShield,
-    title: "AI Security Scan",
-    desc: "Pro-only scan for sensitive data with optional redaction and privacy-safe profile storage.",
-    pro: true,
-  },
-  {
-    icon: IconLock,
-    title: "Security Center",
-    desc: "PIN lock, AES-256 encryption, password management, and safe delete-all-data.",
-  },
-  {
-    icon: IconCloud,
-    title: "Cloud + Local",
-    desc: "Work offline on mobile or desktop. Changes sync when you're back online.",
-  },
-  {
-    icon: IconPackets,
-    title: "Document Packets",
-    desc: "Bundle related forms into packets — reorder items, export combined PDFs, and email the full set to your team.",
-  },
-] as const;
+function buildFeatures() {
+  return [
+    {
+      icon: IconBuilder,
+      title: "Custom Builder",
+      desc: `Start from ${CATALOG_STATS.total}+ professional templates or build your own forms with text, dates, tables, line items, and signatures.`,
+    },
+    {
+      icon: IconAutofill,
+      title: "Auto-Fill Profile",
+      desc: "Save business, personal, or organization info once — logo, address, and tax IDs flow into every document automatically.",
+    },
+    {
+      icon: IconPdf,
+      title: "Print, PDF & Email",
+      desc: "Pro: clean, watermark-free PDFs, print-ready layouts, and email documents to clients or teammates — not just yourself.",
+      pro: true,
+    },
+    {
+      icon: IconTeam,
+      title: "Team Sharing",
+      desc: "Pro: invite colleagues, join multiple teams, send signature requests, and share completed files instantly.",
+      pro: true,
+    },
+    {
+      icon: IconShield,
+      title: "AI Security Scan",
+      desc: "Pro: scan for SSNs, tax IDs, and payment data locally in your browser — then redact before you share.",
+      pro: true,
+    },
+    {
+      icon: IconLock,
+      title: "Security Center",
+      desc: "AES-256-GCM encryption for sensitive profile fields, optional PIN lock, password management, and one-click delete-all-data.",
+      encryption: true,
+    },
+    {
+      icon: IconCloud,
+      title: "Cloud + Local",
+      desc: "Pro: sync documents and profile across devices with offline access — work locally, catch up when you're back online.",
+      pro: true,
+    },
+    {
+      icon: IconPackets,
+      title: "Document Packets",
+      desc: "Bundle related forms into packets — reorder items, export combined PDFs, and email the full set. Unlimited on Pro.",
+    },
+  ] as const;
+}
 
 export default function HomePage() {
   const monthly = getPlan("monthly");
   const yearly = getPlan("yearly");
+  const features = buildFeatures();
 
   return (
     <div className="landing-page">
@@ -104,10 +111,11 @@ export default function HomePage() {
           <div className="container">
             <h2>Everything you need to ship documents today</h2>
             <p className="landing-section-lead">
-              From templates to AI security scanning — DocSolid keeps your workflow fast and protected.
+              From {CATALOG_STATS.total}+ templates to AES-256-GCM encrypted profiles and Pro-only AI redaction —
+              DocSolid keeps your workflow fast, shareable, and protected.
             </p>
             <div className="landing-features-grid">
-              {FEATURES.map((f) => (
+              {features.map((f) => (
                 <FeatureCard key={f.title} {...f} />
               ))}
             </div>
@@ -117,7 +125,10 @@ export default function HomePage() {
         <section className="landing-pricing">
           <div className="container landing-pricing-inner">
             <h2>Simple pricing</h2>
-            <p>Free to start. Upgrade when you need clean PDFs, AI security scan, team sharing, and priority support.</p>
+            <p>
+              Free to start with watermarked PDFs. Pro unlocks clean exports, AI scan & redaction, team sharing,
+              cloud sync, unlimited documents, and priority support.
+            </p>
             <div className="landing-pricing-cards">
               <div className="card landing-price-card">
                 <strong>{PLANS[0].name}</strong>
@@ -129,7 +140,7 @@ export default function HomePage() {
                 <span className="landing-pro-badge">Most Popular</span>
                 <strong>Pro Monthly</strong>
                 <span className="landing-price">${monthly.price}/mo</span>
-                <span>AI security scan · Clean PDFs · Team sharing · Priority support</span>
+                <span>AI security scan · Clean PDFs · Team sharing · Cloud sync · Priority support</span>
                 <Link href="/signup" className="btn btn-primary">Start Pro Trial</Link>
               </div>
               <div className="card landing-price-card">
@@ -208,19 +219,22 @@ function FeatureCard({
   title,
   desc,
   pro,
+  encryption,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   desc: string;
   pro?: boolean;
+  encryption?: boolean;
 }) {
   return (
-    <div className="card landing-feature-card">
+    <div className={`card landing-feature-card${encryption ? " landing-feature-card-encryption" : ""}`}>
       <div className="landing-feature-icon-wrap">
         <span className="landing-feature-icon" aria-hidden>
           <Icon className="landing-feature-svg" />
         </span>
         {pro && <span className="landing-feature-pro">Pro</span>}
+        {encryption && <span className="landing-feature-encryption">AES-256</span>}
       </div>
       <h3>{title}</h3>
       <p>{desc}</p>

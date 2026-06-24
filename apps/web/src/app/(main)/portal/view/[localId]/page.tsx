@@ -86,7 +86,7 @@ function SavedDocumentPageContent() {
 
   async function handleRedact(redacted: Record<string, string>) {
     setValues(redacted);
-    if (!localId) return;
+    if (!localId || isSharedPreview) return;
     const updated = await updateSavedDocumentFields(localId, redacted);
     if (updated) setDocStatus(updated.status);
   }
@@ -148,54 +148,55 @@ function SavedDocumentPageContent() {
 
   return (
     <AppShell wide>
-      <div className="editor-header">
+      <div className="editor-header portal-view-header">
         <Link href="/portal" className="back-link">← Back to portal</Link>
-        <h1 className="editor-title">{title || meta.name}</h1>
-        {isSharedPreview && (
-          <p className="editor-desc">
-            Document as sent by {relatedShare?.fromName}
-            {isCompletedShare ? " — signed and completed" : relatedShare?.shareType === "signature_request" ? " — review and sign" : ""}
-          </p>
-        )}
-        {documentNumber && !isSharedPreview && (
-          <p className="editor-desc">{meta.name} · {documentNumber}</p>
-        )}
-        <div className="editor-actions portal-view-actions">
-          {signHref && relatedShare?.shareType === "signature_request" && !isCompletedShare && (
-            <Link href={signHref} className="btn btn-primary">
-              Sign document
-            </Link>
-          )}
-          {signHref && relatedShare?.shareType === "review_request" && !isCompletedShare && (
-            <Link href={signHref} className="btn btn-primary">
-              Review & comment
-            </Link>
-          )}
-          {!isSharedPreview && (
-            <>
-              <Link href={`/documents/${templateId}?localId=${localId}`} className="btn btn-secondary">
-                Edit this copy
+        <div className="editor-header-row">
+          <div className="editor-header-text">
+            <h1 className="editor-title">{title || meta.name}</h1>
+            {isSharedPreview && (
+              <p className="editor-desc">
+                Document as sent by {relatedShare?.fromName}
+                {isCompletedShare ? " — signed and completed" : relatedShare?.shareType === "signature_request" ? " — review and sign" : ""}
+              </p>
+            )}
+            {documentNumber && !isSharedPreview && (
+              <p className="editor-desc">{meta.name} · {documentNumber}</p>
+            )}
+          </div>
+          <div className="editor-actions portal-view-actions">
+            {signHref && relatedShare?.shareType === "signature_request" && !isCompletedShare && (
+              <Link href={signHref} className="btn btn-primary btn-sm">
+                Sign document
               </Link>
-              <Link href={`/documents/${templateId}`} className="btn btn-secondary">
-                Edit as new copy
+            )}
+            {signHref && relatedShare?.shareType === "review_request" && !isCompletedShare && (
+              <Link href={signHref} className="btn btn-primary btn-sm">
+                Review & comment
               </Link>
-              <button type="button" className="btn btn-secondary" onClick={() => setShowRequestReview(true)}>
-                Request Review
-              </button>
-              <button type="button" className="btn btn-secondary" onClick={() => setShowRequestSig(true)}>
-                Request Signature
-              </button>
-            </>
-          )}
-          <button type="button" className="btn btn-secondary" onClick={() => setShowEmail(true)}>
-            Email Document
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={handlePdfExport} disabled={exporting}>
-            {exporting ? "Exporting…" : "Download PDF"}
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={handlePrint}>
-            Print
-          </button>
+            )}
+            {!isSharedPreview && (
+              <>
+                <Link href={`/documents/${templateId}?localId=${localId}`} className="btn btn-secondary btn-sm">
+                  Edit
+                </Link>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowRequestReview(true)}>
+                  Request Review
+                </button>
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowRequestSig(true)}>
+                  Request Signature
+                </button>
+              </>
+            )}
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setShowEmail(true)}>
+              Email
+            </button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={handlePdfExport} disabled={exporting}>
+              {exporting ? "Exporting…" : "Download PDF"}
+            </button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={handlePrint}>
+              Print
+            </button>
+          </div>
         </div>
       </div>
 
@@ -203,7 +204,7 @@ function SavedDocumentPageContent() {
         meta={fullTemplate}
         values={values}
         status={docStatus}
-        onScanRedact={isSharedPreview ? () => {} : () => setShowAiScan(true)}
+        onScanRedact={() => setShowAiScan(true)}
         onMarkFinal={
           isSharedPreview
             ? undefined
