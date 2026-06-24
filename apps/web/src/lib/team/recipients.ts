@@ -1,4 +1,5 @@
 import type { UserProfile } from "@/lib/profile/types";
+import { resolveMemberAvatarUrl } from "./member-avatar";
 
 export type RecipientSource = "team" | "contact";
 
@@ -25,7 +26,7 @@ export function getEmailRecipients(profile: UserProfile, selfEmail: string): Ema
       email: m.email,
       name: m.name,
       username: m.username,
-      avatarUrl: m.avatarUrl,
+      avatarUrl: resolveMemberAvatarUrl(profile, m.email, m.avatarUrl, selfEmail),
       source: "team",
       role: m.role,
     });
@@ -40,7 +41,7 @@ export function getEmailRecipients(profile: UserProfile, selfEmail: string): Ema
         email: c.email,
         name: c.name,
         username: c.username,
-        avatarUrl: c.avatarUrl,
+        avatarUrl: resolveMemberAvatarUrl(profile, c.email, c.avatarUrl, selfEmail),
         source: "contact",
       });
     }

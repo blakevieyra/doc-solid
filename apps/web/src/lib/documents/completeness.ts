@@ -1,6 +1,5 @@
 import {
   generateTemplate,
-  auditTemplateCompliance,
   type DocumentTypeDefinition,
   type TemplateField,
 } from "@doc-solid/documents";
@@ -33,33 +32,12 @@ function isFieldFilled(value: string | undefined, field: TemplateField): boolean
   return true;
 }
 
-function categoryComplianceNotes(meta: DocumentTypeDefinition): string[] {
-  const notes: string[] = [];
-  if (meta.primaryResources?.length) {
-    notes.push(`Standards referenced: ${meta.primaryResources.slice(0, 3).join(" · ")}`);
-  }
-  if (meta.category === "compliance" || meta.category === "legal") {
-    notes.push("Have legal counsel review before external use.");
-  }
-  if (meta.category === "health") {
-    notes.push("Contains health-related fields — run a security scan before sharing.");
-  }
-  if (meta.category === "financial") {
-    notes.push("Verify amounts, tax IDs, and payment details before sending.");
-  }
-  if (meta.category === "hr") {
-    notes.push("Confirm employment terms comply with your jurisdiction.");
-  }
-  return notes;
-}
-
 export function auditDocumentCompleteness(
   meta: DocumentTypeDefinition,
   values: Record<string, string>
 ): DocumentAuditResult {
   const template = generateTemplate(meta);
   const missingFields: MissingField[] = [];
-  const templateIssues = auditTemplateCompliance(template);
 
   for (const sec of template.sections) {
     for (const field of sec.fields) {
@@ -87,10 +65,7 @@ export function auditDocumentCompleteness(
     filledRequired,
     missingFields,
     isComplete,
-    complianceNotes: [
-      ...categoryComplianceNotes(meta),
-      ...templateIssues.map((issue) => `Form structure: ${issue.detail}`),
-    ],
+    complianceNotes: [],
     readinessLabel,
   };
 }

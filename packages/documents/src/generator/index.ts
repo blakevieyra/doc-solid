@@ -1,5 +1,6 @@
 import type { CatalogMeta } from "../catalog/entries";
 import type { DocumentTypeDefinition, TemplateSection } from "../types";
+import { getNumberFieldId } from "../catalog/numbering";
 import { FIELD_BLUEPRINTS, section, withOrgBranding } from "./blueprints";
 import { FULL_TEMPLATES } from "../templates/full";
 import { TEMPLATE_OVERRIDES } from "../templates/overrides";
@@ -10,6 +11,20 @@ function normalizeSections(sections: TemplateSection[]): TemplateSection[] {
     ...s,
     fields: withOrgBranding(s.fields),
   }));
+}
+
+function ensureTrackingNumberField(sections: TemplateSection[]): TemplateSection[] {
+  const fieldIds = sections.flatMap((s) => s.fields.map((f) => f.id));
+  if (getNumberFieldId(fieldIds)) return sections;
+
+  const trackingField = {
+    ...FIELD_BLUEPRINTS.documentNumber,
+  };
+  const [first, ...rest] = sections;
+  if (!first) {
+    return [section("tracking", "Document Tracking", [trackingField])];
+  }
+  return [{ ...first, fields: [trackingField, ...first.fields] }, ...rest];
 }
 
 const CATEGORY_SECTIONS: Record<string, (meta: CatalogMeta) => TemplateSection[]> = {
@@ -281,16 +296,18 @@ const DEFAULT_SECTIONS = (meta: CatalogMeta): TemplateSection[] => [
 
 export function generateTemplate(meta: CatalogMeta): DocumentTypeDefinition {
   const full = FULL_TEMPLATES[meta.id];
-  if (full) return { ...meta, sections: normalizeSections(full) };
+  if (full) return { ...meta, sections: normalizeSections(ensureTrackingNumberField(full)) };
 
   const override = TEMPLATE_OVERRIDES[meta.id];
-  if (override) return { ...meta, sections: normalizeSections(override) };
+  if (override) return { ...meta, sections: normalizeSections(ensureTrackingNumberField(override)) };
 
   const catalogSpecific = getCatalogFieldTemplate(meta);
-  if (catalogSpecific) return { ...meta, sections: normalizeSections(catalogSpecific) };
+  if (catalogSpecific) {
+    return { ...meta, sections: normalizeSections(ensureTrackingNumberField(catalogSpecific)) };
+  }
 
   const builder = CATEGORY_SECTIONS[meta.category] ?? DEFAULT_SECTIONS;
-  return { ...meta, sections: normalizeSections(builder(meta)) };
+  return { ...meta, sections: normalizeSections(ensureTrackingNumberField(builder(meta))) };
 }
 
 export function generateAllTemplates(catalog: CatalogMeta[]): DocumentTypeDefinition[] {

@@ -186,6 +186,8 @@ export function SendToContactModal({
                     checked={selected.includes(r.email)}
                     disabled={!teamAllowed}
                     onToggle={() => toggle(r.email)}
+                    profile={profile}
+                    selfEmail={selfEmail}
                   />
                 </li>
               ))}

@@ -30,10 +30,9 @@ function LockedSignatureDisplay({
     <div className="signature-field signature-field-locked">
       <SignaturePreview value={value} label={label} compact />
       <p className="field-help signature-locked-notice" role="status">
-        Signed and locked
+        Signed
         {lockMeta?.signedByName ? ` by ${lockMeta.signedByName}` : ""}
         {lockMeta?.signedAt ? ` on ${new Date(lockMeta.signedAt).toLocaleDateString()}` : ""}.
-        This signature cannot be removed or changed.
       </p>
     </div>
   );

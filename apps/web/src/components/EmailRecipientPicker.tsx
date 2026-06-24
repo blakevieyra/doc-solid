@@ -113,6 +113,8 @@ export function EmailRecipientPicker({
                   checked={selectedEmails.some((e) => e.toLowerCase() === r.email.toLowerCase())}
                   disabled={!canEmailOthers}
                   onToggle={() => toggle(r.email)}
+                  profile={profile}
+                  selfEmail={senderEmail ?? undefined}
                 />
               </li>
             ))}

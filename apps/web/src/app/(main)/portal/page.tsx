@@ -28,6 +28,8 @@ import {
 
 } from "@doc-solid/documents";
 
+import { backfillDocumentNumbers, resolveDocumentNumber } from "@/lib/documents/document-number";
+
 import { AppShell } from "@/components/AppShell";
 
 import { useAuth } from "@/components/AuthProvider";
@@ -137,8 +139,9 @@ export default function PortalPage() {
 
 
       const docs = await storage.getDocumentsForUser(userId);
-
-      setDocuments(docs);
+      const accountCode = profile.account.accountId?.slice(0, 8) || undefined;
+      const withNumbers = await backfillDocumentNumbers(docs, userId, accountCode);
+      setDocuments(withNumbers);
 
       setLoading(false);
 
@@ -152,7 +155,7 @@ export default function PortalPage() {
       void loadSharesForRecipient(email, authMode ?? "local").then(setShares);
     }
 
-  }, [session?.email, session?.userId, authMode]);
+  }, [session?.email, session?.userId, authMode, profile.account.accountId]);
 
   function refreshShares() {
     const email = session?.email ?? "";
@@ -291,7 +294,7 @@ export default function PortalPage() {
     const canOpen = Boolean(s.documentTemplateId && s.fieldDataSnapshot);
     const previewHref = `/portal/view/${s.documentId}?shareId=${s.id}`;
     const signHref =
-      canOpen && !archived && s.documentTemplateId
+      canOpen && s.documentTemplateId
         ? `/documents/${s.documentTemplateId}?localId=${s.documentId}&sign=1&shareId=${s.id}`
         : null;
     const returnedByMe = shareWasReturnedBy(s, userEmail);
@@ -299,8 +302,13 @@ export default function PortalPage() {
       !archived &&
       !returnedByMe &&
       (s.shareType === "signature_request" || s.shareType === "review_request");
-    const primaryLabel =
-      s.shareType === "signature_request"
+    const primaryLabel = archived
+      ? s.shareType === "signature_request"
+        ? "Sign again"
+        : s.shareType === "review_request"
+          ? "Review again"
+          : "Open"
+      : s.shareType === "signature_request"
         ? "Sign"
         : s.shareType === "review_request"
           ? "Review"
@@ -348,8 +356,7 @@ export default function PortalPage() {
             </span>
           </div>
 
-          {!archived && (
-            <div className="share-inbox-actions">
+          <div className="share-inbox-actions">
               {primaryHref ? (
                 <Link href={primaryHref} className="btn btn-primary btn-sm">
                   {primaryLabel}
@@ -363,20 +370,26 @@ export default function PortalPage() {
                   Unavailable
                 </span>
               )}
-              {showReturn ? (
+              {canOpen && primaryHref !== previewHref && (
+                <Link href={previewHref} className="btn btn-secondary btn-sm">
+                  View
+                </Link>
+              )}
+              {!archived && showReturn ? (
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setReturnShare(s)}>
                   Return
                 </button>
-              ) : returnedByMe ? (
+              ) : !archived && returnedByMe ? (
                 <span className="btn btn-secondary btn-sm" style={{ opacity: 0.45, pointerEvents: "none" }}>
                   Returned
                 </span>
               ) : null}
-              <button type="button" className="btn btn-secondary btn-sm" onClick={handleKeep}>
-                Keep
-              </button>
+              {!archived && (
+                <button type="button" className="btn btn-secondary btn-sm" onClick={handleKeep}>
+                  Keep
+                </button>
+              )}
             </div>
-          )}
         </div>
 
         {rowExpanded && (
@@ -708,7 +721,7 @@ export default function PortalPage() {
 
                 <div className="portal-file-card-head">
 
-                  <code className="portal-file-number">{doc.documentNumber ?? "—"}</code>
+                  <code className="portal-file-number">{resolveDocumentNumber(doc) ?? "—"}</code>
 
                   <span className="doc-tag">{doc.status}</span>
 

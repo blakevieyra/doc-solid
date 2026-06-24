@@ -115,6 +115,8 @@ export function RequestReviewModal({
                     checked={selected.includes(r.email)}
                     disabled={!teamAllowed}
                     onToggle={() => toggle(r.email)}
+                    profile={profile}
+                    selfEmail={selfEmail}
                   />
                 </li>
               ))}

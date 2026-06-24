@@ -72,3 +72,15 @@ export function getNumberFieldId(fieldIds: string[]): string | null {
   }
   return fieldIds.includes("documentNumber") ? "documentNumber" : null;
 }
+
+/** Read an assigned number from saved field values (invoice #, quote #, etc.). */
+export function extractDocumentNumberFromValues(
+  values: Record<string, unknown> | undefined | null
+): string | null {
+  if (!values) return null;
+  for (const id of NUMBER_FIELD_IDS) {
+    const raw = values[id];
+    if (typeof raw === "string" && raw.trim()) return raw.trim();
+  }
+  return null;
+}

@@ -9,7 +9,7 @@ export const TEMPLATE_OVERRIDES: Record<string, TemplateSection[]> = {
       FIELD_BLUEPRINTS.personAddress,
       FIELD_BLUEPRINTS.personPhone,
       { id: "sellerEmail", label: "Seller Email", type: "email", defaultFromProfile: "personal.email" },
-    ], "State DMV title transfer requirements"),
+    ]),
     section("buyer", "Buyer", [
       { id: "buyerName", label: "Buyer Full Name", type: "text", required: true },
       { id: "buyerAddress", label: "Buyer Address", type: "address", required: true },
@@ -423,13 +423,13 @@ export const TEMPLATE_OVERRIDES: Record<string, TemplateSection[]> = {
       { id: "reportingTo", label: "Reports To", type: "text" },
       { id: "benefits", label: "Benefits Summary", type: "textarea" },
       { id: "atWill", label: "At-Will Employment Acknowledgment", type: "textarea", required: true },
-      { id: "contingencies", label: "Contingencies", type: "textarea", helpText: "Background check, I-9, etc." },
+      { id: "contingencies", label: "Contingencies", type: "textarea" },
     ]),
     section("acceptance", "Signatures", [
       FIELD_BLUEPRINTS.signature,
       { id: "candidateSignature", label: "Candidate Signature", type: "signature", required: true },
       FIELD_BLUEPRINTS.signatureDate,
-    ], "Review with employment counsel before sending"),
+    ]),
   ],
 
   "independent-contractor-agreement": [
@@ -456,7 +456,7 @@ export const TEMPLATE_OVERRIDES: Record<string, TemplateSection[]> = {
       FIELD_BLUEPRINTS.signature,
       { id: "contractorSignature", label: "Contractor Signature", type: "signature", required: true },
       FIELD_BLUEPRINTS.signatureDate,
-    ], "1099 contractor — not an employee"),
+    ]),
   ],
 
   "volunteer-agreement": [
@@ -585,7 +585,7 @@ export const TEMPLATE_OVERRIDES: Record<string, TemplateSection[]> = {
       { id: "journalLines", label: "Debit / Credit Lines", type: "table", required: true, tableColumns: TABLE_COLUMNS.journalLines },
       { id: "preparedBy", label: "Prepared By", type: "text", required: true },
       { id: "reviewedBy", label: "Reviewed By", type: "text" },
-    ], "Double-entry — debits must equal credits"),
+    ]),
   ],
 
   "w9-request": [
@@ -596,8 +596,8 @@ export const TEMPLATE_OVERRIDES: Record<string, TemplateSection[]> = {
       { id: "taxClassification", label: "Federal Tax Classification", type: "select", options: ["Individual/Sole proprietor", "C Corporation", "S Corporation", "Partnership", "LLC", "Other"], required: true },
       { id: "payeeAddress", label: "Address", type: "address", required: true },
       { id: "taxId", label: "Taxpayer Identification Number (TIN)", type: "text", required: true },
-      { id: "certification", label: "Certification", type: "textarea", required: true, helpText: "Under penalties of perjury certification per IRS Form W-9" },
-    ], "IRS Form W-9 equivalent — handle TIN securely"),
+      { id: "certification", label: "Certification", type: "textarea", required: true },
+    ]),
     section("signatures", "Signatures", [
       FIELD_BLUEPRINTS.signature,
       FIELD_BLUEPRINTS.signatureDate,
@@ -618,7 +618,7 @@ export const TEMPLATE_OVERRIDES: Record<string, TemplateSection[]> = {
       { id: "retention", label: "Data Retention", type: "textarea", required: true },
       { id: "userRights", label: "Your Rights (access, delete, opt-out)", type: "textarea", required: true },
       { id: "contact", label: "Privacy Contact", type: "text", required: true },
-    ], "GDPR / CCPA — legal review recommended"),
+    ]),
   ],
 
   "personal-loan-agreement": [
@@ -690,6 +690,6 @@ export const TEMPLATE_OVERRIDES: Record<string, TemplateSection[]> = {
       { id: "hipaaNotice", label: "HIPAA Privacy Notice Acknowledgment", type: "textarea", required: true },
       FIELD_BLUEPRINTS.signature,
       FIELD_BLUEPRINTS.signatureDate,
-    ], "PHI — store securely and scan before sharing"),
+    ]),
   ],
 };

@@ -63,14 +63,6 @@ export function DocumentComplianceBar({
             )}
           </ul>
         )}
-
-        {!compact && audit.complianceNotes.length > 0 && (
-          <ul className="doc-compliance-notes">
-            {audit.complianceNotes.map((note) => (
-              <li key={note}>{note}</li>
-            ))}
-          </ul>
-        )}
       </div>
 
       <div className="doc-compliance-actions">

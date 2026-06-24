@@ -11,7 +11,7 @@ export const FULL_TEMPLATES: Record<string, TemplateSection[]> = {
       FIELD_BLUEPRINTS.businessPhone,
       FIELD_BLUEPRINTS.businessEmail,
       FIELD_BLUEPRINTS.taxId,
-    ], "Per IRS recordkeeping and GAAP revenue recognition standards"),
+    ]),
     section("recipient", "Bill To", [
       FIELD_BLUEPRINTS.clientName,
       FIELD_BLUEPRINTS.clientAddress,
@@ -43,7 +43,7 @@ export const FULL_TEMPLATES: Record<string, TemplateSection[]> = {
       { id: "providerAddress", label: "Provider Address", type: "address", defaultFromProfile: "business.address" },
       { id: "clientName", label: "Client Name", type: "text", required: true },
       { id: "clientAddress", label: "Client Address", type: "address" },
-    ], "Based on Restatement (Second) of Contracts and UCC Article 2"),
+    ]),
     section("scope", "Scope of Services", [
       { id: "effectiveDate", label: "Effective Date", type: "date", required: true },
       { id: "servicesDescription", label: "Description of Services", type: "textarea", required: true },
@@ -74,7 +74,7 @@ export const FULL_TEMPLATES: Record<string, TemplateSection[]> = {
       { id: "disclosingParty", label: "Disclosing Party", type: "text", required: true, defaultFromProfile: "business.name" },
       { id: "receivingParty", label: "Receiving Party", type: "text", required: true },
       { id: "effectiveDate", label: "Effective Date", type: "date", required: true },
-    ], "Based on Uniform Trade Secrets Act and Defend Trade Secrets Act 2016"),
+    ]),
     section("confidential-info", "Confidential Information", [
       { id: "definition", label: "Definition of Confidential Information", type: "textarea", required: true },
       { id: "exclusions", label: "Exclusions", type: "textarea" },
@@ -124,7 +124,7 @@ export const FULL_TEMPLATES: Record<string, TemplateSection[]> = {
       FIELD_BLUEPRINTS.businessAddress,
       FIELD_BLUEPRINTS.taxId,
       { id: "orgMission", label: "Mission", type: "textarea" },
-    ], "Per IRS Publication 1771 and IRC §170(f)(8) substantiation requirements"),
+    ]),
     section("donor", "Donor Information", [
       { id: "donorName", label: "Donor Name", type: "text", required: true },
       { id: "donorAddress", label: "Donor Address", type: "address", required: true },

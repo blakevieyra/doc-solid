@@ -372,7 +372,7 @@ export function ProfileTeamTab() {
       )}
       <ul className="team-member-list">
         {displayMembers.map((m) => (
-          <li key={m.id} className={`team-member-row${m.isYou ? " team-member-row-you" : ""}`}>
+          <li key={m.id} className="team-member-row">
             <TeamMemberIdentity
               recipient={{
                 name: m.name,
@@ -382,7 +382,8 @@ export function ProfileTeamTab() {
                 source: "team",
                 role: m.role,
               }}
-              badge={m.isYou ? <span className="team-you-badge">You</span> : undefined}
+              profile={profile}
+              selfEmail={selfEmail}
             />
             {isOwner && teamAllowed && profile.team.enabled && !m.isYou && (
               <button
@@ -438,6 +439,8 @@ export function ProfileTeamTab() {
                 avatarUrl: c.avatarUrl,
                 source: "contact",
               }}
+              profile={profile}
+              selfEmail={selfEmail}
             />
             <button
               type="button"

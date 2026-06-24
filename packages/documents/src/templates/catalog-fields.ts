@@ -68,7 +68,7 @@ const inventorySheet: ArchetypeBuilder = (meta) => [
     { id: "countedBy", label: "Counted By", type: "text", required: true },
     { id: "supervisor", label: "Supervisor / Reviewer", type: "text" },
     { id: "valuationMethod", label: "Valuation Method", type: "select", options: ["FIFO", "LIFO", "Weighted Average", "Specific ID"] },
-  ], meta.primaryResources[0]),
+  ]),
   section("items", "Inventory Items", [
     { id: "inventoryItems", label: "Stock Count Lines", type: "table", required: true, tableColumns: COL.inventoryItems },
     { id: "totalSkus", label: "Total Line Items", type: "number" },
@@ -172,7 +172,7 @@ const vendorRegistration: ArchetypeBuilder = () => [
     { id: "vendorPhone", label: "Phone", type: "phone" },
     { id: "vendorTaxId", label: "Tax ID / EIN", type: "text", required: true },
     { id: "paymentTerms", label: "Payment Terms", type: "text" },
-    { id: "bankingInfo", label: "Banking / ACH Details", type: "textarea", helpText: "Store securely — do not email unencrypted" },
+    { id: "bankingInfo", label: "Banking / ACH Details", type: "textarea" },
   ]),
   section("compliance", "Compliance", [
     { id: "insuranceCert", label: "Insurance Certificate on File", type: "checkbox" },

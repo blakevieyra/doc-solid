@@ -182,6 +182,8 @@ export function RequestSignatureModal({
                     checked={selectedMembers.includes(m.email)}
                     disabled={!teamAllowed}
                     onToggle={() => toggleMember(m.email)}
+                    profile={profile}
+                    selfEmail={selfEmail}
                   />
                 </li>
               ))}

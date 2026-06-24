@@ -1,6 +1,8 @@
 "use client";
 
 import type { EmailRecipient } from "@/lib/team/recipients";
+import type { UserProfile } from "@/lib/profile/types";
+import { resolveMemberAvatarUrl } from "@/lib/team/member-avatar";
 
 function memberInitials(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -15,10 +17,12 @@ type RecipientPick = Pick<
 
 export function TeamMemberIdentity({
   recipient,
-  badge,
+  profile,
+  selfEmail,
 }: {
   recipient: RecipientPick;
-  badge?: React.ReactNode;
+  profile?: UserProfile;
+  selfEmail?: string;
 }) {
   const handle = recipient.username?.trim();
   const subtitle = [
@@ -33,20 +37,22 @@ export function TeamMemberIdentity({
     .filter(Boolean)
     .join(" · ");
 
+  const avatarUrl =
+    profile != null
+      ? resolveMemberAvatarUrl(profile, recipient.email, recipient.avatarUrl, selfEmail)
+      : recipient.avatarUrl ?? null;
+
   return (
     <div className="team-member-picker-body">
-      {recipient.avatarUrl ? (
-        <img src={recipient.avatarUrl} alt="" className="team-member-avatar" />
+      {avatarUrl ? (
+        <img src={avatarUrl} alt="" className="team-member-avatar" />
       ) : (
         <span className="team-member-avatar team-member-avatar-fallback" aria-hidden>
           {memberInitials(recipient.name)}
         </span>
       )}
-      <div>
-        <strong>
-          {recipient.name}
-          {badge}
-        </strong>
+      <div className="team-member-picker-text">
+        <strong>{recipient.name}</strong>
         <span>{subtitle}</span>
       </div>
     </div>
@@ -58,16 +64,20 @@ export function TeamMemberPickerRow({
   checked,
   disabled,
   onToggle,
+  profile,
+  selfEmail,
 }: {
   recipient: RecipientPick;
   checked: boolean;
   disabled?: boolean;
   onToggle: () => void;
+  profile?: UserProfile;
+  selfEmail?: string;
 }) {
   return (
     <label className="security-toggle team-member-picker-row">
       <input type="checkbox" checked={checked} onChange={onToggle} disabled={disabled} />
-      <TeamMemberIdentity recipient={recipient} />
+      <TeamMemberIdentity recipient={recipient} profile={profile} selfEmail={selfEmail} />
     </label>
   );
 }

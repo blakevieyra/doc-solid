@@ -929,21 +929,25 @@ a.quick-action-card { text-decoration: none; color: inherit; }
 .team-member-avatar {
   width: 36px;
   height: 36px;
+  min-width: 36px;
+  min-height: 36px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
 }
 .team-member-avatar-fallback {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   background: #e2e8f0;
   color: var(--primary);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 700;
+  line-height: 1;
+  text-align: center;
 }
-.team-member-picker-body strong { display: block; }
-.team-member-picker-body span {
+.team-member-picker-text strong { display: block; font-size: 0.9rem; }
+.team-member-picker-text span {
   display: block;
   font-size: 0.8125rem;
   color: var(--text-muted);
@@ -984,19 +988,6 @@ a.quick-action-card { text-decoration: none; color: inherit; }
   word-break: break-all;
 }
 .team-id-copy { padding: 0.2rem 0.5rem; font-size: 0.75rem; min-height: auto; }
-.team-member-row-you { border-color: #93c5fd; background: #f8fbff; }
-.team-you-badge {
-  margin-left: 0.5rem;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #1d4ed8;
-  background: #dbeafe;
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
-  vertical-align: middle;
-}
 .invite-code-display { font-family: monospace; padding: 0.5rem 0.75rem; background: white; border: 1px solid var(--border); border-radius: 6px; }
 
 /* ── Landing Page ── */

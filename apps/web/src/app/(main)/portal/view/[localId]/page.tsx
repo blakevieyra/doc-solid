@@ -15,6 +15,7 @@ import { DocumentComplianceBar } from "@/components/DocumentComplianceBar";
 import { useProfile } from "@/components/ProfileProvider";
 import { exportDocumentPdf, documentPdfFilename } from "@/lib/pdf/exportDocument";
 import { canUseFeature } from "@/lib/subscription/plans";
+import { resolveDocumentNumber } from "@/lib/documents/document-number";
 import { updateSavedDocumentFields } from "@/lib/documents/persist";
 import { loadShares, getShareById } from "@/lib/team/invites";
 
@@ -64,7 +65,7 @@ function SavedDocumentPageContent() {
       if (doc) {
         setTitle(doc.title);
         setTemplateId(doc.templateId);
-        setDocumentNumber(doc.documentNumber);
+        setDocumentNumber(resolveDocumentNumber(doc) ?? undefined);
         setValues(doc.fieldData as Record<string, string>);
         setDocStatus(doc.status);
         setLoading(false);
@@ -140,6 +141,7 @@ function SavedDocumentPageContent() {
   const fullTemplate = { ...meta, sections: template.sections };
   const relatedShare = shareContext ?? loadShares().find((s) => s.documentId === localId);
   const isSharedPreview = Boolean(relatedShare?.fieldDataSnapshot);
+  const isCompletedShare = Boolean(relatedShare?.completedAt);
   const signHref = relatedShare?.documentTemplateId
     ? `/documents/${relatedShare.documentTemplateId}?localId=${localId}&sign=1&shareId=${relatedShare.id}`
     : null;
@@ -152,7 +154,7 @@ function SavedDocumentPageContent() {
         {isSharedPreview && (
           <p className="editor-desc">
             Document as sent by {relatedShare?.fromName}
-            {relatedShare?.shareType === "signature_request" ? " — read-only preview" : ""}
+            {isCompletedShare ? " — signed and completed" : relatedShare?.shareType === "signature_request" ? " — review and sign" : ""}
           </p>
         )}
         {documentNumber && !isSharedPreview && (
@@ -161,7 +163,7 @@ function SavedDocumentPageContent() {
         <div className="editor-actions portal-view-actions">
           {signHref && relatedShare?.shareType === "signature_request" && (
             <Link href={signHref} className="btn btn-primary">
-              Sign document
+              {isCompletedShare || docStatus === "FINAL" ? "Sign again" : "Sign document"}
             </Link>
           )}
           {signHref && relatedShare?.shareType === "review_request" && (
@@ -171,6 +173,11 @@ function SavedDocumentPageContent() {
           )}
           {!isSharedPreview && (
             <>
+              {(docStatus === "FINAL" || docStatus === "ARCHIVED") && (
+                <Link href={`/documents/${templateId}?localId=${localId}`} className="btn btn-primary">
+                  Sign again
+                </Link>
+              )}
               <Link href={`/documents/${templateId}?localId=${localId}`} className="btn btn-secondary">
                 Edit this copy
               </Link>
@@ -180,14 +187,14 @@ function SavedDocumentPageContent() {
               <button type="button" className="btn btn-secondary" onClick={() => setShowRequestReview(true)}>
                 Request Review
               </button>
-              <button type="button" className="btn btn-secondary" onClick={() => setShowEmail(true)}>
-                Email Document
-              </button>
               <button type="button" className="btn btn-secondary" onClick={() => setShowRequestSig(true)}>
                 Request Signature
               </button>
             </>
           )}
+          <button type="button" className="btn btn-secondary" onClick={() => setShowEmail(true)}>
+            Email Document
+          </button>
           <button type="button" className="btn btn-secondary" onClick={handlePdfExport} disabled={exporting}>
             {exporting ? "Exporting…" : "Download PDF"}
           </button>

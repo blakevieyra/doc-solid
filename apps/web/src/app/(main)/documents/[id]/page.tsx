@@ -42,12 +42,12 @@ import {
 import {
   getSignatureLockMeta,
   isSignatureFilled,
-  isSignatureLocked,
   stampSignatureLock,
 } from "@/lib/documents/signature-lock";
 import { getShareById } from "@/lib/team/invites";
 import { completeShareSigning, markShareOpened, returnShareCorrection } from "@/lib/team/share-document";
-import { commitDocumentNumber, peekNextDocumentNumber } from "@/lib/documents/sequencing";
+import { peekNextDocumentNumber } from "@/lib/documents/sequencing";
+import { ensureDocumentNumber, resolveDocumentNumber } from "@/lib/documents/document-number";
 import { snapshotBrandingIntoValues } from "@/lib/profile/document-branding";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 
@@ -152,7 +152,7 @@ function DocumentEditorPageContent() {
           setDocOwnerId(doc.userId ?? null);
           setSaved(true);
           setDocStatus(doc.status);
-          setAssignedNumber(doc.documentNumber ?? null);
+          setAssignedNumber(resolveDocumentNumber(doc) ?? null);
           setInitialized(true);
           return;
         }
@@ -274,20 +274,10 @@ function DocumentEditorPageContent() {
 
   function setField(fieldId: string, value: string) {
     const field = fullTemplate.sections.flatMap((s) => s.fields).find((f) => f.id === fieldId);
-    if (field?.type === "signature" && isSignatureLocked(fieldId, values)) {
-      if (value !== values[fieldId]) {
-        window.alert("This signature is locked and cannot be changed.");
-        return;
-      }
-    }
 
     setValues((prev) => {
       let next = { ...prev, [fieldId]: value };
-      if (
-        field?.type === "signature" &&
-        !isSignatureFilled(prev[fieldId]) &&
-        isSignatureFilled(value)
-      ) {
+      if (field?.type === "signature" && isSignatureFilled(value)) {
         const isOwnerSig = isOwnerSignatureField(field, meta!.category);
         if (isOwnerSig && !signingMode) {
           const gate = canApplyOwnerSignature(fullTemplate, next);
@@ -298,7 +288,9 @@ function DocumentEditorPageContent() {
             return prev;
           }
         }
-        next = stampSignatureLock(fieldId, next, { email: userEmail, name: userName });
+        if (value !== prev[fieldId]) {
+          next = stampSignatureLock(fieldId, next, { email: userEmail, name: userName });
+        }
       }
       return next;
     });
@@ -316,28 +308,30 @@ function DocumentEditorPageContent() {
     const userId = session?.userId ?? null;
     const accountCode = profile.account.accountId?.slice(0, 8) || undefined;
 
-    let documentNumber = assignedNumber;
-    if (numberFieldId) {
-      const existingNum = values[numberFieldId]?.trim();
-      if (existingNum) {
-        documentNumber = existingNum;
-      } else if (!savedLocalId) {
-        documentNumber = commitDocumentNumber(userId, meta.id, accountCode);
-        setValues((prev) => ({ ...prev, [numberFieldId]: documentNumber! }));
-        setAssignedNumber(documentNumber);
-      }
+    const { documentNumber, fieldData: numberedValues } = ensureDocumentNumber({
+      userId,
+      templateId: meta.id,
+      accountCode,
+      fieldData: values,
+      numberFieldId,
+      existingDocumentNumber: assignedNumber,
+    });
+
+    if (numberFieldId && numberedValues[numberFieldId] !== values[numberFieldId]) {
+      setValues((prev) => ({ ...prev, [numberFieldId]: numberedValues[numberFieldId] }));
+    }
+    if (documentNumber !== assignedNumber) {
+      setAssignedNumber(documentNumber);
     }
 
-    const fieldData = snapshotBrandingIntoValues(
-      documentProfile,
-      numberFieldId && documentNumber
-        ? { ...values, [numberFieldId]: documentNumber }
-        : values
-    );
+    const fieldData = snapshotBrandingIntoValues(documentProfile, numberedValues);
+    const title = `${meta.name} #${documentNumber}`;
 
     if (savedLocalId) {
       const updated = await updateSavedDocumentFields(savedLocalId, fieldData, {
         actor: { email: userEmail, name: userName },
+        documentNumber,
+        title,
       });
       if (!updated) {
         alert("Could not update this document. It may have been removed from your portal.");
@@ -354,13 +348,13 @@ function DocumentEditorPageContent() {
     }
 
     if (signingMode && shareId && editLocalId) {
-      const storage = new IndexedDBStorage();
       const now = new Date().toISOString();
       const doc: LocalDocument = {
         localId: editLocalId,
-        title: `${meta.name} — ${new Date().toLocaleDateString()}`,
+        title,
         templateId: meta.id,
         fieldData,
+        documentNumber,
         domain: meta.domain,
         category: meta.category,
         userId: userId ?? undefined,
@@ -386,20 +380,13 @@ function DocumentEditorPageContent() {
       return;
     }
 
-    if (numberFieldId && !documentNumber) {
-      documentNumber = commitDocumentNumber(userId, meta.id, accountCode);
-      setValues((prev) => ({ ...prev, [numberFieldId]: documentNumber! }));
-      setAssignedNumber(documentNumber);
-    }
-
     const now = new Date().toISOString();
-    const titleSuffix = documentNumber ? ` #${documentNumber}` : ` — ${new Date().toLocaleDateString()}`;
     const doc: LocalDocument = {
       localId: createLocalId(),
-      title: `${meta.name}${titleSuffix}`,
+      title,
       templateId: meta.id,
       fieldData,
-      documentNumber: documentNumber ?? undefined,
+      documentNumber,
       domain: meta.domain,
       category: meta.category,
       userId: userId ?? undefined,
@@ -496,7 +483,6 @@ function DocumentEditorPageContent() {
             <span className="badge badge-common">Next #: {assignedNumber}</span>
           )}
           {!cleanPdf && <span className="badge badge-common">Free — watermarked PDF</span>}
-          <span className="editor-sources">Sources: {meta.primaryResources.join(" · ")}</span>
         </div>
         )}
       </div>
@@ -655,7 +641,6 @@ function DocumentEditorPageContent() {
             return (
             <div key={section.id} className="editor-section">
               <h3 className="section-title">{section.title}</h3>
-              {section.description && <p className="field-help section-desc">{section.description}</p>}
               {section.fields.map((field) => {
                 const sigAccess =
                   field.type === "signature"
@@ -866,7 +851,6 @@ function FieldInput({
             taxRate={taxRate}
             onTotalsChange={onTotalsChange}
           />
-          {field.helpText && <span className="field-help">{field.helpText}</span>}
         </div>
       );
     }
@@ -881,7 +865,6 @@ function FieldInput({
             columns={field.tableColumns}
             addRowLabel={`+ Add ${field.label.replace(/ Entries?$/, "")}`}
           />
-          {field.helpText && <span className="field-help">{field.helpText}</span>}
         </div>
       );
     }
@@ -944,7 +927,6 @@ function FieldInput({
           step={field.type === "currency" ? "0.01" : undefined}
         />
       )}
-      {field.helpText && <span className="field-help">{field.helpText}</span>}
     </div>
   );
 }

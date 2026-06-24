@@ -78,7 +78,6 @@ export const FIELD_BLUEPRINTS = {
     label: "Line Items",
     type: "table" as const,
     required: true,
-    helpText: "Description, quantity, rate, and amount per GAAP invoicing standards",
   },
 
   subtotal: { id: "subtotal", label: "Subtotal", type: "currency" as const },

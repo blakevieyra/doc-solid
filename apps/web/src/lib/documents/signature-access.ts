@@ -25,15 +25,14 @@ export function resolveSignatureFieldAccess(
 ): SignatureFieldAccess {
   if (field.type !== "signature") return "readonly-pending";
 
-  if (isSignatureLocked(field.id, ctx.values)) {
-    return "locked";
-  }
-
   const isOwner = isOwnerSignatureField(field, ctx.docCategory);
   const isCounterparty = isCounterpartySignatureField(field, ctx.docCategory);
 
   if (isOwner) {
     if (ctx.isDocumentOwner) return "owner-sign";
+    if (isSignatureLocked(field.id, ctx.values) && isSignatureFilled(ctx.values[field.id])) {
+      return "locked";
+    }
     return "readonly-pending";
   }
 
@@ -41,10 +40,14 @@ export function resolveSignatureFieldAccess(
     if (ctx.signingMode && ctx.assignedFieldIds.includes(field.id)) {
       return "counterparty-sign";
     }
+    if (isSignatureLocked(field.id, ctx.values) && isSignatureFilled(ctx.values[field.id])) {
+      return "locked";
+    }
     return "readonly-pending";
   }
 
-  return ctx.isDocumentOwner ? "owner-sign" : "readonly-pending";
+  if (ctx.isDocumentOwner) return "owner-sign";
+  return "readonly-pending";
 }
 
 export function emptyCounterpartySignatureFields(

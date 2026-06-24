@@ -10,7 +10,7 @@ import { canUseFeature } from "@/lib/subscription/plans";
 import { canCreateDocumentThisMonth } from "@/lib/documents/limits";
 import { canApplyOwnerSignature } from "@/lib/documents/completeness";
 import { pushCloudDocument } from "@/lib/documents/cloud-sync";
-import { commitDocumentNumber, peekNextDocumentNumber } from "@/lib/documents/sequencing";
+import { ensureDocumentNumber } from "@/lib/documents/document-number";
 import { shouldAutofillOwnerSignature } from "@/lib/profile/signature";
 import { snapshotBrandingIntoValues } from "@/lib/profile/document-branding";
 
@@ -68,26 +68,22 @@ export async function quickSaveTemplate(params: {
     }
   }
 
-  let documentNumber: string | undefined;
-  if (numField) {
-    const next = peekNextDocumentNumber(params.userId, meta.id, accountCode);
-    if (next) {
-      documentNumber = commitDocumentNumber(params.userId, meta.id, accountCode);
-      values[numField] = documentNumber;
-    }
-  }
+  const { documentNumber, fieldData: numberedValues } = ensureDocumentNumber({
+    userId: params.userId,
+    templateId: meta.id,
+    accountCode,
+    fieldData: values,
+    numberFieldId: numField,
+  });
 
   const now = new Date().toISOString();
-  const titleSuffix = documentNumber
-    ? ` #${documentNumber}`
-    : ` — ${new Date().toLocaleDateString()}`;
-  const title = `${meta.name}${titleSuffix}`;
+  const title = `${meta.name} #${documentNumber}`;
 
   const doc: LocalDocument = {
     localId: createLocalId(),
     title,
     templateId: meta.id,
-    fieldData: snapshotBrandingIntoValues(params.profile, values),
+    fieldData: snapshotBrandingIntoValues(params.profile, numberedValues),
     documentNumber,
     domain: meta.domain,
     category: meta.category,
@@ -102,7 +98,7 @@ export async function quickSaveTemplate(params: {
         timestamp: now,
         actorEmail: params.profile.account.email ?? undefined,
         actorName: params.profile.account.displayName ?? undefined,
-        details: "Document created",
+        details: `Document created · ${documentNumber}`,
       },
     ],
   };

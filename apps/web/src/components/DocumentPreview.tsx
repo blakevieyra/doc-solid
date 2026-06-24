@@ -3,6 +3,7 @@
 
 
 import type { DocumentTypeDefinition, TemplateField } from "@doc-solid/documents";
+import { extractDocumentNumberFromValues } from "@doc-solid/documents";
 
 import type { UserProfile } from "@/lib/profile/types";
 
@@ -41,8 +42,7 @@ interface DocumentPreviewProps {
 export function DocumentPreview({ meta, values, profile, previewId }: DocumentPreviewProps) {
 
   const branding = resolveDocumentBranding(profile, values);
-
-  const isLegal = meta.category === "legal";
+  const displayNumber = extractDocumentNumberFromValues(values);
 
 
 
@@ -82,10 +82,8 @@ export function DocumentPreview({ meta, values, profile, previewId }: DocumentPr
 
           <h2 className="doc-preview-title">{meta.name.toUpperCase()}</h2>
 
-          {values.documentNumber && (
-
-            <p><span className="doc-label">No.</span> {values.documentNumber || values.invoiceNumber}</p>
-
+          {displayNumber && (
+            <p><span className="doc-label">No.</span> {displayNumber}</p>
           )}
 
           {(values.documentDate || values.invoiceDate) && (
@@ -125,18 +123,6 @@ export function DocumentPreview({ meta, values, profile, previewId }: DocumentPr
         />
 
       ))}
-
-
-
-      {isLegal && (
-
-        <footer className="doc-preview-legal">
-
-          <p>This document was prepared using industry-standard templates. Consult qualified legal counsel before signing binding agreements.</p>
-
-        </footer>
-
-      )}
 
 
 
@@ -219,12 +205,6 @@ function SectionPreview({
     <section className="doc-preview-section">
 
       <h3 className="doc-preview-section-title">{section.title}</h3>
-
-      {section.description && (
-
-        <p className="doc-preview-section-desc">{section.description}</p>
-
-      )}
 
 
 

@@ -8,6 +8,8 @@ export async function updateSavedDocumentFields(
   fieldData: Record<string, string>,
   options?: {
     status?: LocalDocument["status"];
+    documentNumber?: string;
+    title?: string;
     actor?: DocumentActor;
     auditDetails?: string;
   }
@@ -27,6 +29,8 @@ export async function updateSavedDocumentFields(
     fieldData: protectedData,
     updatedAt: new Date().toISOString(),
     ...(options?.status ? { status: options.status } : {}),
+    ...(options?.documentNumber ? { documentNumber: options.documentNumber } : {}),
+    ...(options?.title ? { title: options.title } : {}),
   };
 
   if (options?.status && options.status !== doc.status) {

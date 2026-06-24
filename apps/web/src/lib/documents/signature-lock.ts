@@ -67,6 +67,11 @@ export function mergeProtectedSignatures(
       if (field.type !== "signature") continue;
       const id = field.id;
       if (!isSignatureLocked(id, existing)) continue;
+      const incomingVal = incoming[id];
+      const existingVal = existing[id];
+      if (incomingVal !== existingVal && isSignatureFilled(incomingVal)) {
+        continue;
+      }
       next[id] = existing[id]!;
       const metaKey = signatureMetaKey(id);
       if (existing[metaKey]) next[metaKey] = existing[metaKey]!;
