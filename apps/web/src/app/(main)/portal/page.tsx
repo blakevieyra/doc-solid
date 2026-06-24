@@ -34,9 +34,13 @@ import { useAuth } from "@/components/AuthProvider";
 
 import { useProfile } from "@/components/ProfileProvider";
 
-import { getSharesForEmail } from "@/lib/team/invites";
 import type { DocumentShare } from "@/lib/team/invites";
-import { getShareAuditLabel } from "@/lib/team/share-document";
+import {
+  getShareAuditLabel,
+  keepShare,
+  shareWasReturnedBy,
+} from "@/lib/team/share-document";
+import { loadSharesForRecipient } from "@/lib/team/shares-sync";
 
 const FAVORITES_FILTER = "__favorites__";
 
@@ -144,9 +148,16 @@ export default function PortalPage() {
 
     const email = session?.email ?? "";
 
-    if (email) setShares(getSharesForEmail(email));
+    if (email) {
+      void loadSharesForRecipient(email, authMode ?? "local").then(setShares);
+    }
 
   }, [session?.email, session?.userId, authMode]);
+
+  function refreshShares() {
+    const email = session?.email ?? "";
+    if (email) void loadSharesForRecipient(email, authMode ?? "local").then(setShares);
+  }
 
 
 
@@ -264,102 +275,137 @@ export default function PortalPage() {
   }
 
   function renderShareItem(s: DocumentShare, archived: boolean) {
-    const activityOpen = expandedShares[s.id] ?? false;
+    const rowExpanded = expandedShares[s.id] === true;
     const auditLog = s.auditLog ?? [];
     const latestAudit = auditLog[auditLog.length - 1];
-    const canPreview = Boolean(s.documentTemplateId && s.fieldDataSnapshot);
-    const canSign = canPreview && !archived;
+    const canOpen = Boolean(s.documentTemplateId && s.fieldDataSnapshot);
     const previewHref = `/portal/view/${s.documentId}?shareId=${s.id}`;
     const signHref =
-      canSign && s.documentTemplateId
+      canOpen && !archived && s.documentTemplateId
         ? `/documents/${s.documentTemplateId}?localId=${s.documentId}&sign=1&shareId=${s.id}`
         : null;
-    const canReturn = !archived && (s.shareType === "signature_request" || s.shareType === "review_request");
+    const returnedByMe = shareWasReturnedBy(s, userEmail);
+    const showReturn =
+      !archived &&
+      !returnedByMe &&
+      (s.shareType === "signature_request" || s.shareType === "review_request");
+    const primaryLabel =
+      s.shareType === "signature_request"
+        ? "Sign"
+        : s.shareType === "review_request"
+          ? "Review"
+          : "Open";
+    const primaryHref = signHref ?? (canOpen ? previewHref : null);
+
+    function handleKeep() {
+      keepShare(s.id, { email: userEmail, name: userName });
+      refreshShares();
+    }
 
     return (
-      <li key={s.id} className={`share-inbox-item${archived ? " share-inbox-item-archived" : ""}`}>
-        <div className="share-inbox-main">
-          <strong>{s.documentTitle}</strong>
-          {archived && <span className="share-inbox-badge share-inbox-badge-archived">Completed</span>}
-          {!archived && s.shareType === "signature_request" && (
-            <span className="share-inbox-badge">Signature requested</span>
-          )}
-          {!archived && s.shareType === "review_request" && (
-            <span className="share-inbox-badge">Review requested</span>
-          )}
-          <span>
-            From {s.fromName} · {new Date(s.createdAt).toLocaleDateString()}
-            {archived && s.completedAt
-              ? ` · Completed ${new Date(s.completedAt).toLocaleDateString()}`
-              : ""}
-          </span>
-          {latestAudit && (
-            <p className="doc-audit-latest">
-              <strong>{getShareAuditLabel(latestAudit)}</strong>
-              {" · "}
-              {new Date(latestAudit.timestamp).toLocaleString()}
-              {latestAudit.actorName ? ` · ${latestAudit.actorName}` : ""}
-            </p>
-          )}
-          {s.message && <p className="field-help">{s.message}</p>}
-          {auditLog.length > 0 && (
-            <button
-              type="button"
-              className="share-activity-toggle"
-              onClick={() => setExpandedShares((prev) => ({ ...prev, [s.id]: !activityOpen }))}
-              aria-expanded={activityOpen}
-            >
-              Audit trail ({auditLog.length}) {activityOpen ? "▾" : "▸"}
-            </button>
-          )}
-          {activityOpen && auditLog.length > 0 && (
-            <ul className="share-audit-log">
-              {[...auditLog].reverse().map((event, i) => (
-                <li key={`${event.type}-${event.timestamp}-${i}`}>
-                  <strong>{getShareAuditLabel(event)}</strong>
-                  {" · "}
-                  {new Date(event.timestamp).toLocaleString()}
-                  {event.actorName ? ` · ${event.actorName}` : ""}
-                  {event.details ? ` — ${event.details}` : ""}
-                </li>
-              ))}
-            </ul>
-          )}
-          {!canPreview && (
-            <p className="field-help share-resend-hint">
-              This share has no saved document snapshot. Ask {s.fromName} to re-send it.
-            </p>
+      <li
+        key={s.id}
+        className={`share-inbox-item share-inbox-item-row${archived ? " share-inbox-item-archived" : ""}${rowExpanded ? " expanded" : ""}`}
+      >
+        <div className="share-inbox-row">
+          <button
+            type="button"
+            className="share-inbox-expand"
+            onClick={() => setExpandedShares((prev) => ({ ...prev, [s.id]: !rowExpanded }))}
+            aria-expanded={rowExpanded}
+            aria-label={rowExpanded ? "Collapse details" : "Expand details"}
+          >
+            {rowExpanded ? "▾" : "▸"}
+          </button>
+
+          <div className="share-inbox-summary">
+            <span className="share-inbox-title-line">
+              <strong>{s.documentTitle}</strong>
+              {archived && (
+                <span className="share-inbox-badge share-inbox-badge-archived">Completed</span>
+              )}
+              {!archived && s.shareType === "signature_request" && (
+                <span className="share-inbox-badge">Signature requested</span>
+              )}
+              {!archived && s.shareType === "review_request" && (
+                <span className="share-inbox-badge">Review requested</span>
+              )}
+            </span>
+            <span className="share-inbox-oneline">
+              From {s.fromName} · {new Date(s.createdAt).toLocaleDateString()}
+              {latestAudit ? ` · ${getShareAuditLabel(latestAudit)}` : ""}
+              {returnedByMe ? " · Returned" : ""}
+            </span>
+          </div>
+
+          {!archived && (
+            <div className="share-inbox-actions">
+              {primaryHref ? (
+                <Link href={primaryHref} className="btn btn-primary btn-sm">
+                  {primaryLabel}
+                </Link>
+              ) : (
+                <span
+                  className="btn btn-primary btn-sm"
+                  style={{ opacity: 0.45, pointerEvents: "none" }}
+                  title="No document snapshot — ask sender to re-send"
+                >
+                  Unavailable
+                </span>
+              )}
+              {showReturn ? (
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => setReturnShare(s)}>
+                  Return
+                </button>
+              ) : returnedByMe ? (
+                <span className="btn btn-secondary btn-sm" style={{ opacity: 0.45, pointerEvents: "none" }}>
+                  Returned
+                </span>
+              ) : null}
+              <button type="button" className="btn btn-secondary btn-sm" onClick={handleKeep}>
+                Keep
+              </button>
+            </div>
           )}
         </div>
-        <div className="share-inbox-actions">
-          {!archived && signHref ? (
-            <Link href={signHref} className="btn btn-primary btn-sm">
-              {s.shareType === "signature_request"
-                ? "Sign document"
-                : s.shareType === "review_request"
-                  ? "Review document"
-                  : "Open"}
-            </Link>
-          ) : !archived ? (
-            <span className="btn btn-primary btn-sm" style={{ opacity: 0.45, pointerEvents: "none" }}>
-              Unavailable
-            </span>
-          ) : null}
-          {canPreview ? (
-            <Link href={previewHref} className="btn btn-secondary btn-sm">
-              Preview
-            </Link>
-          ) : (
-            <span className="btn btn-secondary btn-sm" style={{ opacity: 0.45, pointerEvents: "none" }}>
-              Preview
-            </span>
-          )}
-          {canReturn && (
-            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setReturnShare(s)}>
-              Return
-            </button>
-          )}
-        </div>
+
+        {rowExpanded && (
+          <div className="share-inbox-details">
+            {s.message && <p className="field-help">{s.message}</p>}
+            {archived && s.completedAt && (
+              <p className="field-help">
+                Completed {new Date(s.completedAt).toLocaleDateString()}
+              </p>
+            )}
+            {latestAudit && (
+              <p className="doc-audit-latest">
+                <strong>{getShareAuditLabel(latestAudit)}</strong>
+                {" · "}
+                {new Date(latestAudit.timestamp).toLocaleString()}
+                {latestAudit.actorName ? ` · ${latestAudit.actorName}` : ""}
+                {latestAudit.details ? ` — ${latestAudit.details}` : ""}
+              </p>
+            )}
+            {auditLog.length > 0 && (
+              <ul className="share-audit-log">
+                {[...auditLog].reverse().map((event, i) => (
+                  <li key={`${event.type}-${event.timestamp}-${i}`}>
+                    <strong>{getShareAuditLabel(event)}</strong>
+                    {" · "}
+                    {new Date(event.timestamp).toLocaleString()}
+                    {event.actorName ? ` · ${event.actorName}` : ""}
+                    {event.details ? ` — ${event.details}` : ""}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {!canOpen && (
+              <p className="field-help share-resend-hint">
+                This share has no saved document snapshot. Ask {s.fromName} to re-send it from My Files using Send.
+              </p>
+            )}
+          </div>
+        )}
       </li>
     );
   }
@@ -755,10 +801,7 @@ export default function PortalPage() {
         <ReturnShareModal
           share={returnShare}
           onClose={() => setReturnShare(null)}
-          onReturned={() => {
-            const email = session?.email ?? "";
-            if (email) setShares(getSharesForEmail(email));
-          }}
+          onReturned={refreshShares}
         />
       )}
 

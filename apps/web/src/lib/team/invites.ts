@@ -9,7 +9,14 @@ export interface TeamInvite {
   expiresAt: string;
 }
 
-export type ShareAuditEventType = "sent" | "received" | "opened" | "signed" | "completed" | "correction_requested";
+export type ShareAuditEventType =
+  | "sent"
+  | "received"
+  | "opened"
+  | "signed"
+  | "completed"
+  | "correction_requested"
+  | "kept";
 
 export interface ShareAuditEvent {
   type: ShareAuditEventType;

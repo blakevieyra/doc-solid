@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useProfile } from "./ProfileProvider";
 import { useNotifications } from "./NotificationProvider";
 import { EmailRecipientPicker, useEmailRecipientSelection } from "@/components/EmailRecipientPicker";
-import { saveShare } from "@/lib/team/invites";
+import { saveShareWithDocument } from "@/lib/team/share-document";
 import { canUseFeature } from "@/lib/subscription/plans";
 import {
   documentPdfFilename,
@@ -125,14 +125,15 @@ export function EmailDocumentModal({
         for (const email of selectedEmails) {
           const member = profile.team.members.find((m) => m.email.toLowerCase() === email.toLowerCase())
             ?? profile.library?.contacts?.find((c) => c.email.toLowerCase() === email.toLowerCase());
-          saveShare({
+          await saveShareWithDocument({
             documentTitle,
             documentId,
             fromName: senderName,
             fromEmail: senderEmail ?? "",
             toEmail: email,
             toName: member?.name ?? email,
-            message,
+            message: message.trim() || undefined,
+            shareType: "share",
           });
         }
       }
