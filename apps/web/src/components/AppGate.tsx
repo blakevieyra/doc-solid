@@ -5,7 +5,7 @@ import { useProfile } from "./ProfileProvider";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-const AUTH_PUBLIC = ["/login", "/signup"];
+const AUTH_PUBLIC = ["/login", "/signup", "/forgot-password", "/reset-password"];
 const APP_PUBLIC = ["/onboarding", "/onboarding/success", "/join-team"];
 const MARKETING_PUBLIC = ["/", "/help"];
 
