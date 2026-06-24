@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { CATALOG_STATS } from "@doc-solid/documents";
 import { BrandLogo } from "@/components/BrandLogo";
+import { LandingHeroIntro } from "@/components/landing/LandingHeroIntro";
+import { LandingHeroCta } from "@/components/landing/LandingHeroCta";
+import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions";
 import { PLANS, getPlan, ENTERPRISE_PLAN } from "@/lib/subscription/plans";
 import { FAQ_ITEMS, SALES_EMAIL, SUPPORT_EMAIL } from "@/lib/support/config";
 import {
@@ -67,29 +70,20 @@ export default function HomePage() {
       <header className="landing-header">
         <div className="container landing-header-inner">
           <BrandLogo href="/" size="sm" />
-          <nav className="landing-nav">
-            <Link href="/help">Help</Link>
-            <a href="#faq">FAQ</a>
-            <Link href="/login">Sign In</Link>
-            <Link href="/signup" className="btn btn-primary">Start Free</Link>
-          </nav>
+          <LandingHeaderActions />
         </div>
       </header>
 
       <main>
         <section className="landing-hero">
           <div className="container">
-            <BrandLogo href="/" size="xl" className="landing-hero-logo" />
-            <div className="landing-hero-badge">Trusted document workflow</div>
+            <LandingHeroIntro />
             <h1>Professional documents<br />for your business</h1>
             <p>
               Build, fill, print, email, and save {CATALOG_STATS.total}+ document types.
               Cloud sync with offline access. Multi-user teams supported.
             </p>
-            <div className="landing-cta-row">
-              <Link href="/signup" className="btn btn-primary btn-lg">Create Free Account</Link>
-              <Link href="/login" className="btn btn-secondary btn-lg">Sign In</Link>
-            </div>
+            <LandingHeroCta />
           </div>
         </section>
 

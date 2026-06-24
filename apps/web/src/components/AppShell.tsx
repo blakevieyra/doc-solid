@@ -7,6 +7,7 @@ import { useAuth } from "./AuthProvider";
 import { useProfile } from "./ProfileProvider";
 import { useNotifications } from "./NotificationProvider";
 import { BrandLogo } from "./BrandLogo";
+import { getEffectiveSubscription } from "@/lib/subscription/plans";
 
 export function AppShell({
   title,
@@ -28,6 +29,7 @@ export function AppShell({
 
   const logo = profile.business.logo ?? profile.organization.logo;
   const displayName = user?.name?.split(" ")[0] ?? "User";
+  const isPro = getEffectiveSubscription(profile.subscription).isProActive;
 
   useEffect(() => {
     function close(e: MouseEvent | TouchEvent) {
@@ -77,6 +79,11 @@ export function AppShell({
             <Link href="/team" onClick={() => setMenuOpen(false)}>Team</Link>
             <Link href="/profile" onClick={() => setMenuOpen(false)}>Profile</Link>
             <Link href="/help" onClick={() => setMenuOpen(false)}>Help</Link>
+            {!isPro && (
+              <Link href="/profile?tab=billing" onClick={() => setMenuOpen(false)} className="app-nav-go-pro">
+                Go Pro
+              </Link>
+            )}
             {menuOpen && (
               <div className="mobile-nav-footer">
                 <Link href="/profile?tab=security" className="btn btn-secondary btn-block" onClick={() => setMenuOpen(false)}>
