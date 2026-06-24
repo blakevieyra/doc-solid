@@ -336,7 +336,9 @@ function DocumentEditorPageContent() {
     );
 
     if (savedLocalId) {
-      const updated = await updateSavedDocumentFields(savedLocalId, fieldData);
+      const updated = await updateSavedDocumentFields(savedLocalId, fieldData, {
+        actor: { email: userEmail, name: userName },
+      });
       if (!updated) {
         alert("Could not update this document. It may have been removed from your portal.");
         return;

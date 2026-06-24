@@ -1,5 +1,24 @@
 export type SyncAction = "CREATE" | "UPDATE" | "DELETE";
 
+export type DocumentAuditEventType =
+  | "created"
+  | "saved"
+  | "status_changed"
+  | "shared"
+  | "signed"
+  | "opened"
+  | "archived"
+  | "returned"
+  | "emailed";
+
+export interface DocumentAuditEvent {
+  type: DocumentAuditEventType;
+  timestamp: string;
+  actorEmail?: string;
+  actorName?: string;
+  details?: string;
+}
+
 export interface LocalDocument {
   localId: string;
   cloudId?: string;
@@ -16,6 +35,7 @@ export interface LocalDocument {
   createdAt?: string;
   updatedAt: string;
   syncStatus: "SYNCED" | "PENDING" | "CONFLICT" | "LOCAL_ONLY";
+  auditLog?: DocumentAuditEvent[];
 }
 
 export interface DocumentSearchFilters {

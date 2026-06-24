@@ -96,6 +96,15 @@ export async function quickSaveTemplate(params: {
     createdAt: now,
     updatedAt: now,
     syncStatus: "LOCAL_ONLY",
+    auditLog: [
+      {
+        type: "created",
+        timestamp: now,
+        actorEmail: params.profile.account.email ?? undefined,
+        actorName: params.profile.account.displayName ?? undefined,
+        details: "Document created",
+      },
+    ],
   };
 
   await storage.saveDocument(doc);

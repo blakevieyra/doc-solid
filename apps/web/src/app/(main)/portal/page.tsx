@@ -54,9 +54,14 @@ import { syncDocumentsFromCloud } from "@/lib/documents/cloud-sync";
 import { PortalCompliancePanel, PortalScanButton } from "@/components/PortalCompliancePanel";
 
 import { AISecurityScanModal } from "@/components/AISecurityScanModal";
+import { DocumentAuditTrail } from "@/components/DocumentAuditTrail";
+import { ReturnShareModal } from "@/components/ReturnShareModal";
+import { SendToContactModal } from "@/components/SendToContactModal";
+import { AddToPacketModal } from "@/components/AddToPacketModal";
 import { canUseFeature } from "@/lib/subscription/plans";
-import { updateSavedDocumentFields } from "@/lib/documents/persist";
+import { archiveSavedDocument, updateSavedDocumentFields } from "@/lib/documents/persist";
 import { getFavoriteTemplateIds } from "@/lib/documents/favorites";
+import { createDocumentAuditEvent } from "@/lib/documents/audit";
 
 
 
@@ -85,10 +90,18 @@ export default function PortalPage() {
 
   const [scanDoc, setScanDoc] = useState<LocalDocument | null>(null);
   const [expandedShares, setExpandedShares] = useState<Record<string, boolean>>({});
+  const [returnShare, setReturnShare] = useState<DocumentShare | null>(null);
+  const [sendTarget, setSendTarget] = useState<{ doc: LocalDocument; mode: "share" | "signature" } | null>(null);
+  const [packetDoc, setPacketDoc] = useState<LocalDocument | null>(null);
+  const [archivingId, setArchivingId] = useState<string | null>(null);
 
 
 
   const pro = canUseFeature(profile.subscription, "aiSecurityScan");
+  const teamSharing = canUseFeature(profile.subscription, "teamSharing");
+  const userEmail = session?.email ?? profile.account.email ?? "";
+  const userName = session?.name ?? profile.account.displayName ?? "You";
+  const actor = { email: userEmail, name: userName };
   const favoriteTemplateIds = getFavoriteTemplateIds(profile);
 
   const favoriteSavedDocs = useMemo(
@@ -231,15 +244,37 @@ export default function PortalPage() {
     [typeCounts]
   );
 
+  function documentAuditEvents(doc: LocalDocument) {
+    if (doc.auditLog?.length) return doc.auditLog;
+    const fallback = [];
+    if (doc.createdAt) {
+      fallback.push({ ...createDocumentAuditEvent("created", actor, "Document created"), timestamp: doc.createdAt });
+    }
+    fallback.push({ ...createDocumentAuditEvent("saved", actor, `Status: ${doc.status}`), timestamp: doc.updatedAt });
+    return fallback;
+  }
+
+  async function handleArchiveDocument(doc: LocalDocument) {
+    setArchivingId(doc.localId);
+    const updated = await archiveSavedDocument(doc.localId, actor);
+    if (updated) {
+      setDocuments((prev) => prev.map((d) => (d.localId === updated.localId ? updated : d)));
+    }
+    setArchivingId(null);
+  }
+
   function renderShareItem(s: DocumentShare, archived: boolean) {
     const activityOpen = expandedShares[s.id] ?? false;
-    const activityCount = s.auditLog?.length ?? 0;
+    const auditLog = s.auditLog ?? [];
+    const latestAudit = auditLog[auditLog.length - 1];
     const canPreview = Boolean(s.documentTemplateId && s.fieldDataSnapshot);
+    const canSign = canPreview && !archived;
     const previewHref = `/portal/view/${s.documentId}?shareId=${s.id}`;
     const signHref =
-      !archived && s.documentTemplateId
+      canSign && s.documentTemplateId
         ? `/documents/${s.documentTemplateId}?localId=${s.documentId}&sign=1&shareId=${s.id}`
         : null;
+    const canReturn = !archived && (s.shareType === "signature_request" || s.shareType === "review_request");
 
     return (
       <li key={s.id} className={`share-inbox-item${archived ? " share-inbox-item-archived" : ""}`}>
@@ -258,20 +293,28 @@ export default function PortalPage() {
               ? ` · Completed ${new Date(s.completedAt).toLocaleDateString()}`
               : ""}
           </span>
+          {latestAudit && (
+            <p className="doc-audit-latest">
+              <strong>{getShareAuditLabel(latestAudit)}</strong>
+              {" · "}
+              {new Date(latestAudit.timestamp).toLocaleString()}
+              {latestAudit.actorName ? ` · ${latestAudit.actorName}` : ""}
+            </p>
+          )}
           {s.message && <p className="field-help">{s.message}</p>}
-          {activityCount > 0 && (
+          {auditLog.length > 0 && (
             <button
               type="button"
               className="share-activity-toggle"
               onClick={() => setExpandedShares((prev) => ({ ...prev, [s.id]: !activityOpen }))}
               aria-expanded={activityOpen}
             >
-              Activity ({activityCount}) {activityOpen ? "▾" : "▸"}
+              Audit trail ({auditLog.length}) {activityOpen ? "▾" : "▸"}
             </button>
           )}
-          {activityOpen && s.auditLog && s.auditLog.length > 0 && (
+          {activityOpen && auditLog.length > 0 && (
             <ul className="share-audit-log">
-              {s.auditLog.map((event, i) => (
+              {[...auditLog].reverse().map((event, i) => (
                 <li key={`${event.type}-${event.timestamp}-${i}`}>
                   <strong>{getShareAuditLabel(event)}</strong>
                   {" · "}
@@ -288,28 +331,35 @@ export default function PortalPage() {
             </p>
           )}
         </div>
-        {!archived && signHref ? (
-          <Link href={signHref} className="btn btn-primary btn-sm">
-            {s.shareType === "signature_request"
-              ? "Sign document"
-              : s.shareType === "review_request"
-                ? "Review document"
-                : "Open"}
-          </Link>
-        ) : !archived ? (
-          <span className="btn btn-primary btn-sm" style={{ opacity: 0.45, pointerEvents: "none" }}>
-            Unavailable
-          </span>
-        ) : null}
-        {canPreview ? (
-          <Link href={previewHref} className="btn btn-secondary btn-sm">
-            Preview
-          </Link>
-        ) : (
-          <span className="btn btn-secondary btn-sm" style={{ opacity: 0.45, pointerEvents: "none" }}>
-            Preview
-          </span>
-        )}
+        <div className="share-inbox-actions">
+          {!archived && signHref ? (
+            <Link href={signHref} className="btn btn-primary btn-sm">
+              {s.shareType === "signature_request"
+                ? "Sign document"
+                : s.shareType === "review_request"
+                  ? "Review document"
+                  : "Open"}
+            </Link>
+          ) : !archived ? (
+            <span className="btn btn-primary btn-sm" style={{ opacity: 0.45, pointerEvents: "none" }}>
+              Unavailable
+            </span>
+          ) : null}
+          {canPreview ? (
+            <Link href={previewHref} className="btn btn-secondary btn-sm">
+              Preview
+            </Link>
+          ) : (
+            <span className="btn btn-secondary btn-sm" style={{ opacity: 0.45, pointerEvents: "none" }}>
+              Preview
+            </span>
+          )}
+          {canReturn && (
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setReturnShare(s)}>
+              Return
+            </button>
+          )}
+        </div>
       </li>
     );
   }
@@ -393,9 +443,9 @@ export default function PortalPage() {
 
           {(portalFilter === "all" || portalFilter === "ARCHIVED") && archivedShares.length > 0 && (
             <>
-              <h3 className="share-inbox-subtitle share-inbox-subtitle-archived">Archived</h3>
+              <h3 className="share-inbox-subtitle share-inbox-subtitle-archived">Completed shares</h3>
               <p className="field-help share-archived-hint">
-                Completed signature and review requests are archived here for your records.
+                Signed and reviewed documents are archived here for your records.
               </p>
               <ul className="share-inbox-list">
                 {archivedShares.map((s) => renderShareItem(s, true))}
@@ -622,9 +672,49 @@ export default function PortalPage() {
 
                 <p className="portal-file-date">{new Date(doc.updatedAt).toLocaleString()}</p>
 
+                <DocumentAuditTrail events={documentAuditEvents(doc)} compact />
+
                 <div className="portal-file-actions">
 
                   <Link href={`/portal/view/${doc.localId}`} className="btn btn-primary btn-sm">Open</Link>
+
+                  {teamSharing && (
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => setSendTarget({ doc, mode: "share" })}
+                      >
+                        Send
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => setSendTarget({ doc, mode: "signature" })}
+                      >
+                        Sign
+                      </button>
+                    </>
+                  )}
+
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => setPacketDoc(doc)}
+                  >
+                    Packet
+                  </button>
+
+                  {doc.status === "FINAL" && (
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      disabled={archivingId === doc.localId}
+                      onClick={() => void handleArchiveDocument(doc)}
+                    >
+                      {archivingId === doc.localId ? "Archiving…" : "Archive"}
+                    </button>
+                  )}
 
                   <PortalScanButton doc={doc} pro={pro} onScan={() => setScanDoc(doc)} />
 
@@ -652,12 +742,41 @@ export default function PortalPage() {
           values={scanDoc.fieldData as Record<string, string>}
           onClose={() => setScanDoc(null)}
           onRedact={async (redacted) => {
-            const updated = await updateSavedDocumentFields(scanDoc.localId, redacted);
+            const updated = await updateSavedDocumentFields(scanDoc.localId, redacted, { actor });
             if (updated) {
               setDocuments((prev) => prev.map((d) => (d.localId === updated.localId ? updated : d)));
             }
             setScanDoc(null);
           }}
+        />
+      )}
+
+      {returnShare && (
+        <ReturnShareModal
+          share={returnShare}
+          onClose={() => setReturnShare(null)}
+          onReturned={() => {
+            const email = session?.email ?? "";
+            if (email) setShares(getSharesForEmail(email));
+          }}
+        />
+      )}
+
+      {sendTarget && (
+        <SendToContactModal
+          mode={sendTarget.mode}
+          documentTitle={sendTarget.doc.title}
+          documentId={sendTarget.doc.localId}
+          documentTemplateId={sendTarget.doc.templateId}
+          onClose={() => setSendTarget(null)}
+        />
+      )}
+
+      {packetDoc && (
+        <AddToPacketModal
+          localId={packetDoc.localId}
+          documentTitle={packetDoc.title}
+          onClose={() => setPacketDoc(null)}
         />
       )}
 

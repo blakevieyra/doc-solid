@@ -1,11 +1,16 @@
 import { IndexedDBStorage, type LocalDocument } from "@doc-solid/storage";
 import { generateTemplate, getDocumentById } from "@doc-solid/documents";
+import { appendDocumentAudit, type DocumentActor } from "./audit";
 import { mergeProtectedSignatures } from "./signature-lock";
 
 export async function updateSavedDocumentFields(
   localId: string,
   fieldData: Record<string, string>,
-  options?: { status?: LocalDocument["status"] }
+  options?: {
+    status?: LocalDocument["status"];
+    actor?: DocumentActor;
+    auditDetails?: string;
+  }
 ): Promise<LocalDocument | null> {
   const storage = new IndexedDBStorage();
   const doc = await storage.getDocument(localId);
@@ -17,12 +22,52 @@ export async function updateSavedDocumentFields(
     ? mergeProtectedSignatures(fieldData, doc.fieldData as Record<string, string>, template)
     : fieldData;
 
-  const updated: LocalDocument = {
+  let updated: LocalDocument = {
     ...doc,
     fieldData: protectedData,
     updatedAt: new Date().toISOString(),
     ...(options?.status ? { status: options.status } : {}),
   };
+
+  if (options?.status && options.status !== doc.status) {
+    updated = appendDocumentAudit(
+      updated,
+      options.status === "ARCHIVED" ? "archived" : "status_changed",
+      options?.actor,
+      options?.auditDetails ?? `Status → ${options.status}`
+    );
+  } else {
+    updated = appendDocumentAudit(
+      updated,
+      "saved",
+      options?.actor,
+      options?.auditDetails ?? "Document saved"
+    );
+  }
+
+  await storage.saveDocument(updated);
+  return updated;
+}
+
+export async function archiveSavedDocument(
+  localId: string,
+  actor?: DocumentActor
+): Promise<LocalDocument | null> {
+  const storage = new IndexedDBStorage();
+  const doc = await storage.getDocument(localId);
+  if (!doc) return null;
+  if (doc.status === "ARCHIVED") return doc;
+
+  const updated = appendDocumentAudit(
+    {
+      ...doc,
+      status: "ARCHIVED",
+      updatedAt: new Date().toISOString(),
+    },
+    "archived",
+    actor,
+    "Moved to archive"
+  );
   await storage.saveDocument(updated);
   return updated;
 }

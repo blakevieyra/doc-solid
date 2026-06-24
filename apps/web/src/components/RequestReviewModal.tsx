@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useProfile } from "./ProfileProvider";
 import { useAuth } from "./AuthProvider";
 import { useNotifications } from "./NotificationProvider";
-import { saveShare } from "@/lib/team/invites";
+import { saveShareWithDocument } from "@/lib/team/share-document";
+import { recordDocumentShareAudit } from "@/lib/documents/share-audit";
 import { canUseFeature } from "@/lib/subscription/plans";
 
 export interface RequestReviewModalProps {
@@ -67,28 +68,31 @@ export function RequestReviewModal({
     const fromName = session?.name ?? profile.account.displayName ?? "DocSolid User";
     const fromEmail = session?.email ?? profile.account.email ?? "";
 
-    for (const email of selected) {
-      const recipient = recipients.find((r) => r.email === email);
-      saveShare({
-        documentTitle,
-        documentId,
-        fromName,
-        fromEmail,
-        toEmail: email,
-        toName: recipient?.name ?? email,
-        message: message.trim() || "Review requested",
-        shareType: "review_request",
+    void (async () => {
+      for (const email of selected) {
+        const recipient = recipients.find((r) => r.email === email);
+        await saveShareWithDocument({
+          documentTitle,
+          documentId,
+          fromName,
+          fromEmail,
+          toEmail: email,
+          toName: recipient?.name ?? email,
+          message: message.trim() || "Review requested",
+          shareType: "review_request",
+        });
+      }
+      await recordDocumentShareAudit(documentId, selected, fromEmail, fromName, "share");
+
+      notify({
+        type: "share",
+        title: "Review requested",
+        message: `Sent "${documentTitle}" to ${selected.length} reviewer(s)`,
       });
-    }
 
-    notify({
-      type: "share",
-      title: "Review requested",
-      message: `Sent "${documentTitle}" to ${selected.length} reviewer(s)`,
-    });
-
-    setSent(true);
-    setTimeout(onClose, 1400);
+      setSent(true);
+      setTimeout(onClose, 1400);
+    })();
   }
 
   return (
