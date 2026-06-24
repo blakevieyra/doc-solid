@@ -40,9 +40,16 @@ import { getShareAuditLabel } from "@/lib/team/share-document";
 
 const FAVORITES_FILTER = "__favorites__";
 
-import { syncDocumentsFromCloud } from "@/lib/documents/cloud-sync";
+type PortalFilter =
+  | "all"
+  | "types"
+  | "waiting_signature"
+  | "DRAFT"
+  | "FINAL"
+  | "ARCHIVED"
+  | typeof FAVORITES_FILTER;
 
-import { getSequenceStats } from "@/lib/documents/sequencing";
+import { syncDocumentsFromCloud } from "@/lib/documents/cloud-sync";
 
 import { PortalCompliancePanel, PortalScanButton } from "@/components/PortalCompliancePanel";
 
@@ -74,6 +81,7 @@ export default function PortalPage() {
   const [templateId, setTemplateId] = useState("all");
 
   const [status, setStatus] = useState("all");
+  const [portalFilter, setPortalFilter] = useState<PortalFilter>("all");
 
   const [scanDoc, setScanDoc] = useState<LocalDocument | null>(null);
   const [expandedShares, setExpandedShares] = useState<Record<string, boolean>>({});
@@ -131,18 +139,30 @@ export default function PortalPage() {
 
   const typeCounts = useMemo(() => documentTypeCounts(documents), [documents]);
 
-  const sequenceStats = useMemo(
-
-    () => getSequenceStats(session?.userId ?? null),
-
-    [session?.userId, documents]
-
-  );
-
-
+  function selectPortalFilter(next: PortalFilter) {
+    setPortalFilter(next);
+    if (next === "DRAFT" || next === "FINAL" || next === "ARCHIVED") {
+      setStatus(next);
+      setTemplateId("all");
+    } else {
+      setStatus("all");
+    }
+    if (next === FAVORITES_FILTER) {
+      setTemplateId(FAVORITES_FILTER);
+    } else if (next !== "types") {
+      setTemplateId("all");
+    }
+  }
 
   const filtered = useMemo(
     () => {
+      const effectiveStatus =
+        portalFilter === "DRAFT" || portalFilter === "FINAL" || portalFilter === "ARCHIVED"
+          ? portalFilter
+          : status === "all"
+            ? undefined
+            : (status as LocalDocument["status"]);
+
       const base = searchDocuments(documents, {
         query: query || undefined,
         domain: domain === "all" ? undefined : domain,
@@ -151,7 +171,7 @@ export default function PortalPage() {
           templateId === "all" || templateId === FAVORITES_FILTER
             ? undefined
             : templateId,
-        status: status === "all" ? undefined : (status as LocalDocument["status"]),
+        status: effectiveStatus,
         sortBy: "updatedAt",
         sortDir: "desc",
       });
@@ -160,7 +180,7 @@ export default function PortalPage() {
       }
       return base;
     },
-    [documents, query, domain, category, templateId, status, favoriteTemplateIds]
+    [documents, query, domain, category, templateId, status, portalFilter, favoriteTemplateIds]
   );
 
   const activeShares = useMemo(
@@ -172,6 +192,37 @@ export default function PortalPage() {
     () => shares.filter((s) => Boolean(s.completedAt)),
     [shares]
   );
+
+  const waitingSigShares = useMemo(
+    () => activeShares.filter((s) => s.shareType === "signature_request"),
+    [activeShares]
+  );
+
+  const draftCount = useMemo(
+    () => documents.filter((d) => d.status === "DRAFT").length,
+    [documents]
+  );
+  const finalCount = useMemo(
+    () => documents.filter((d) => d.status === "FINAL").length,
+    [documents]
+  );
+  const archivedDocCount = useMemo(
+    () => documents.filter((d) => d.status === "ARCHIVED").length,
+    [documents]
+  );
+  const archivedTotal = archivedDocCount + archivedShares.length;
+
+  const visibleActiveShares = useMemo(() => {
+    if (portalFilter === "waiting_signature") return waitingSigShares;
+    if (portalFilter === "ARCHIVED") return [];
+    return activeShares;
+  }, [portalFilter, waitingSigShares, activeShares]);
+
+  const showSharedSection =
+    portalFilter === "waiting_signature" ||
+    (shares.length > 0 && (portalFilter === "all" || portalFilter === "ARCHIVED"));
+
+  const showFileGrid = portalFilter !== "waiting_signature";
 
 
 
@@ -269,20 +320,78 @@ export default function PortalPage() {
 
     <AppShell title="My File Portal" wide>
 
-      {shares.length > 0 && (
+      <div className="portal-stats-row portal-stats-row-filter">
+        <button
+          type="button"
+          className={`portal-stat card portal-stat-filter${portalFilter === "all" ? " active" : ""}`}
+          onClick={() => selectPortalFilter("all")}
+        >
+          <span className="portal-stat-value">{documents.length}</span>
+          <span className="portal-stat-label">Saved documents</span>
+        </button>
+        <button
+          type="button"
+          className={`portal-stat card portal-stat-filter${portalFilter === "types" ? " active" : ""}`}
+          onClick={() => selectPortalFilter("types")}
+        >
+          <span className="portal-stat-value">{usedTemplateIds.length}</span>
+          <span className="portal-stat-label">Document types</span>
+        </button>
+        <button
+          type="button"
+          className={`portal-stat card portal-stat-filter${portalFilter === "waiting_signature" ? " active" : ""}`}
+          onClick={() => selectPortalFilter("waiting_signature")}
+        >
+          <span className="portal-stat-value">{waitingSigShares.length}</span>
+          <span className="portal-stat-label">Waiting signature</span>
+        </button>
+        <button
+          type="button"
+          className={`portal-stat card portal-stat-filter${portalFilter === "DRAFT" ? " active" : ""}`}
+          onClick={() => selectPortalFilter("DRAFT")}
+        >
+          <span className="portal-stat-value">{draftCount}</span>
+          <span className="portal-stat-label">Draft</span>
+        </button>
+        <button
+          type="button"
+          className={`portal-stat card portal-stat-filter${portalFilter === "FINAL" ? " active" : ""}`}
+          onClick={() => selectPortalFilter("FINAL")}
+        >
+          <span className="portal-stat-value">{finalCount}</span>
+          <span className="portal-stat-label">Final</span>
+        </button>
+        <button
+          type="button"
+          className={`portal-stat card portal-stat-filter${portalFilter === "ARCHIVED" ? " active" : ""}`}
+          onClick={() => selectPortalFilter("ARCHIVED")}
+        >
+          <span className="portal-stat-value">{archivedTotal}</span>
+          <span className="portal-stat-label">Archived</span>
+        </button>
+        <Link href="/documents" className="btn btn-primary portal-new-btn">+ New Document</Link>
+      </div>
+
+      {showSharedSection && (
         <section className="portal-shares card" style={{ marginBottom: "1.5rem", padding: "1.25rem" }}>
           <h2 className="section-title" style={{ marginTop: 0 }}>Shared with you</h2>
 
-          {activeShares.length > 0 && (
+          {portalFilter === "waiting_signature" && waitingSigShares.length === 0 && (
+            <p className="field-help">No documents waiting for your signature.</p>
+          )}
+
+          {visibleActiveShares.length > 0 && (
             <>
-              <h3 className="share-inbox-subtitle">Active</h3>
+              <h3 className="share-inbox-subtitle">
+                {portalFilter === "waiting_signature" ? "Awaiting your signature" : "Active"}
+              </h3>
               <ul className="share-inbox-list">
-                {activeShares.map((s) => renderShareItem(s, false))}
+                {visibleActiveShares.map((s) => renderShareItem(s, false))}
               </ul>
             </>
           )}
 
-          {archivedShares.length > 0 && (
+          {(portalFilter === "all" || portalFilter === "ARCHIVED") && archivedShares.length > 0 && (
             <>
               <h3 className="share-inbox-subtitle share-inbox-subtitle-archived">Archived</h3>
               <p className="field-help share-archived-hint">
@@ -296,47 +405,19 @@ export default function PortalPage() {
         </section>
       )}
 
-
-
-      <div className="portal-stats-row">
-
-        <div className="portal-stat card">
-
-          <span className="portal-stat-value">{documents.length}</span>
-
-          <span className="portal-stat-label">Saved documents</span>
-
-        </div>
-
-        <div className="portal-stat card">
-
-          <span className="portal-stat-value">{usedTemplateIds.length}</span>
-
-          <span className="portal-stat-label">Document types used</span>
-
-        </div>
-
-        <div className="portal-stat card">
-
-          <span className="portal-stat-value">{sequenceStats.totalIssued}</span>
-
-          <span className="portal-stat-label">Numbers issued</span>
-
-        </div>
-
-        <Link href="/documents" className="btn btn-primary portal-new-btn">+ New Document</Link>
-
-      </div>
-
-
+      {portalFilter === "waiting_signature" && waitingSigShares.length > 0 && (
+        <p className="field-help" style={{ marginBottom: "1rem" }}>
+          Select a document above to sign or preview. Your saved files are hidden while this filter is active.
+        </p>
+      )}
 
       <PortalCompliancePanel documents={documents} />
 
 
 
-      {(usedTemplateIds.length > 0 || favoriteTemplateIds.length > 0) && (
+      {(usedTemplateIds.length > 0 || favoriteTemplateIds.length > 0) && showFileGrid && (
 
-        <div className="portal-type-index card" style={{ marginBottom: "1rem", padding: "1rem" }}>
+        <div className={`portal-type-index card${portalFilter === "types" ? " portal-type-index-highlight" : ""}`} style={{ marginBottom: "1rem", padding: "1rem" }}>
 
           <div className="portal-type-index-head">
             <h3 className="section-title" style={{ marginTop: 0, fontSize: "0.95rem" }}>By type</h3>
@@ -350,8 +431,8 @@ export default function PortalPage() {
             {favoriteTemplateIds.length > 0 && (
               <button
                 type="button"
-                className={`portal-type-chip portal-type-chip-fav${templateId === FAVORITES_FILTER ? " active" : ""}`}
-                onClick={() => setTemplateId(templateId === FAVORITES_FILTER ? "all" : FAVORITES_FILTER)}
+                className={`portal-type-chip portal-type-chip-fav${portalFilter === FAVORITES_FILTER ? " active" : ""}`}
+                onClick={() => selectPortalFilter(portalFilter === FAVORITES_FILTER ? "types" : FAVORITES_FILTER)}
               >
                 ★ Favorites ({favoriteSavedDocs.length})
               </button>
@@ -371,7 +452,11 @@ export default function PortalPage() {
 
                   className={`portal-type-chip${templateId === id ? " active" : ""}`}
 
-                  onClick={() => setTemplateId(templateId === id ? "all" : id)}
+                  onClick={() => {
+                    setPortalFilter("types");
+                    setStatus("all");
+                    setTemplateId(templateId === id ? "all" : id);
+                  }}
 
                 >
 
@@ -404,6 +489,8 @@ export default function PortalPage() {
 
 
 
+      {showFileGrid && (
+      <>
       <div className="doc-search-bar doc-search-bar-wide">
 
         <input
@@ -444,7 +531,16 @@ export default function PortalPage() {
 
         </select>
 
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className="doc-filter-select">
+        <select
+          value={status}
+          onChange={(e) => {
+            const v = e.target.value;
+            setStatus(v);
+            if (v === "all") setPortalFilter("all");
+            else setPortalFilter(v as PortalFilter);
+          }}
+          className="doc-filter-select"
+        >
 
           <option value="all">All statuses</option>
 
@@ -542,6 +638,9 @@ export default function PortalPage() {
 
         </div>
 
+      )}
+
+      </>
       )}
 
 

@@ -1465,6 +1465,29 @@ a.quick-action-card { text-decoration: none; color: inherit; }
 }
 .portal-stat-value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
 .portal-stat-label { font-size: 0.75rem; color: var(--text-muted); }
+.portal-stats-row-filter { gap: 0.75rem; }
+button.portal-stat-filter {
+  text-align: left;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+button.portal-stat-filter:hover {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
+button.portal-stat-filter.active {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+  box-shadow: var(--shadow-sm);
+}
+button.portal-stat-filter.active .portal-stat-value {
+  color: var(--primary);
+}
+.portal-type-index-highlight {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-sm);
+}
 .portal-new-btn { margin-left: auto; align-self: center; }
 .portal-type-chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .portal-type-chip {

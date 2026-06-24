@@ -14,7 +14,6 @@ import { AppShell } from "@/components/AppShell";
 import { RecommendedDocuments } from "@/components/RecommendedDocuments";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { useProfile } from "@/components/ProfileProvider";
-import { useSubscription } from "@/lib/subscription/useSubscription";
 import { getFavoriteTemplateIds, isFavorite, toggleFavorite } from "@/lib/documents/favorites";
 import {
   getRecommendedDocuments,
@@ -25,7 +24,6 @@ type LibraryView = "all" | "favorites";
 
 export default function DocumentsPage() {
   const { profile, updateProfile } = useProfile();
-  const { maxFavorites } = useSubscription();
   const [domain, setDomain] = useState<string>("all");
   const [category, setCategory] = useState<string>("all");
   const [query, setQuery] = useState("");
@@ -69,26 +67,6 @@ export default function DocumentsPage() {
 
   return (
     <AppShell title="Document Library">
-      {favorites.length > 0 && view === "all" && !query && (
-        <section className="card favorites-strip" style={{ padding: "1rem", marginBottom: "1.25rem" }}>
-          <div className="favorites-strip-header">
-            <h2 className="section-title" style={{ marginTop: 0 }}>Favorites</h2>
-            <Link href="/packets" className="btn btn-secondary btn-sm">Build packet →</Link>
-          </div>
-          <div className="portal-type-chips">
-            {favorites.map((id) => {
-              const meta = getDocumentById(id);
-              return (
-                <Link key={id} href={`/documents/${id}`} className="portal-type-chip">
-                  {meta?.name ?? id}
-                </Link>
-              );
-            })}
-          </div>
-          <p className="field-help">{favorites.length}{maxFavorites === Infinity ? "" : ` / ${maxFavorites}`} saved · Use packets to bundle and export</p>
-        </section>
-      )}
-
       {recommended.length > 0 && !query && domain === "all" && category === "all" && view === "all" && (
         <RecommendedDocuments
           documents={recommended}
