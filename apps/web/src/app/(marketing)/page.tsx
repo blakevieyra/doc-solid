@@ -79,6 +79,7 @@ export default function HomePage() {
       <main>
         <section className="landing-hero">
           <div className="container">
+            <BrandLogo href="/" size="xl" className="landing-hero-logo" />
             <div className="landing-hero-badge">Trusted document workflow</div>
             <h1>Professional documents<br />for your business</h1>
             <p>

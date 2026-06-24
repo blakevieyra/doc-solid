@@ -1022,6 +1022,17 @@ a.quick-action-card { text-decoration: none; color: inherit; }
   align-items: center;
 }
 .landing-hero .container { width: 100%; }
+.landing-hero-logo {
+  display: flex;
+  justify-content: center;
+  margin: 0 auto clamp(1.25rem, 3vw, 2rem);
+}
+.landing-hero-logo .brand-logo-img {
+  height: clamp(100px, 14vw, 160px);
+  max-height: 160px;
+  width: auto;
+  margin: 0 auto;
+}
 .landing-hero h1 {
   font-size: clamp(2.75rem, 5vw + 1.25rem, 4.75rem);
   font-weight: 800;
