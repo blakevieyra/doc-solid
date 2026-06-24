@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Doc Solid",
+    "slug": "doc-solid",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "docsolid",
+    "userInterfaceStyle": "automatic",
+    "platforms": ["ios", "android"],
+    "plugins": ["expo-router", "expo-sqlite"]
+  }
+}

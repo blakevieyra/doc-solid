@@ -1,0 +1,25 @@
+"use client";
+
+export function FavoriteButton({
+  active,
+  onToggle,
+  size = "md",
+}: {
+  active: boolean;
+  onToggle: (e: React.MouseEvent) => void;
+  size?: "sm" | "md";
+}) {
+  return (
+    <button
+      type="button"
+      className={`favorite-btn${active ? " active" : ""}${size === "sm" ? " favorite-btn-sm" : ""}`}
+      aria-label={active ? "Remove from favorites" : "Add to favorites"}
+      aria-pressed={active}
+      onClick={onToggle}
+    >
+      <svg width={size === "sm" ? 16 : 20} height={size === "sm" ? 16 : 20} viewBox="0 0 24 24" fill={active ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2">
+        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+      </svg>
+    </button>
+  );
+}

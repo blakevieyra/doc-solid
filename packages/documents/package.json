@@ -1,0 +1,22 @@
+{
+  "name": "@doc-solid/documents",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./types": "./src/types.ts",
+    "./catalog": "./src/catalog/index.ts",
+    "./templates": "./src/templates/index.ts",
+    "./generator": "./src/generator/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "audit:templates": "tsx scripts/audit-templates.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.4",
+    "typescript": "^5.7.0"
+  }
+}

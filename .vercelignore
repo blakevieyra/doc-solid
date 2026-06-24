@@ -1,0 +1,6 @@
+apps/mobile
+node_modules
+.git
+**/.next
+**/*.local
+.vercel

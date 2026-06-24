@@ -1,0 +1,29 @@
+{
+  "name": "doc-solid",
+  "private": true,
+  "workspaces": [
+    "apps/web",
+    "packages/database",
+    "packages/documents",
+    "packages/storage"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@doc-solid/web",
+    "dev:mobile": "npm run start --workspace=@doc-solid/mobile",
+    "build": "npm run build --workspaces --if-present",
+    "vercel-build": "npm run db:generate && npm run db:push && npm run build --workspace=@doc-solid/web",
+    "lint": "npm run lint --workspaces --if-present",
+    "db:generate": "npm run generate --workspace=@doc-solid/database",
+    "db:push": "npm run push --workspace=@doc-solid/database"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "overrides": {
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "styled-jsx": {
+      "react": "19.2.7"
+    }
+  }
+}

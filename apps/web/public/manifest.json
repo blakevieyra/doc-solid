@@ -1,0 +1,16 @@
+{
+  "name": "DocSolid",
+  "short_name": "DocSolid",
+  "description": "Build, fill, and manage business documents",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f4f6f9",
+  "theme_color": "#1a2744",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
