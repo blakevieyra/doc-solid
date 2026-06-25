@@ -144,6 +144,22 @@ export async function returnShareCorrection(
   return syncShareToServer(shareId);
 }
 
+export async function markShareComplete(
+  shareId: string,
+  actor: { email: string; name: string },
+): Promise<DocumentShare | null> {
+  const share = getShareById(shareId);
+  if (!share || share.completedAt) return null;
+
+  updateShare(shareId, { completedAt: new Date().toISOString() });
+  recordShareAudit(shareId, "completed", {
+    actorEmail: actor.email,
+    actorName: actor.name,
+    details: "Marked complete by recipient",
+  });
+  return syncShareToServer(shareId);
+}
+
 export async function keepShare(
   shareId: string,
   keeper: { email: string; name: string }

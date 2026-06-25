@@ -22,6 +22,7 @@ import { updateSavedDocumentFields } from "@/lib/documents/persist";
 import { loadShares, getShareById } from "@/lib/team/invites";
 import {
   getShareSigningHref,
+  markShareComplete,
   markShareOpened,
   shareWasReturnedBy,
 } from "@/lib/team/share-document";
@@ -46,6 +47,7 @@ function SavedDocumentPageContent() {
   const [exporting, setExporting] = useState(false);
   const [shareContext, setShareContext] = useState<ReturnType<typeof getShareById>>(null);
   const [showReturnShare, setShowReturnShare] = useState(false);
+  const [completingShare, setCompletingShare] = useState(false);
 
   const userEmail = session?.email ?? profile.account.email ?? "";
   const userName = session?.name ?? profile.account.displayName ?? profile.personal.fullName ?? "";
@@ -167,6 +169,19 @@ function SavedDocumentPageContent() {
   const signHref = relatedShare ? getShareSigningHref(relatedShare) : null;
   const returnedByMe = relatedShare ? shareWasReturnedBy(relatedShare, userEmail) : false;
   const canReturnWithComment = isSharedPreview && !isCompletedShare && !returnedByMe;
+  const canCompleteShare =
+    isSharedPreview && !isCompletedShare && relatedShare?.shareType !== "signature_request";
+
+  async function handleCompleteShare() {
+    if (!relatedShare || completingShare) return;
+    setCompletingShare(true);
+    try {
+      const updated = await markShareComplete(relatedShare.id, { email: userEmail, name: userName });
+      if (updated) setShareContext(updated);
+    } finally {
+      setCompletingShare(false);
+    }
+  }
 
   return (
     <AppShell wide>
@@ -203,6 +218,16 @@ function SavedDocumentPageContent() {
                 onClick={() => setShowReturnShare(true)}
               >
                 Return with comment
+              </button>
+            )}
+            {canCompleteShare && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                disabled={completingShare}
+                onClick={() => void handleCompleteShare()}
+              >
+                {completingShare ? "Completing…" : "Complete"}
               </button>
             )}
             {!isSharedPreview && (
