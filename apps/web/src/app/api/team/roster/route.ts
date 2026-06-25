@@ -287,7 +287,7 @@ async function enrichMembersWithIdentity<T extends {
 
 async function buildTeamView(userId: string, email: string, name: string): Promise<TeamView> {
   let profile = (await getUserProfile(userId)) ?? null;
-  const roster = await resolveTeamRoster(profile, email);
+  const roster = await resolveTeamRoster(profile, email, userId);
 
   if (
     roster &&
@@ -303,6 +303,7 @@ async function buildTeamView(userId: string, email: string, name: string): Promi
     roster?.teamId ??
     profile?.team.teamId ??
     profile?.account.accountId ??
+    userId ??
     null;
   const orgView = await fromOrganization(userId, email, name);
   const profileView = profile ? fromProfileTeam(profile, email, name) : null;
@@ -349,7 +350,13 @@ async function buildTeamView(userId: string, email: string, name: string): Promi
     profileMembers.find((m) => m.role === "owner")?.email ??
     email;
 
-  const mergedMembers = mergeMemberLists(ownerEmail, orgMembers, profileMembers, contactMembers, rosterMembers);
+  const mergedMembers = mergeMemberLists(
+    ownerEmail,
+    orgMembers,
+    profileMembers,
+    contactMembers,
+    rosterMembers
+  );
 
   const rosterEmails = new Set(rosterMembers.map((m) => m.email.toLowerCase()));
   for (let i = mergedMembers.length - 1; i >= 0; i--) {
@@ -448,7 +455,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
-  const team = await buildTeamView(auth.user.id, auth.user.email, auth.user.name);
+  let team = await buildTeamView(auth.user.id, auth.user.email, auth.user.name);
 
   let sharedProfile: TeamSharedProfile | null = null;
   if (
@@ -459,11 +466,11 @@ export async function GET(req: NextRequest) {
     sharedProfile = await loadOwnerSharedProfile(team.ownerEmail, team.orgName);
   }
 
-  const teamWithShared = { ...team, sharedProfile };
+  let teamWithShared = { ...team, sharedProfile };
 
   const ownerProfile = teamWithShared.isOwner ? await getUserProfile(auth.user.id) : null;
   const roster = teamWithShared.teamId
-    ? (await resolveTeamRoster(ownerProfile, auth.user.email)) ??
+    ? (await resolveTeamRoster(ownerProfile, auth.user.email, auth.user.id)) ??
       (await getTeamRoster(teamWithShared.teamId))
     : null;
   if (
@@ -472,6 +479,17 @@ export async function GET(req: NextRequest) {
     ownerProfileNeedsRosterHeal(roster, ownerProfile.team.members)
   ) {
     await syncOwnerProfileFromRoster(roster);
+    team = await buildTeamView(auth.user.id, auth.user.email, auth.user.name);
+    if (
+      !team.isOwner &&
+      team.ownerEmail &&
+      (team.shareBusinessProfile || team.shareOrganizationProfile)
+    ) {
+      sharedProfile = await loadOwnerSharedProfile(team.ownerEmail, team.orgName);
+    } else {
+      sharedProfile = null;
+    }
+    teamWithShared = { ...team, sharedProfile };
   }
 
   if (teamWithShared.isOwner && teamWithShared.teamId && teamWithShared.members.length > 0) {

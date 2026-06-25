@@ -26,6 +26,10 @@ function mergeAddress(primary: Address, secondary: Address): Address {
   };
 }
 
+function mergeUniqueStrings(a: string[], b: string[]): string[] {
+  return [...new Set([...a, ...b])];
+}
+
 export async function fetchServerProfile(): Promise<UserProfile | null> {
   const res = await fetch("/api/profile", { credentials: "include", cache: "no-store" });
   if (res.status === 401 || res.status === 503) return null;
@@ -109,10 +113,14 @@ export function mergeProfiles(local: UserProfile, server: UserProfile): UserProf
     library: {
       ...primary.library,
       ...secondary.library,
-      favoriteTemplateIds:
-        primary.library.favoriteTemplateIds.length >= secondary.library.favoriteTemplateIds.length
-          ? primary.library.favoriteTemplateIds
-          : secondary.library.favoriteTemplateIds,
+      favoriteTemplateIds: mergeUniqueStrings(
+        primary.library?.favoriteTemplateIds ?? [],
+        secondary.library?.favoriteTemplateIds ?? []
+      ),
+      packets:
+        (primary.library?.packets?.length ?? 0) >= (secondary.library?.packets?.length ?? 0)
+          ? (primary.library?.packets ?? [])
+          : (secondary.library?.packets ?? []),
       contacts:
         (primary.library.contacts?.length ?? 0) >= (secondary.library.contacts?.length ?? 0)
           ? primary.library.contacts

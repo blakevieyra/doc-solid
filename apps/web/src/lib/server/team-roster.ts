@@ -30,15 +30,19 @@ function rosterOwnerKey(ownerEmail: string): string {
   return `team-roster-owner:${ownerEmail.trim().toLowerCase()}`;
 }
 
-export function candidateTeamIds(profile: {
-  team?: { teamId?: string | null };
-  account?: { accountId?: string };
-} | null): string[] {
+export function candidateTeamIds(
+  profile: {
+    team?: { teamId?: string | null };
+    account?: { accountId?: string };
+  } | null,
+  userId?: string | null
+): string[] {
   const ids = new Set<string>();
   const teamId = profile?.team?.teamId?.trim();
   const accountId = profile?.account?.accountId?.trim();
   if (teamId) ids.add(teamId);
   if (accountId) ids.add(accountId);
+  if (userId?.trim()) ids.add(userId.trim());
   return [...ids];
 }
 
@@ -47,9 +51,10 @@ export async function resolveTeamRoster(
     team?: { teamId?: string | null };
     account?: { accountId?: string };
   } | null,
-  ownerEmail?: string | null
+  ownerEmail?: string | null,
+  userId?: string | null
 ): Promise<TeamRoster | null> {
-  for (const id of candidateTeamIds(profile)) {
+  for (const id of candidateTeamIds(profile, userId)) {
     const roster = await getTeamRoster(id);
     if (roster) return roster;
   }

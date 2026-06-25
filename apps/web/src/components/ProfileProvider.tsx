@@ -113,8 +113,11 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
           const logosRecovered =
             (merged.business.logo && !server.business.logo) ||
             (merged.organization.logo && !server.organization.logo);
+          const favoritesRecovered =
+            merged.library.favoriteTemplateIds.length >
+            (server.library?.favoriteTemplateIds?.length ?? 0);
           local = merged;
-          if (logosRecovered) {
+          if (logosRecovered || favoritesRecovered) {
             await saveProfile(local, userId, sessionPin ?? undefined);
             await pushServerProfile(local);
           }

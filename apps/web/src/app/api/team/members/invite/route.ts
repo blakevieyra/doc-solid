@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     const ownerProfile = await getUserProfile(auth.user.id);
     const teamId = resolveTeamId(body.teamId, ownerProfile, auth.user.id);
 
-    const roster = await resolveTeamRoster(ownerProfile, inviterEmail);
+    const roster = await resolveTeamRoster(ownerProfile, inviterEmail, auth.user.id);
     if (roster) {
       const isOwner = roster.ownerEmail.toLowerCase() === inviterEmail;
       const isAdmin = roster.members.some(
