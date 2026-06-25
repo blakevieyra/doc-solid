@@ -111,7 +111,7 @@ export async function quickSaveTemplate(params: {
     timestamp: now,
   });
 
-  if (params.authMode === "server") {
+  if (params.authMode === "server" && canUseFeature(params.profile.subscription, "cloudSync")) {
     const synced = await pushCloudDocument(doc);
     if (synced) {
       await storage.saveDocument({ ...doc, ...synced, syncStatus: "SYNCED" });

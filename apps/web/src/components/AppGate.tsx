@@ -11,7 +11,7 @@ const MARKETING_PUBLIC = ["/", "/help"];
 
 export function AppGate({ children }: { children: React.ReactNode }) {
   const { session, loading: authLoading } = useAuth();
-  const { profile, loading: profileLoading } = useProfile();
+  const { loading: profileLoading } = useProfile();
   const pathname = usePathname();
   const router = useRouter();
   const [initialCheckDone, setInitialCheckDone] = useState(false);
@@ -31,31 +31,13 @@ export function AppGate({ children }: { children: React.ReactNode }) {
     }
     if (session && isAuthPage) {
       redirecting.current = true;
-      router.replace(profile.onboardingComplete ? "/documents" : "/onboarding");
-      return;
-    }
-    if (session && !profile.onboardingComplete && !isPublic && pathname !== "/login") {
-      const hasActiveSub =
-        profile.subscription.status === "active" ||
-        profile.subscription.status === "trialing";
-      if (hasActiveSub) {
-        redirecting.current = false;
-        setInitialCheckDone(true);
-        return;
-      }
-      redirecting.current = true;
-      router.replace("/onboarding");
-      return;
-    }
-    if (session && profile.onboardingComplete && pathname === "/onboarding") {
-      redirecting.current = true;
       router.replace("/documents");
       return;
     }
 
     redirecting.current = false;
     setInitialCheckDone(true);
-  }, [authLoading, profileLoading, session, profile.onboardingComplete, profile.subscription.status, pathname, router]);
+  }, [authLoading, profileLoading, session, pathname, router]);
 
   if (!initialCheckDone) {
     return (

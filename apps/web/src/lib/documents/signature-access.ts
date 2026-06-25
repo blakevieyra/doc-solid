@@ -37,6 +37,12 @@ export function resolveSignatureFieldAccess(
   }
 
   if (isCounterparty) {
+    if (ctx.isDocumentOwner) {
+      if (isSignatureLocked(field.id, ctx.values) && isSignatureFilled(ctx.values[field.id])) {
+        return "locked";
+      }
+      return "readonly-pending";
+    }
     if (ctx.signingMode && ctx.assignedFieldIds.includes(field.id)) {
       return "counterparty-sign";
     }

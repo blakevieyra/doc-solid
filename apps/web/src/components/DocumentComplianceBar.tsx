@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import type { DocumentTypeDefinition } from "@doc-solid/documents";
 import { auditDocumentCompleteness } from "@/lib/documents/completeness";
 import { canUseFeature } from "@/lib/subscription/plans";
@@ -72,14 +73,24 @@ export function DocumentComplianceBar({
           </button>
         )}
         {status === "FINAL" && <span className="doc-status-badge final">Final</span>}
-        <button
-          type="button"
-          className="btn btn-accent btn-sm"
-          onClick={onScanRedact}
-          title={canScan ? "Scan for sensitive data and apply redaction" : "Pro feature"}
-        >
-          {canScan ? "Scan & Redact" : "Scan & Redact (Pro)"}
-        </button>
+        {canScan ? (
+          <button
+            type="button"
+            className="btn btn-accent btn-sm"
+            onClick={onScanRedact}
+            title="Scan for sensitive data and apply redaction"
+          >
+            Scan & Redact
+          </button>
+        ) : (
+          <Link
+            href="/profile?tab=billing"
+            className="btn btn-accent btn-sm"
+            title="Pro feature — upgrade to scan and redact"
+          >
+            Scan & Redact (Pro)
+          </Link>
+        )}
       </div>
     </div>
   );

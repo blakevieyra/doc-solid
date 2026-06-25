@@ -6,6 +6,7 @@ import { useProfile } from "./ProfileProvider";
 import { useAuth } from "./AuthProvider";
 import { useNotifications } from "./NotificationProvider";
 import { saveShareWithDocument } from "@/lib/team/share-document";
+import { canUseFeature } from "@/lib/subscription/plans";
 
 interface TeamShareModalProps {
   documentTitle: string;
@@ -21,6 +22,7 @@ export function TeamShareModal({ documentTitle, documentId, onClose }: TeamShare
   const [message, setMessage] = useState("");
   const [sent, setSent] = useState(false);
 
+  const teamAllowed = canUseFeature(profile.subscription, "teamSharing");
   const members = profile.team.members;
 
   function toggle(email: string) {
@@ -28,6 +30,7 @@ export function TeamShareModal({ documentTitle, documentId, onClose }: TeamShare
   }
 
   async function handleSend() {
+    if (!teamAllowed) return;
     const fromName = session?.name ?? profile.account.displayName;
     const fromEmail = session?.email ?? profile.account.email;
 
@@ -59,6 +62,13 @@ export function TeamShareModal({ documentTitle, documentId, onClose }: TeamShare
         <h2>Send to Team</h2>
         <p className="field-help">Share &quot;{documentTitle}&quot; with team members</p>
 
+        {!teamAllowed && (
+          <div className="email-doc-notice">
+            Pro required for team inbox sharing.{" "}
+            <Link href="/profile?tab=billing">Upgrade</Link>
+          </div>
+        )}
+
         {members.length === 0 ? (
           <p className="field-help">No team members yet. <Link href="/team">Invite members on Team</Link> first.</p>
         ) : (
@@ -82,7 +92,7 @@ export function TeamShareModal({ documentTitle, documentId, onClose }: TeamShare
             </div>
             <div className="modal-actions">
               <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-              <button type="button" className="btn btn-primary" disabled={selected.length === 0 || sent} onClick={handleSend}>
+              <button type="button" className="btn btn-primary" disabled={selected.length === 0 || sent || !teamAllowed} onClick={handleSend}>
                 {sent ? "Sent ✓" : `Send to ${selected.length} member${selected.length !== 1 ? "s" : ""}`}
               </button>
             </div>

@@ -22,7 +22,15 @@ export function resolveOnboardingComplete(
 
   if (options?.userCreatedAt) {
     const userCreated = new Date(options.userCreatedAt).getTime();
-    if (!Number.isNaN(userCreated) && Date.now() - userCreated > NEW_ACCOUNT_GRACE_MS) {
+    if (!Number.isNaN(userCreated)) {
+      const isBrandNew = Date.now() - userCreated <= NEW_ACCOUNT_GRACE_MS;
+      if (!isBrandNew) return true;
+      const stillDefaultProfile =
+        profile.profileType === "mixed" &&
+        !profile.business.industry &&
+        !profile.personal.title &&
+        !profile.business.logo;
+      if (stillDefaultProfile) return false;
       return true;
     }
   }
@@ -34,5 +42,6 @@ export function resolveOnboardingComplete(
   if (profile.profileType !== "mixed") return true;
   if (profile.business.industry || profile.personal.title || profile.business.logo) return true;
 
-  return false;
+  // Returning users with a saved account should not be forced through onboarding again.
+  return true;
 }

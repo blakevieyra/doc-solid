@@ -32,6 +32,9 @@ export async function createRedactedDocumentCopy(
     userId?: string | null;
     unlimitedDocs?: boolean;
     authMode?: "local" | "server";
+    /** When false, redaction is blocked (Pro-only feature). */
+    securityScanAllowed?: boolean;
+    cloudSyncAllowed?: boolean;
   },
 ): Promise<RedactedDocumentCopyResult> {
   const storage = new IndexedDBStorage();
@@ -41,6 +44,14 @@ export async function createRedactedDocumentCopy(
   }
   if (findings.length === 0) {
     return { sourceDoc: source, redactedDoc: null, skippedLockedSignatures: [] };
+  }
+  if (options?.securityScanAllowed === false) {
+    return {
+      sourceDoc: source,
+      redactedDoc: null,
+      skippedLockedSignatures: [],
+      error: "Security scan and redaction require a Pro plan.",
+    };
   }
 
   const userId = options?.userId ?? source.userId ?? null;
@@ -128,7 +139,7 @@ export async function createRedactedDocumentCopy(
   await storage.saveDocument(sourceDoc);
 
   let savedRedactedDoc = redactedDoc;
-  if (options?.authMode === "server") {
+  if (options?.authMode === "server" && options?.cloudSyncAllowed) {
     const synced = await pushCloudDocument(redactedDoc);
     if (synced) {
       savedRedactedDoc = { ...redactedDoc, ...synced, syncStatus: "SYNCED" };

@@ -121,6 +121,7 @@ export default function PortalPage() {
 
   const pro = canUseFeature(profile.subscription, "securityScan");
   const teamSharing = canUseFeature(profile.subscription, "teamSharing");
+  const cloudSyncAllowed = canUseFeature(profile.subscription, "cloudSync");
   const userEmail = session?.email ?? profile.account.email ?? "";
   const userName = session?.name ?? profile.account.displayName ?? "You";
   const actor = { email: userEmail, name: userName };
@@ -147,7 +148,7 @@ export default function PortalPage() {
 
 
 
-      if (authMode === "server") {
+      if (authMode === "server" && cloudSyncAllowed) {
 
         await syncDocumentsFromCloud(userId);
 
@@ -929,7 +930,12 @@ export default function PortalPage() {
                   <button
                     type="button"
                     className="btn btn-secondary btn-sm"
-                    onClick={() => setSendTarget({ doc, mode: "share" })}
+                    onClick={() => {
+                      if (!teamSharing) return;
+                      setSendTarget({ doc, mode: "share" });
+                    }}
+                    disabled={!teamSharing}
+                    title={teamSharing ? "Send to contact" : "Pro feature — upgrade to share in-app"}
                   >
                     Send
                   </button>
@@ -1001,6 +1007,7 @@ export default function PortalPage() {
           documentStatus={scanDoc.status}
           onClose={() => setScanDoc(null)}
           onRedact={async (_redacted, _scan, applied) => {
+            if (!pro) return;
             const unlimitedDocs = canUseFeature(profile.subscription, "unlimitedDocs");
             const { sourceDoc, redactedDoc, error } = await createRedactedDocumentCopy(
               scanDoc.localId,
@@ -1010,6 +1017,8 @@ export default function PortalPage() {
                 userId: session?.userId ?? null,
                 unlimitedDocs,
                 authMode: authMode ?? undefined,
+                securityScanAllowed: pro,
+                cloudSyncAllowed,
               },
             );
             if (error) {

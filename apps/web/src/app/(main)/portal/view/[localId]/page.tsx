@@ -59,6 +59,8 @@ function SavedDocumentPageContent() {
   const userName = session?.name ?? profile.account.displayName ?? profile.personal.fullName ?? "";
 
   const cleanPdf = canUseFeature(profile.subscription, "pdfClean");
+  const canScanRedact = canUseFeature(profile.subscription, "securityScan");
+  const cloudSyncAllowed = canUseFeature(profile.subscription, "cloudSync");
 
   const meta = useMemo(() => (templateId ? getDocumentById(templateId) : null), [templateId]);
   const template = useMemo(() => (meta ? generateTemplate(meta) : null), [meta]);
@@ -127,12 +129,23 @@ function SavedDocumentPageContent() {
       });
       return;
     }
+    if (!canScanRedact) {
+      notify({
+        type: "system",
+        title: "Pro feature",
+        message: "Security scan and redaction require a Pro plan.",
+        link: "/profile?tab=billing",
+      });
+      return;
+    }
     const unlimitedDocs = canUseFeature(profile.subscription, "unlimitedDocs");
     const { redactedDoc, error } = await createRedactedDocumentCopy(localId, applied, {
       actor: { email: userEmail, name: userName },
       userId: session?.userId ?? null,
       unlimitedDocs,
       authMode: authMode ?? undefined,
+      securityScanAllowed: canScanRedact,
+      cloudSyncAllowed,
     });
     if (error) {
       notify({ type: "system", title: "Could not create redacted copy", message: error });
@@ -297,7 +310,9 @@ function SavedDocumentPageContent() {
         meta={fullTemplate}
         values={values}
         status={docStatus}
-        onScanRedact={() => setShowSecurityScan(true)}
+        onScanRedact={() => {
+          if (canScanRedact) setShowSecurityScan(true);
+        }}
         onMarkFinal={
           isSharedPreview
             ? undefined

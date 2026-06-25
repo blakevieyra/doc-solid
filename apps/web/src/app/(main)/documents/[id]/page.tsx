@@ -45,7 +45,7 @@ import {
   isSignatureFilled,
   stampSignatureLock,
 } from "@/lib/documents/signature-lock";
-import { getShareById } from "@/lib/team/invites";
+import { isShareSender, getShareById } from "@/lib/team/invites";
 import { completeShareSigning, markShareOpened, returnShareCorrection, shareNeedsSigningFlow, getSharePreviewHref } from "@/lib/team/share-document";
 import { useNotifications } from "@/components/NotificationProvider";
 import { peekNextDocumentNumber } from "@/lib/documents/sequencing";
@@ -90,6 +90,9 @@ function DocumentEditorPageContent() {
   }, [signingMode]);
 
   const cleanPdf = canUseFeature(profile.subscription, "pdfClean");
+  const canScanRedact = canUseFeature(profile.subscription, "securityScan");
+  const teamSharing = canUseFeature(profile.subscription, "teamSharing");
+  const cloudSyncAllowed = canUseFeature(profile.subscription, "cloudSync");
 
   useEffect(() => {
     if (!shareId) return;
@@ -118,21 +121,26 @@ function DocumentEditorPageContent() {
   useEffect(() => {
     if (!shareId) return;
     const share = getShareById(shareId);
-    if (share?.signatureFieldIds?.length) {
-      setAssignedFieldIds(share.signatureFieldIds);
-    }
-  }, [shareId]);
+    if (!share?.signatureFieldIds?.length) return;
+    const viewerEmail = (session?.email ?? profile.account.email ?? "").trim().toLowerCase();
+    if (!viewerEmail || share.toEmail.trim().toLowerCase() !== viewerEmail) return;
+    if (isShareSender(share, viewerEmail)) return;
+    setAssignedFieldIds(share.signatureFieldIds);
+  }, [shareId, session?.email, profile.account.email]);
 
   useEffect(() => {
     if (!signingMode || !template || !meta || assignedFieldIds.length > 0) return;
     const share = shareId ? getShareById(shareId) : null;
     if (share?.shareType !== "signature_request") return;
+    const viewerEmail = (session?.email ?? profile.account.email ?? "").trim().toLowerCase();
+    if (!viewerEmail || share.toEmail.trim().toLowerCase() !== viewerEmail) return;
+    if (isShareSender(share, viewerEmail)) return;
     const full = { ...meta, sections: template.sections };
     const empty = emptyCounterpartySignatureFields(full, values);
     if (empty.length > 0) {
       setAssignedFieldIds(empty.map((f) => f.id));
     }
-  }, [signingMode, template, meta, values, assignedFieldIds.length, shareId]);
+  }, [signingMode, template, meta, values, assignedFieldIds.length, shareId, session?.email, profile.account.email]);
 
   useEffect(() => {
     if (!template || initialized) return;
@@ -145,7 +153,13 @@ function DocumentEditorPageContent() {
         const allFieldIds = template!.sections.flatMap((s) => s.fields.map((f) => f.id));
         setNumberFieldId(getNumberFieldId(allFieldIds));
         setValues(snapshot);
-        if (share?.signatureFieldIds?.length) {
+        const viewerEmail = (session?.email ?? profile.account.email ?? "").trim().toLowerCase();
+        if (
+          share?.signatureFieldIds?.length &&
+          viewerEmail &&
+          share.toEmail.trim().toLowerCase() === viewerEmail &&
+          !isShareSender(share, viewerEmail)
+        ) {
           setAssignedFieldIds(share.signatureFieldIds);
         }
         setInitialized(true);
@@ -276,13 +290,14 @@ function DocumentEditorPageContent() {
   const lockShareBranding = Boolean(shareSnapshot);
   const isSignatureShare = activeShare?.shareType === "signature_request";
   const isReviewShare = activeShare?.shareType === "review_request";
-  const isRecipientSigning = Boolean(
+  const isShareRecipient = Boolean(
     signingMode &&
     shareId &&
     activeShare &&
-    activeShare.toEmail.toLowerCase() === userEmail.toLowerCase()
+    activeShare.toEmail.toLowerCase() === userEmail.toLowerCase() &&
+    !isShareSender(activeShare, userEmail)
   );
-  const isDocumentOwner = isRecipientSigning
+  const isDocumentOwner = isShareRecipient
     ? false
     : !savedLocalId || !docOwnerId || docOwnerId === userId;
 
@@ -298,6 +313,17 @@ function DocumentEditorPageContent() {
     const field = fullTemplate.sections.flatMap((s) => s.fields).find((f) => f.id === fieldId);
 
     setValues((prev) => {
+      const field = fullTemplate.sections.flatMap((s) => s.fields).find((f) => f.id === fieldId);
+      if (field?.type === "signature") {
+        const access = resolveSignatureFieldAccess(field, {
+          ...signatureAccessCtx,
+          values: { ...prev, [fieldId]: value },
+        });
+        if (access !== "owner-sign" && access !== "counterparty-sign") {
+          return prev;
+        }
+      }
+
       let next = { ...prev, [fieldId]: value };
       if (field?.type === "signature" && isSignatureFilled(value)) {
         const isOwnerSig = isOwnerSignatureField(field, meta!.category);
@@ -433,7 +459,7 @@ function DocumentEditorPageContent() {
     await storage.saveDocument(doc);
     await storage.enqueueSync({ localId: doc.localId, action: "CREATE", payload: doc, timestamp: doc.updatedAt });
 
-    if (authMode === "server") {
+    if (authMode === "server" && cloudSyncAllowed) {
       const synced = await pushCloudDocument(doc);
       if (synced) {
         await storage.saveDocument({ ...doc, ...synced, syncStatus: "SYNCED" });
@@ -535,7 +561,9 @@ function DocumentEditorPageContent() {
         meta={fullTemplate}
         values={values}
         status={savedLocalId ? docStatus : "DRAFT"}
-        onScanRedact={() => setShowSecurityScan(true)}
+        onScanRedact={() => {
+          if (canScanRedact) setShowSecurityScan(true);
+        }}
         onMarkFinal={
           savedLocalId
             ? async () => {
@@ -554,6 +582,15 @@ function DocumentEditorPageContent() {
               <strong>Document snapshot missing</strong>
               <p className="field-help">
                 Ask the sender to re-send this document so you can view the filled version and sign.
+              </p>
+            </div>
+          )}
+
+          {signingMode && activeShare && isShareSender(activeShare, userEmail) && (
+            <div className="card signature-signing-banner">
+              <strong>You sent this document</strong>
+              <p className="field-help">
+                Other party signature fields can only be completed by the recipient you sent this to — not by you as the sender.
               </p>
             </div>
           )}
@@ -774,6 +811,10 @@ function DocumentEditorPageContent() {
                   alert("Save to portal first, then share with your team inbox.");
                   return;
                 }
+                if (!teamSharing) {
+                  alert("Team inbox sharing is a Pro feature. Upgrade in Profile → Billing.");
+                  return;
+                }
                 setShowShare(true);
               }}
             >
@@ -823,11 +864,14 @@ function DocumentEditorPageContent() {
             onClose={() => setShowSecurityScan(false)}
             onRedact={async (_redacted, _scan, applied) => {
               if (!savedLocalId) return;
+              if (!canScanRedact) return;
               const unlimitedDocs = canUseFeature(profile.subscription, "unlimitedDocs");
               const { redactedDoc, error } = await createRedactedDocumentCopy(savedLocalId, applied, {
                 userId: session?.userId ?? docOwnerId,
                 unlimitedDocs,
                 authMode: authMode ?? undefined,
+                securityScanAllowed: canScanRedact,
+                cloudSyncAllowed,
               });
               if (error) {
                 notify({ type: "system", title: "Could not create redacted copy", message: error });
