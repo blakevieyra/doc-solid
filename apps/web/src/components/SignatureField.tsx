@@ -614,11 +614,52 @@ export function OwnerSignatureSettings({
   context: SignatureContext;
   onChange: (patch: Pick<UserProfile, "signatures" | "signature">) => void;
 }) {
-  const sig = getSignatureSettings(profile, context);
-  const previewValue = buildOwnerSignatureValue({ ...profile, signature: sig }, context);
+  const saved = getSignatureSettings(profile, context);
+  const [draft, setDraft] = useState(saved);
+  const draftRef = useRef(saved);
+  draftRef.current = draft;
 
-  function updateSig(next: SignatureSettings) {
+  useEffect(() => {
+    const next = getSignatureSettings(profile, context);
+    setDraft(next);
+    draftRef.current = next;
+  }, [
+    context,
+    profile.signatures,
+    saved.signerName,
+    saved.signerTitle,
+    saved.entityName,
+    saved.useDrawnSignature,
+    saved.drawnSignature,
+  ]);
+
+  const previewPatch = patchSignatureLibrary(profile, context, draft);
+  const previewValue = buildOwnerSignatureValue({ ...profile, ...previewPatch }, context);
+
+  function commitDraft(next: SignatureSettings) {
+    const current = getSignatureSettings(profile, context);
+    if (
+      next.signerName === current.signerName &&
+      next.signerTitle === current.signerTitle &&
+      next.entityName === current.entityName &&
+      next.useDrawnSignature === current.useDrawnSignature &&
+      next.drawnSignature === current.drawnSignature
+    ) {
+      return;
+    }
     onChange(patchSignatureLibrary(profile, context, next));
+  }
+
+  function updateDraftField<K extends keyof SignatureSettings>(key: K, value: SignatureSettings[K]) {
+    setDraft((prev) => {
+      const next = { ...prev, [key]: value };
+      draftRef.current = next;
+      return next;
+    });
+  }
+
+  function handleFieldBlur() {
+    commitDraft(draftRef.current);
   }
 
   return (
@@ -632,8 +673,9 @@ export function OwnerSignatureSettings({
         <label>Signer Name</label>
         <input
           type="text"
-          value={sig.signerName}
-          onChange={(e) => updateSig({ ...sig, signerName: e.target.value })}
+          value={draft.signerName}
+          onChange={(e) => updateDraftField("signerName", e.target.value)}
+          onBlur={handleFieldBlur}
           placeholder="Legal name as it appears on documents"
         />
       </div>
@@ -641,8 +683,9 @@ export function OwnerSignatureSettings({
         <label>Title / Role</label>
         <input
           type="text"
-          value={sig.signerTitle}
-          onChange={(e) => updateSig({ ...sig, signerTitle: e.target.value })}
+          value={draft.signerTitle}
+          onChange={(e) => updateDraftField("signerTitle", e.target.value)}
+          onBlur={handleFieldBlur}
           placeholder={
             context === "individual"
               ? "Individual, Owner, etc."
@@ -657,8 +700,9 @@ export function OwnerSignatureSettings({
           <label>Signing On Behalf Of</label>
           <input
             type="text"
-            value={sig.entityName}
-            onChange={(e) => updateSig({ ...sig, entityName: e.target.value })}
+            value={draft.entityName}
+            onChange={(e) => updateDraftField("entityName", e.target.value)}
+            onBlur={handleFieldBlur}
             placeholder={
               context === "organization"
                 ? profile.organization.name || "Organization name"
@@ -670,8 +714,12 @@ export function OwnerSignatureSettings({
       <label className="security-toggle">
         <input
           type="checkbox"
-          checked={sig.useDrawnSignature}
-          onChange={(e) => updateSig({ ...sig, useDrawnSignature: e.target.checked })}
+          checked={draft.useDrawnSignature}
+          onChange={(e) => {
+            const next = { ...draft, useDrawnSignature: e.target.checked };
+            setDraft(next);
+            commitDraft(next);
+          }}
         />
         <div>
           <strong>Use drawn signature when available</strong>
