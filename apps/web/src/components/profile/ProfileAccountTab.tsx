@@ -16,13 +16,15 @@ interface ProfileAccountTabProps {
 
 export function ProfileAccountTab({ onNavigate }: ProfileAccountTabProps) {
   const { profile, updateProfile } = useProfile();
-  const { user, logout } = useAuth();
+  const { user, logout, authMode } = useAuth();
   const router = useRouter();
   const { count, loading } = useDocumentStats();
   const [showDelete, setShowDelete] = useState(false);
 
   const primaryEmail = user?.email || profile.account.email ||
     profile.business.email || profile.personal.email || profile.organization.email;
+
+  const accountId = profile.account.accountId?.trim();
 
   function handleLogout() {
     logout();
@@ -56,13 +58,25 @@ export function ProfileAccountTab({ onNavigate }: ProfileAccountTabProps) {
         onChange={(v) => updateProfile({ account: { ...profile.account, email: v } })}
         help="Used for billing, support replies, and share notifications"
       />
-      <Field
-        label="Account ID"
-        value={profile.account.accountId}
-        onChange={() => {}}
-        readOnly
-        help="Reference this ID when contacting support"
-      />
+      <div className="field-group">
+        <label>Account ID</label>
+        <p className="field-readonly-value account-id-value">{accountId || "Assigning…"}</p>
+        <span className="field-help">System-generated — reference this ID when contacting support</span>
+      </div>
+      {authMode === "server" && primaryEmail && (
+        <div className="field-group">
+          <label>Password</label>
+          <p className="field-readonly-value">••••••••</p>
+          <Link
+            href={`/forgot-password?email=${encodeURIComponent(primaryEmail)}`}
+            className="btn btn-secondary btn-sm"
+            style={{ marginTop: "0.5rem" }}
+          >
+            Reset password
+          </Link>
+          <span className="field-help">We&apos;ll email a one-time code to set a new password.</span>
+        </div>
+      )}
       <div className="field-group">
         <label>Preferred profile for documents</label>
         <p className="field-readonly-value">

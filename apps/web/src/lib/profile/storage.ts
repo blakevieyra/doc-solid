@@ -149,18 +149,25 @@ function normalizeProfile(raw: Partial<UserProfile>): UserProfile {
   merged.signature = syncSignatureFromProfile(merged);
   merged.onboardingComplete =
     merged.onboardingComplete || resolveOnboardingComplete(merged);
-  if (!merged.account.accountId) {
-    merged.account.accountId = generateAccountId();
+  const withDefaults = ensureAccountId(merged);
+  if (!withDefaults.account.displayName) {
+    withDefaults.account.displayName =
+      withDefaults.personal.fullName || withDefaults.business.name || withDefaults.organization.name || "";
   }
-  if (!merged.account.displayName) {
-    merged.account.displayName =
-      merged.personal.fullName || merged.business.name || merged.organization.name || "";
+  if (!withDefaults.account.email) {
+    withDefaults.account.email =
+      withDefaults.business.email || withDefaults.personal.email || withDefaults.organization.email || "";
   }
-  if (!merged.account.email) {
-    merged.account.email =
-      merged.business.email || merged.personal.email || merged.organization.email || "";
-  }
-  return attachSignatureLibrary(merged);
+  return attachSignatureLibrary(withDefaults);
+}
+
+/** Assign a stable system account ID when missing */
+export function ensureAccountId(profile: UserProfile): UserProfile {
+  if (profile.account.accountId?.trim()) return profile;
+  return {
+    ...profile,
+    account: { ...profile.account, accountId: generateAccountId() },
+  };
 }
 
 export async function loadProfile(userId?: string | null, unlockPin?: string): Promise<UserProfile> {

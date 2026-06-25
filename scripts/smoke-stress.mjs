@@ -12,6 +12,7 @@ const pages = [
   "/",
   "/signup",
   "/login",
+  "/forgot-password",
   "/help",
   "/onboarding",
   "/documents",
@@ -174,6 +175,26 @@ async function smokeAuthFlow() {
   } else {
     log("FAIL", "GET /api/profile", `${profGet.status}`);
   }
+
+  const accountId = profGetBody.profile?.account?.accountId ?? "";
+  if (/^DS-/.test(accountId)) {
+    log("PASS", "Profile account ID", accountId.slice(0, 20));
+  } else {
+    log("FAIL", "Profile account ID", accountId ? `invalid: ${accountId}` : "missing");
+  }
+
+  const forgotPw = await fetchStatus("/forgot-password");
+  if (forgotPw.status === 200) log("PASS", "GET /forgot-password", `${forgotPw.status} (${forgotPw.ms}ms)`);
+  else log("FAIL", "GET /forgot-password", `${forgotPw.status}`);
+
+  const forgotApi = await fetch(`${BASE}/api/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "send", email: "nonexistent-smoke@test.invalid" }),
+  });
+  if (forgotApi.status === 200) log("PASS", "POST /api/auth/forgot-password", "200");
+  else if (forgotApi.status === 503) log("WARN", "POST /api/auth/forgot-password", "503 — email not configured");
+  else log("WARN", "POST /api/auth/forgot-password", `${forgotApi.status}`);
 
   const docPayload = {
     document: {

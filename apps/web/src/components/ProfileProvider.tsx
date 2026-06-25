@@ -20,6 +20,7 @@ import {
   importProfile,
   importFromCsv,
   resolveOnboardingComplete,
+  ensureAccountId,
 } from "@/lib/profile/storage";
 import {
   resolveDocumentProfile,
@@ -148,6 +149,15 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         }
       } else if (authMode === "server" && session) {
         await saveProfile(local, userId, sessionPin ?? undefined);
+      }
+
+      const missingAccountId = !local.account.accountId?.trim();
+      local = ensureAccountId(local);
+      if (missingAccountId && local.account.accountId?.trim()) {
+        await saveProfile(local, userId, sessionPin ?? undefined);
+        if (authMode === "server" && session) {
+          await pushServerProfile(local);
+        }
       }
 
       setProfile(local);

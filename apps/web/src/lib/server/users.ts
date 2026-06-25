@@ -88,18 +88,32 @@ export async function getUserPrimaryOrgId(userId: string): Promise<string> {
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
   const data = await prisma.userAccountData.findUnique({ where: { userId } });
   if (!data) return null;
-  return data.profile as unknown as UserProfile;
+  const profile = data.profile as unknown as UserProfile;
+  const accountId = profile.account.accountId?.trim() || data.accountId || generateAccountId();
+  if (profile.account.accountId?.trim() === accountId) return profile;
+  return {
+    ...profile,
+    account: { ...profile.account, accountId },
+  };
 }
 
 export async function saveUserProfile(userId: string, profile: UserProfile): Promise<void> {
+  const accountId = profile.account.accountId?.trim() || generateAccountId();
+  const profileWithId = profile.account.accountId?.trim()
+    ? profile
+    : { ...profile, account: { ...profile.account, accountId } };
+
   await prisma.userAccountData.upsert({
     where: { userId },
     create: {
       userId,
-      accountId: profile.account.accountId || generateAccountId(),
-      profile: profile as object,
+      accountId,
+      profile: profileWithId as object,
     },
-    update: { profile: profile as object },
+    update: {
+      accountId,
+      profile: profileWithId as object,
+    },
   });
 }
 

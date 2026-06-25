@@ -5,6 +5,7 @@ import { DEFAULT_PROFILE, type UserProfile } from "@/lib/profile/types";
 import { resolveOnboardingComplete } from "@/lib/profile/onboarding";
 import { rejectIfBodyTooLarge } from "@/lib/server/rate-limit";
 import { reconcileProfileSubscription } from "@/lib/server/profile-subscription";
+import { generateAccountId } from "@/lib/support/config";
 
 export const runtime = "nodejs";
 
@@ -34,6 +35,14 @@ export async function GET(req: NextRequest) {
   const storedUpdatedAt = profile.updatedAt;
   const onboardingBefore = profile.onboardingComplete;
   let dirty = false;
+
+  if (!profile.account.accountId?.trim()) {
+    profile = {
+      ...profile,
+      account: { ...profile.account, accountId: generateAccountId() },
+    };
+    dirty = true;
+  }
 
   if (resolveOnboardingComplete(profile, { userCreatedAt: auth.user.createdAt }) && !profile.onboardingComplete) {
     profile = { ...profile, onboardingComplete: true };
@@ -104,6 +113,10 @@ export async function PUT(req: NextRequest) {
       ...body.profile.account,
       email: body.profile.account.email || auth.user.email,
       displayName: body.profile.account.displayName || auth.user.name,
+      accountId:
+        body.profile.account.accountId?.trim() ||
+        existing?.account.accountId?.trim() ||
+        generateAccountId(),
     },
     subscription: await reconcileProfileSubscription(auth.user.email, subscriptionSeed),
   };

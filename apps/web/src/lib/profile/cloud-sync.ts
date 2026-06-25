@@ -98,7 +98,13 @@ export function mergeProfiles(local: UserProfile, server: UserProfile): UserProf
     business,
     personal,
     organization,
-    account: mergeSection(primary.account, secondary.account),
+    account: {
+      ...mergeSection(primary.account, secondary.account),
+      accountId:
+        primary.account.accountId?.trim() ||
+        secondary.account.accountId?.trim() ||
+        "",
+    },
     preferences: mergeSection(primary.preferences, secondary.preferences),
     signatures: mergedSignatures,
     signature,

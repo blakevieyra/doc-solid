@@ -1485,6 +1485,10 @@ a.quick-action-card { text-decoration: none; color: inherit; }
   font-size: 0.875rem;
   white-space: pre-wrap;
 }
+.account-id-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0.02em;
+}
 .field-group.field-readonly label { color: var(--text-muted); }
 
 @media (max-width: 768px) {

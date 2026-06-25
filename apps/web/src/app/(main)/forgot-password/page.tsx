@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { BrandLogo } from "@/components/BrandLogo";
 
 type Step = "email" | "verify" | "password";
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -19,6 +20,11 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const preset = searchParams?.get("email")?.trim();
+    if (preset) setEmail(preset);
+  }, [searchParams]);
 
   async function sendCode(e?: React.FormEvent) {
     e?.preventDefault();
@@ -211,5 +217,20 @@ export default function ForgotPasswordPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="auth-page">
+        <div className="auth-card">
+          <BrandLogo href="/" size="xl" className="auth-logo" />
+          <p>Loading…</p>
+        </div>
+      </div>
+    }>
+      <ForgotPasswordPageContent />
+    </Suspense>
   );
 }
