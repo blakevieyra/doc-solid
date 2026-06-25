@@ -17,9 +17,9 @@
   --warning: #d97706;
   --radius: 12px;
   --shadow: 0 1px 3px rgba(26, 39, 68, 0.06), 0 8px 24px rgba(26, 39, 68, 0.06);
-  --header-logo-height: 80px;
-  --header-logo-max-width: 260px;
-  --header-bar-min-height: 88px;
+  --header-logo-height: 96px;
+  --header-logo-max-width: 300px;
+  --header-bar-min-height: 100px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1444,9 +1444,9 @@ a.quick-action-card { text-decoration: none; color: inherit; }
     gap: 0.5rem;
   }
   :root {
-    --header-logo-height: 64px;
-    --header-logo-max-width: 200px;
-    --header-bar-min-height: 76px;
+    --header-logo-height: 72px;
+    --header-logo-max-width: 220px;
+    --header-bar-min-height: 84px;
   }
   .auth-logo .brand-logo-img,
   .brand-logo-xl .brand-logo-img { height: 120px; max-height: 120px; }

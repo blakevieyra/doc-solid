@@ -2,7 +2,7 @@ import type Stripe from "stripe";
 import type { Subscription, SubscriptionPlan, SubscriptionStatus } from "@/lib/profile/types";
 import { getStripe } from "./client";
 import { planFromPriceId, mapStripeStatus } from "./maps";
-import { saveSubscription, type StoredSubscription } from "./subscription-store";
+import { saveSubscription, getSubscriptionByEmail, type StoredSubscription } from "./subscription-store";
 import { subscriptionPeriodEnd, subscriptionStartDate } from "./types";
 import { isProActive } from "@/lib/subscription/plans";
 
@@ -134,20 +134,33 @@ export async function resolveSubscriptionFromStripe(
 
     const best = pickBestSubscription(subs.data);
     if (!best || !resolvedEmail) {
+      const cached = resolvedEmail ? await getSubscriptionByEmail(resolvedEmail).catch(() => null) : null;
+      if (cached && isProActive(toProfileSubscription(cached))) {
+        return {
+          subscription: toProfileSubscription(cached),
+          source: "stripe",
+          stored: cached,
+        };
+      }
+
       const inactive: Subscription = {
         plan: "free",
         status: "none",
         stripeCustomerId: customerId,
       };
       if (resolvedEmail) {
-        await saveSubscription({
-          email: resolvedEmail,
-          stripeCustomerId: customerId,
-          stripeSubscriptionId: subs.data[0]?.id ?? customerId,
-          plan: "free",
-          status: "none",
-          updatedAt: new Date().toISOString(),
-        }).catch(() => null);
+        try {
+          await saveSubscription({
+            email: resolvedEmail,
+            stripeCustomerId: customerId,
+            stripeSubscriptionId: subs.data[0]?.id ?? customerId,
+            plan: "free",
+            status: "none",
+            updatedAt: new Date().toISOString(),
+          });
+        } catch {
+          /* non-fatal */
+        }
       }
       return { subscription: inactive, source: "stripe" };
     }
@@ -160,7 +173,11 @@ export async function resolveSubscriptionFromStripe(
       record.status = "none";
     }
 
-    await saveSubscription(record);
+    try {
+      await saveSubscription(record);
+    } catch (err) {
+      console.error("saveSubscription failed (subscription still resolved from Stripe):", err);
+    }
 
     return {
       subscription: isProActive(profileSub) ? profileSub : freeSubscription({ stripeCustomerId: customerId }),
@@ -169,6 +186,14 @@ export async function resolveSubscriptionFromStripe(
     };
   } catch (err) {
     console.error("resolveSubscriptionFromStripe error:", err);
+    const cached = email ? await getSubscriptionByEmail(email).catch(() => null) : null;
+    if (cached && isProActive(toProfileSubscription(cached))) {
+      return {
+        subscription: toProfileSubscription(cached),
+        source: "stripe",
+        stored: cached,
+      };
+    }
     return { subscription: freeSubscription({ stripeCustomerId: customerId }), source: "none" };
   }
 }

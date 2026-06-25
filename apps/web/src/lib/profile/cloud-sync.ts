@@ -1,5 +1,6 @@
 import type { UserProfile } from "./types";
 import { mergeTeamMembersByEmail } from "@/lib/team/members-merge";
+import { mergeSubscriptions } from "@/lib/profile/subscription-merge";
 
 export async function fetchServerProfile(): Promise<UserProfile | null> {
   const res = await fetch("/api/profile", { credentials: "include", cache: "no-store" });
@@ -46,6 +47,7 @@ export function mergeProfiles(local: UserProfile, server: UserProfile): UserProf
       logo: base.organization.logo ?? other.organization.logo,
     },
     onboardingComplete: base.onboardingComplete || other.onboardingComplete,
+    subscription: mergeSubscriptions(local.subscription, server.subscription),
     team: {
       ...base.team,
       ...other.team,

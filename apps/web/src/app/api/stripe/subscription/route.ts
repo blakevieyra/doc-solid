@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe/client";
 import { resolveSubscriptionFromStripe } from "@/lib/stripe/resolve-subscription";
-import { subscriptionsAvailable } from "@/lib/stripe/subscription-store";
 import { enforceRateLimit } from "@/lib/server/rate-limit";
 import { verifyCustomerOwnership } from "@/lib/server/subscription-verify";
 import { requireAuth } from "@/lib/server/session";
@@ -20,13 +19,6 @@ export async function GET(req: NextRequest) {
   const stripe = getStripe();
   if (!stripe) {
     return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
-  }
-
-  if (!subscriptionsAvailable()) {
-    return NextResponse.json(
-      { error: "Subscription store unavailable. Configure Vercel KV in production." },
-      { status: 503 }
-    );
   }
 
   const customerId = req.nextUrl.searchParams.get("customerId");
