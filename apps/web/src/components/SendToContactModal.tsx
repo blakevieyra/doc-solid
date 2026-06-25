@@ -13,6 +13,7 @@ import { recordDocumentShareAudit } from "@/lib/documents/share-audit";
 import { canUseFeature } from "@/lib/subscription/plans";
 import { emptyCounterpartySignatureFields, countCounterpartySignatureFields } from "@/lib/documents/signature-access";
 import { TeamMemberPickerRow } from "@/components/TeamMemberPickerRow";
+import { SignatureFieldPickerRow } from "@/components/SignatureFieldPickerRow";
 import { AddRecipientForm } from "@/components/AddRecipientForm";
 import {
   SignatureRequestBlockedNotice,
@@ -193,17 +194,12 @@ export function SendToContactModal({
             <ul className="team-share-list">
               {availableFields.map((f) => (
                 <li key={f.id}>
-                  <label className="security-toggle">
-                    <input
-                      type="checkbox"
-                      checked={selectedFields.includes(f.id)}
-                      onChange={() => toggleField(f.id)}
-                    />
-                    <div>
-                      <strong>{f.label}</strong>
-                      <span>{f.id}</span>
-                    </div>
-                  </label>
+                  <SignatureFieldPickerRow
+                    label={f.label}
+                    checked={selectedFields.includes(f.id)}
+                    onToggle={() => toggleField(f.id)}
+                    disabled={!teamAllowed}
+                  />
                 </li>
               ))}
             </ul>
