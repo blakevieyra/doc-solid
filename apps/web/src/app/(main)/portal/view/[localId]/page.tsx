@@ -18,7 +18,8 @@ import { useAuth } from "@/components/AuthProvider";
 import { exportDocumentPdf, documentPdfFilename } from "@/lib/pdf/exportDocument";
 import { canUseFeature } from "@/lib/subscription/plans";
 import { resolveDocumentNumber } from "@/lib/documents/document-number";
-import { updateSavedDocumentFields } from "@/lib/documents/persist";
+import { applyDocumentRedaction, updateSavedDocumentFields } from "@/lib/documents/persist";
+import type { SecurityFinding } from "@/lib/security/document-scan";
 import { isShareSender, loadShares, getShareById } from "@/lib/team/invites";
 import {
   getShareSigningHref,
@@ -110,11 +111,18 @@ function SavedDocumentPageContent() {
     setShareContext(getShareById(share.id));
   }, [localId, shareId, loading, userEmail, userName]);
 
-  async function handleRedact(redacted: Record<string, string>) {
+  async function handleRedact(
+    redacted: Record<string, string>,
+    _scan: unknown,
+    applied: SecurityFinding[],
+  ) {
     setValues(redacted);
     if (!localId || shareContext?.fieldDataSnapshot) return;
-    const updated = await updateSavedDocumentFields(localId, redacted);
-    if (updated) setDocStatus(updated.status);
+    const { doc } = await applyDocumentRedaction(localId, applied);
+    if (doc) {
+      setValues(doc.fieldData as Record<string, string>);
+      setDocStatus(doc.status);
+    }
   }
 
   async function handleMarkFinal() {
@@ -322,8 +330,9 @@ function SavedDocumentPageContent() {
           documentTitle={title}
           templateId={templateId}
           values={values}
+          documentStatus={docStatus}
           onClose={() => setShowSecurityScan(false)}
-          onRedact={(redacted) => void handleRedact(redacted)}
+          onRedact={(redacted, _scan, applied) => void handleRedact(redacted, _scan, applied)}
         />
       )}
 

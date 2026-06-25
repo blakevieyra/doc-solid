@@ -10,6 +10,7 @@ import {
   tryParseJsonRecords,
   tableColumnsFromRows,
 } from "@/lib/documents/tableDisplay";
+import { RedactedValue, isRedactedValue } from "@/components/RedactedValue";
 
 export function TableFieldPreview({
   fieldId,
@@ -20,6 +21,14 @@ export function TableFieldPreview({
   label: string;
   value: string;
 }) {
+  if (isRedactedValue(value)) {
+    return (
+      <div className="doc-table-block">
+        <RedactedValue />
+      </div>
+    );
+  }
+
   if (isLineItemsField(fieldId)) {
     if (lineItemsHasVisibleRows(value)) {
       return (

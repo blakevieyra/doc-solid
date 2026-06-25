@@ -72,7 +72,7 @@ import { ReturnShareModal } from "@/components/ReturnShareModal";
 import { SendToContactModal } from "@/components/SendToContactModal";
 import { AddToPacketModal } from "@/components/AddToPacketModal";
 import { canUseFeature } from "@/lib/subscription/plans";
-import { archiveSavedDocument, unarchiveSavedDocument, updateSavedDocumentFields } from "@/lib/documents/persist";
+import { archiveSavedDocument, unarchiveSavedDocument, applyDocumentRedaction } from "@/lib/documents/persist";
 import {
   getFavoriteLocalIds,
   getFavoriteTemplateIds,
@@ -994,11 +994,12 @@ export default function PortalPage() {
           documentTitle={scanDoc.title}
           templateId={scanDoc.templateId}
           values={scanDoc.fieldData as Record<string, string>}
+          documentStatus={scanDoc.status}
           onClose={() => setScanDoc(null)}
-          onRedact={async (redacted) => {
-            const updated = await updateSavedDocumentFields(scanDoc.localId, redacted, { actor });
-            if (updated) {
-              setDocuments((prev) => prev.map((d) => (d.localId === updated.localId ? updated : d)));
+          onRedact={async (redacted, _scan, applied) => {
+            const { doc } = await applyDocumentRedaction(scanDoc.localId, applied, actor);
+            if (doc) {
+              setDocuments((prev) => prev.map((d) => (d.localId === doc.localId ? doc : d)));
             }
             setScanDoc(null);
           }}

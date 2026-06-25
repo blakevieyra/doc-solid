@@ -16,14 +16,20 @@ export function SecurityScanModal({
   documentTitle,
   templateId,
   values,
+  documentStatus,
   onClose,
   onRedact,
 }: {
   documentTitle: string;
   templateId?: string;
   values: Record<string, string>;
+  documentStatus?: "DRAFT" | "FINAL" | "ARCHIVED";
   onClose: () => void;
-  onRedact?: (redacted: Record<string, string>, scan: SecurityScanResult, applied: SecurityFinding[]) => void;
+  onRedact?: (
+    redacted: Record<string, string>,
+    scan: SecurityScanResult,
+    applied: SecurityFinding[],
+  ) => void | Promise<void>;
 }) {
   const { profile } = useProfile();
   const isPro = canUseFeature(profile.subscription, "securityScan");
@@ -89,6 +95,7 @@ export function SecurityScanModal({
   }
 
   const selectedCount = result ? result.findings.filter((f) => selectedIds.has(f.id)).length : 0;
+  const isFinalDocument = documentStatus === "FINAL" || documentStatus === "ARCHIVED";
 
   const riskClass =
     !result ? ""
@@ -101,6 +108,12 @@ export function SecurityScanModal({
       <div className="modal-card sec-scan-modal" onClick={(e) => e.stopPropagation()}>
         <h2>Security Scan & Redaction</h2>
         <p className="field-help">Review sensitive data in &quot;{documentTitle}&quot; and choose what to redact.</p>
+        {isFinalDocument && (
+          <p className="field-help sec-redact-final-note">
+            This document is marked {documentStatus?.toLowerCase()}. Redaction updates flagged text fields with a blacked-out
+            &quot;REDACTED&quot; label. Signed signature fields stay intact to preserve the executed record.
+          </p>
+        )}
 
         <div className="sec-privacy-notice">
           <strong>Privacy notice</strong>
@@ -145,7 +158,9 @@ export function SecurityScanModal({
               <p className="field-help">No sensitive patterns found. Document looks safe to share.</p>
             ) : (
               <>
-                <p className="field-help sec-redact-hint">Select items to redact, then apply. Redacted fields become [REDACTED] in your document.</p>
+                <p className="field-help sec-redact-hint">
+                  Select items to redact, then apply. Flagged fields are replaced with a blacked-out REDACTED label in the preview and PDF.
+                </p>
                 <ul className="sec-findings-list">
                   {result.findings.map((f) => (
                     <li key={f.id} className={`sec-finding sec-finding-${f.risk}`}>

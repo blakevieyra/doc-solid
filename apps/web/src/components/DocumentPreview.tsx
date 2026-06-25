@@ -20,6 +20,7 @@ import {
 } from "@/lib/profile/signature";
 
 import { resolveDocumentLetterhead } from "@/lib/profile/document-branding";
+import { RedactedValue, isRedactedValue } from "@/components/RedactedValue";
 
 
 
@@ -63,6 +64,11 @@ export function DocumentPreview({ meta, values, profile, lockBranding, previewId
     letterhead.pocEmail,
   ].filter(Boolean);
 
+  function renderLetterheadText(value: string) {
+    if (isRedactedValue(value)) return <RedactedValue />;
+    return value;
+  }
+
 
 
   return (
@@ -85,29 +91,36 @@ export function DocumentPreview({ meta, values, profile, lockBranding, previewId
 
           <div className="doc-preview-brand-text">
 
-            <h1 className="doc-preview-company">{letterhead.companyName}</h1>
+            <h1 className="doc-preview-company">{renderLetterheadText(letterhead.companyName)}</h1>
 
             {letterhead.tagline && (
 
-              <p className="doc-preview-tagline">{letterhead.tagline}</p>
+              <p className="doc-preview-tagline">{renderLetterheadText(letterhead.tagline)}</p>
 
             )}
 
             {letterhead.address && (
 
-              <p className="doc-preview-letterhead-line doc-preview-letterhead-address">{letterhead.address}</p>
+              <p className="doc-preview-letterhead-line doc-preview-letterhead-address">{renderLetterheadText(letterhead.address)}</p>
 
             )}
 
             {contactParts.length > 0 && (
 
-              <p className="doc-preview-letterhead-line">{contactParts.join(" · ")}</p>
+              <p className="doc-preview-letterhead-line">{contactParts.map((part, index) => (
+                <span key={`${part}-${index}`}>
+                  {index > 0 && " · "}
+                  {part.startsWith("Tel: ")
+                    ? <>Tel: {renderLetterheadText(part.slice(5))}</>
+                    : renderLetterheadText(part)}
+                </span>
+              ))}</p>
 
             )}
 
             {letterhead.website && (
 
-              <p className="doc-preview-letterhead-line doc-preview-letterhead-website">{letterhead.website}</p>
+              <p className="doc-preview-letterhead-line doc-preview-letterhead-website">{renderLetterheadText(letterhead.website)}</p>
 
             )}
 
@@ -121,11 +134,11 @@ export function DocumentPreview({ meta, values, profile, lockBranding, previewId
 
                   <p className="doc-preview-letterhead-line doc-preview-letterhead-poc-name">
 
-                    {letterhead.pocName}
+                    {renderLetterheadText(letterhead.pocName)}
 
                     {letterhead.pocTitle && (
 
-                      <span className="doc-preview-letterhead-poc-title">, {letterhead.pocTitle}</span>
+                      <span className="doc-preview-letterhead-poc-title">, {renderLetterheadText(letterhead.pocTitle)}</span>
 
                     )}
 
@@ -135,7 +148,14 @@ export function DocumentPreview({ meta, values, profile, lockBranding, previewId
 
                 {pocContactParts.length > 0 && (
 
-                  <p className="doc-preview-letterhead-line">{pocContactParts.join(" · ")}</p>
+                  <p className="doc-preview-letterhead-line">{pocContactParts.map((part, index) => (
+                    <span key={`${part}-${index}`}>
+                      {index > 0 && " · "}
+                      {part.startsWith("Tel: ")
+                        ? <>Tel: {renderLetterheadText(part.slice(5))}</>
+                        : renderLetterheadText(part)}
+                    </span>
+                  ))}</p>
 
                 )}
 
@@ -307,7 +327,9 @@ function SectionPreview({
 
               <dd>
 
-                {field.type === "textarea" ? (
+                {isRedactedValue(values[field.id]) ? (
+                  <RedactedValue />
+                ) : field.type === "textarea" ? (
 
                   values[field.id].split("\n").map((line, i, arr) => (
 
@@ -355,7 +377,7 @@ function SectionPreview({
 
               <span>{field.label}</span>
 
-              <span>{formatValue(values[field.id], field)}</span>
+              <span>{isRedactedValue(values[field.id]) ? <RedactedValue /> : formatValue(values[field.id], field)}</span>
 
             </div>
 

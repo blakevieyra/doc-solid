@@ -30,7 +30,7 @@ import { EmailDocumentModal } from "@/components/EmailDocumentModal";
 import { SecurityScanModal } from "@/components/SecurityScanModal";
 import { DocumentComplianceBar } from "@/components/DocumentComplianceBar";
 import { SignatureField } from "@/components/SignatureField";
-import { updateSavedDocumentFields, deleteSavedDocument } from "@/lib/documents/persist";
+import { applyDocumentRedaction, updateSavedDocumentFields, deleteSavedDocument } from "@/lib/documents/persist";
 import { isOwnerSignatureField } from "@/lib/profile/signature";
 import { canApplyOwnerSignature } from "@/lib/documents/completeness";
 import {
@@ -819,12 +819,16 @@ function DocumentEditorPageContent() {
             documentTitle={assignedNumber ? `${meta.name} #${assignedNumber}` : meta.name}
             templateId={meta.id}
             values={values}
+            documentStatus={docStatus}
             onClose={() => setShowSecurityScan(false)}
-            onRedact={async (redacted) => {
+            onRedact={async (redacted, _scan, applied) => {
               setValues(redacted);
               if (savedLocalId) {
-                const updated = await updateSavedDocumentFields(savedLocalId, redacted);
-                if (updated) setDocStatus(updated.status);
+                const { doc } = await applyDocumentRedaction(savedLocalId, applied);
+                if (doc) {
+                  setValues(doc.fieldData as Record<string, string>);
+                  setDocStatus(doc.status);
+                }
               }
             }}
           />

@@ -1,6 +1,6 @@
 import type { DocumentTypeDefinition } from "@doc-solid/documents";
 import { parseSignatureValue } from "@/lib/profile/signature";
-
+import { isRedactedValue } from "@/lib/security/document-scan";
 export interface SignatureLockMeta {
   signedAt: string;
   signedByEmail: string;
@@ -85,4 +85,26 @@ export function listSignatureFieldIds(template: DocumentTypeDefinition): string[
   return template.sections.flatMap((s) =>
     s.fields.filter((f) => f.type === "signature").map((f) => f.id)
   );
+}
+
+export function listLockedSignatureFields(  template: DocumentTypeDefinition,
+  values: Record<string, string>,
+): string[] {
+  return listSignatureFieldIds(template).filter((id) => isSignatureLocked(id, values));
+}
+
+export function redactionSkippedLockedSignatures(
+  redacted: Record<string, string>,
+  existing: Record<string, string>,
+  template: DocumentTypeDefinition,
+): string[] {
+  const skipped: string[] = [];
+  for (const id of listSignatureFieldIds(template)) {
+    if (!isSignatureLocked(id, existing)) continue;
+    if (redacted[id] === existing[id]) continue;
+    if (isRedactedValue(redacted[id]) || !isSignatureFilled(redacted[id])) {
+      skipped.push(id);
+    }
+  }
+  return skipped;
 }

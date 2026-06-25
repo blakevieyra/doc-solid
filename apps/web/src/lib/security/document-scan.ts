@@ -1,5 +1,11 @@
 export type RiskLevel = "low" | "medium" | "high" | "critical";
 
+export const REDACTED_PLACEHOLDER = "[REDACTED]";
+
+export function isRedactedValue(value: string | undefined | null): boolean {
+  return value?.trim() === REDACTED_PLACEHOLDER;
+}
+
 export interface SecurityFinding {
   id: string;
   type: string;
@@ -126,6 +132,7 @@ export function scanDocumentFields(
   const seen = new Set<string>();
 
   for (const [fieldId, raw] of Object.entries(values)) {
+    if (fieldId.startsWith("_sigMeta.")) continue;
     if (!raw?.trim()) continue;
     const text = raw.trim();
 
@@ -217,11 +224,11 @@ export function redactDocumentFields(
   for (const f of findings) {
     if (!f.fieldId || !next[f.fieldId]) continue;
     if (options?.redactEntireField || f.type === "sensitive_field") {
-      next[f.fieldId] = "[REDACTED]";
+      next[f.fieldId] = REDACTED_PLACEHOLDER;
     } else if (next[f.fieldId].includes(f.value)) {
-      next[f.fieldId] = next[f.fieldId].replace(f.value, "[REDACTED]");
+      next[f.fieldId] = next[f.fieldId].replace(f.value, REDACTED_PLACEHOLDER);
     } else {
-      next[f.fieldId] = "[REDACTED]";
+      next[f.fieldId] = REDACTED_PLACEHOLDER;
     }
   }
   return next;
