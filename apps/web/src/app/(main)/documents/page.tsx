@@ -121,7 +121,7 @@ export default function DocumentsPage() {
           </p>
         </div>
       ) : (
-        <div className="grid-3">
+        <div className="grid-3 doc-catalog-grid">
           {filtered.map((doc) => (
             <DocumentCard
               key={doc.id}

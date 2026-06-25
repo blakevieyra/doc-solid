@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
         invitedAt: now,
         status: "pending",
       };
-      const members = mergeTeamMembersByEmail(ownerProfile.team.members, [ownerMember, pendingMember]);
+      const members = mergeTeamMembersByEmail(inviterEmail, ownerProfile.team.members, [ownerMember, pendingMember]);
 
       await saveUserProfile(auth.user.id, {
         ...ownerProfile,

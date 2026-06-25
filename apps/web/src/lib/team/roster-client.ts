@@ -6,6 +6,8 @@ export interface TeamMemberView {
   id: string;
   email: string;
   name: string;
+  username?: string;
+  avatarUrl?: string | null;
   role: TeamRole;
   joinedAt: string;
   isYou: boolean;

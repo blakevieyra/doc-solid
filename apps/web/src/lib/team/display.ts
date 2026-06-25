@@ -1,4 +1,5 @@
 import type { AppContact, TeamMember, TeamRole, UserProfile } from "@/lib/profile/types";
+import { mergeMemberRole, mergeMemberStatus } from "./member-merge-utils";
 
 export function roleLabel(role: TeamRole): string {
   const labels: Record<TeamRole, string> = {
@@ -24,6 +25,7 @@ export interface TeamMemberDisplay {
 
 export function mergeTeamMemberDisplays(
   selfEmail: string,
+  ownerEmail: string | null | undefined,
   ...lists: Array<TeamMemberDisplay[] | undefined>
 ): TeamMemberDisplay[] {
   const self = selfEmail.toLowerCase();
@@ -35,19 +37,22 @@ export function mergeTeamMemberDisplays(
       const key = m.email.trim().toLowerCase();
       if (!key) continue;
       const prev = byEmail.get(key);
+      const joinedAt = prev?.joinedAt && prev.joinedAt <= m.joinedAt ? prev.joinedAt : m.joinedAt;
+      const status = mergeMemberStatus(
+        m.status,
+        prev?.status,
+        m.status === "active" || prev?.status === "active" ? joinedAt : undefined
+      );
       byEmail.set(key, {
         id: m.id || prev?.id || `tm_${key.replace(/[^a-z0-9]/g, "_")}`,
         email: m.email,
         name: m.name || prev?.name || m.email,
         username: m.username || prev?.username,
         avatarUrl: m.avatarUrl ?? prev?.avatarUrl ?? null,
-        role: m.role === "owner" || prev?.role === "owner" ? "owner" : m.role || prev?.role || "editor",
-        joinedAt: prev?.joinedAt && prev.joinedAt <= m.joinedAt ? prev.joinedAt : m.joinedAt,
+        role: mergeMemberRole(key, ownerEmail, m.role, prev?.role),
+        joinedAt,
         isYou: key === self,
-        status:
-          m.status === "pending" || prev?.status === "pending"
-            ? "pending"
-            : m.status ?? prev?.status ?? "active",
+        status,
       });
     }
   }

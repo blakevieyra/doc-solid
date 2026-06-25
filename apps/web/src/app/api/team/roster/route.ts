@@ -5,6 +5,8 @@ import { getUserProfile } from "@/lib/server/users";
 import { enforceRateLimit } from "@/lib/server/rate-limit";
 import { getTeamRoster, saveTeamRoster, mapDbRole, type TeamRoster, type TeamRosterMember } from "@/lib/server/team-roster";
 import { getPendingInvitesForTeam } from "@/lib/server/team-member-invites";
+import { loadPublicIdentityForEmail } from "@/lib/server/public-identity";
+import { mergeMemberRole, mergeMemberStatus } from "@/lib/team/member-merge-utils";
 import type { TeamRole, UserProfile } from "@/lib/profile/types";
 import { formatAddress } from "@/lib/profile/types";
 import type { TeamSharedProfile } from "@/lib/profile/document-branding";
@@ -15,6 +17,8 @@ export interface TeamMemberView {
   id: string;
   email: string;
   name: string;
+  username?: string;
+  avatarUrl?: string | null;
   role: TeamRole;
   joinedAt: string;
   isYou: boolean;
@@ -41,13 +45,23 @@ function memberId(email: string): string {
 }
 
 function toMemberViews(
-  members: Array<{ email: string; name: string; role: TeamRole; joinedAt: string; status?: "pending" | "active" }>,
+  members: Array<{
+    email: string;
+    name: string;
+    role: TeamRole;
+    joinedAt: string;
+    status?: "pending" | "active";
+    username?: string;
+    avatarUrl?: string | null;
+  }>,
   selfEmail: string
 ): TeamMemberView[] {
   return members.map((m) => ({
     id: memberId(m.email),
     email: m.email,
     name: m.name,
+    username: m.username,
+    avatarUrl: m.avatarUrl,
     role: m.role,
     joinedAt: m.joinedAt,
     isYou: m.email.toLowerCase() === selfEmail.toLowerCase(),
@@ -89,16 +103,19 @@ async function loadOwnerSharedProfile(ownerEmail: string | null, orgName: string
 }
 
 function fromProfileTeam(profile: UserProfile, selfEmail: string, selfName: string): TeamView {
-  const ownerMember = profile.team.members.find((m) => m.role === "owner");
-  const isOwner = !ownerMember || ownerMember.email.toLowerCase() === selfEmail.toLowerCase();
+  const ownerEmail =
+    profile.team.ownerEmail ??
+    profile.team.members.find((m) => m.role === "owner")?.email ??
+    null;
+  const isOwner = ownerEmail?.toLowerCase() === selfEmail.toLowerCase();
   const myMember = profile.team.members.find((m) => m.email.toLowerCase() === selfEmail.toLowerCase());
 
   return {
     source: "local",
     teamId: profile.team.teamId ?? profile.account.accountId ?? null,
     orgName: profile.team.orgName || profile.business.name || profile.organization.name || "My Team",
-    ownerEmail: profile.team.ownerEmail ?? ownerMember?.email ?? (isOwner ? selfEmail : null),
-    ownerName: profile.team.ownerName ?? ownerMember?.name ?? (isOwner ? selfName : null),
+    ownerEmail: ownerEmail ?? (isOwner ? selfEmail : null),
+    ownerName: profile.team.ownerName ?? profile.team.members.find((m) => m.role === "owner")?.name ?? (isOwner ? selfName : null),
     myRole: myMember?.role ?? (isOwner ? "owner" : "editor"),
     isOwner,
     shareBusinessProfile: profile.team.shareBusinessProfile,
@@ -109,6 +126,8 @@ function fromProfileTeam(profile: UserProfile, selfEmail: string, selfName: stri
       profile.team.members.map((m) => ({
         email: m.email,
         name: m.name,
+        username: m.username,
+        avatarUrl: m.avatarUrl,
         role: m.role,
         joinedAt: m.acceptedAt ?? m.invitedAt,
         status: m.status ?? (m.acceptedAt ? "active" : "pending"),
@@ -186,22 +205,52 @@ async function fromOrganization(userId: string, selfEmail: string, selfName: str
 }
 
 function mergeMemberLists(
-  ...lists: Array<Array<{ email: string; name: string; role: TeamRole; joinedAt: string; status?: "pending" | "active" }>>
-): Array<{ email: string; name: string; role: TeamRole; joinedAt: string; status?: "pending" | "active" }> {
-  const byEmail = new Map<string, { email: string; name: string; role: TeamRole; joinedAt: string; status?: "pending" | "active" }>();
+  ownerEmail: string | null | undefined,
+  ...lists: Array<Array<{
+    email: string;
+    name: string;
+    role: TeamRole;
+    joinedAt: string;
+    status?: "pending" | "active";
+    username?: string;
+    avatarUrl?: string | null;
+  }>>
+): Array<{
+  email: string;
+  name: string;
+  role: TeamRole;
+  joinedAt: string;
+  status?: "pending" | "active";
+  username?: string;
+  avatarUrl?: string | null;
+}> {
+  const byEmail = new Map<string, {
+    email: string;
+    name: string;
+    role: TeamRole;
+    joinedAt: string;
+    status?: "pending" | "active";
+    username?: string;
+    avatarUrl?: string | null;
+  }>();
   for (const list of lists) {
     for (const m of list) {
       const key = m.email.toLowerCase();
       const prev = byEmail.get(key);
+      const joinedAt = prev?.joinedAt && prev.joinedAt <= m.joinedAt ? prev.joinedAt : m.joinedAt;
+      const status = mergeMemberStatus(
+        m.status,
+        prev?.status,
+        m.status === "active" || prev?.status === "active" ? joinedAt : undefined
+      );
       byEmail.set(key, {
         email: m.email,
         name: m.name || prev?.name || m.email,
-        role: m.role,
-        joinedAt: prev?.joinedAt && prev.joinedAt <= m.joinedAt ? prev.joinedAt : m.joinedAt,
-        status:
-          m.status === "pending" || prev?.status === "pending"
-            ? "pending"
-            : m.status ?? prev?.status ?? "active",
+        role: mergeMemberRole(key, ownerEmail, m.role, prev?.role),
+        joinedAt,
+        status,
+        username: m.username ?? prev?.username,
+        avatarUrl: m.avatarUrl ?? prev?.avatarUrl ?? null,
       });
     }
   }
@@ -210,6 +259,27 @@ function mergeMemberLists(
     if (b.role === "owner") return 1;
     return a.joinedAt.localeCompare(b.joinedAt);
   });
+}
+
+async function enrichMembersWithIdentity<T extends {
+  email: string;
+  name: string;
+  username?: string;
+  avatarUrl?: string | null;
+}>(members: T[]): Promise<T[]> {
+  return Promise.all(
+    members.map(async (m) => {
+      if (m.avatarUrl) return m;
+      const identity = await loadPublicIdentityForEmail(m.email).catch(() => null);
+      if (!identity) return m;
+      return {
+        ...m,
+        name: m.name || identity.name,
+        username: m.username ?? identity.username,
+        avatarUrl: identity.avatarUrl ?? null,
+      };
+    })
+  );
 }
 
 async function buildTeamView(userId: string, email: string, name: string): Promise<TeamView> {
@@ -231,6 +301,8 @@ async function buildTeamView(userId: string, email: string, name: string): Promi
     profile?.team.members.map((m) => ({
       email: m.email,
       name: m.name,
+      username: m.username,
+      avatarUrl: m.avatarUrl,
       role: m.role,
       joinedAt: m.acceptedAt ?? m.invitedAt,
       status: (m.status ?? (m.acceptedAt ? "active" : "pending")) as "pending" | "active",
@@ -240,6 +312,8 @@ async function buildTeamView(userId: string, email: string, name: string): Promi
     profile?.library?.contacts.map((c) => ({
       email: c.email,
       name: c.name,
+      username: c.username,
+      avatarUrl: c.avatarUrl,
       role: "editor" as TeamRole,
       joinedAt: c.addedAt,
     })) ?? [];
@@ -251,7 +325,13 @@ async function buildTeamView(userId: string, email: string, name: string): Promi
     joinedAt: m.joinedAt,
   })) ?? [];
 
-  const mergedMembers = mergeMemberLists(orgMembers, profileMembers, contactMembers, rosterMembers);
+  const ownerEmail =
+    roster?.ownerEmail ??
+    profile?.team.ownerEmail ??
+    profileMembers.find((m) => m.role === "owner")?.email ??
+    email;
+
+  const mergedMembers = mergeMemberLists(ownerEmail, orgMembers, profileMembers, contactMembers, rosterMembers);
 
   const pendingInvites = teamId ? await getPendingInvitesForTeam(teamId) : [];
   for (const invite of pendingInvites) {
@@ -292,7 +372,7 @@ async function buildTeamView(userId: string, email: string, name: string): Promi
 
   const membersForView =
     mergedMembers.length > 0
-      ? mergedMembers
+      ? await enrichMembersWithIdentity(mergedMembers)
       : [{ email, name, role: "owner" as TeamRole, joinedAt: profile?.createdAt ?? new Date().toISOString() }];
 
   const createdAt =

@@ -6,6 +6,7 @@ import {
   getTeamMemberInvite,
   updateTeamMemberInvite,
 } from "@/lib/server/team-member-invites";
+import { loadPublicIdentityForEmail } from "@/lib/server/public-identity";
 import { getTeamRoster, saveTeamRoster, type TeamRoster } from "@/lib/server/team-roster";
 import { getUserProfile, saveUserProfile } from "@/lib/server/users";
 import { pushServerNotification } from "@/lib/server/share-notifications";
@@ -170,10 +171,13 @@ export async function POST(req: NextRequest) {
     invite.status = "accepted";
     await updateTeamMemberInvite(invite);
 
+    const joinerIdentity = await loadPublicIdentityForEmail(email).catch(() => null);
     const joinerMember: TeamMember = {
       id: memberKey(email),
       email,
       name: auth.user.name,
+      username: joinerIdentity?.username,
+      avatarUrl: joinerIdentity?.avatarUrl ?? null,
       role: invite.role,
       shareProfile: true,
       invitedAt: invite.createdAt,

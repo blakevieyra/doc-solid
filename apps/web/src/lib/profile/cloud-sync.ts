@@ -53,7 +53,11 @@ export function mergeProfiles(local: UserProfile, server: UserProfile): UserProf
       ...other.team,
       teamId: base.team.teamId || other.team.teamId,
       orgName: base.team.orgName || other.team.orgName,
-      members: mergeTeamMembersByEmail(base.team.members, other.team.members),
+      members: mergeTeamMembersByEmail(
+        base.team.ownerEmail ?? other.team.ownerEmail,
+        base.team.members,
+        other.team.members
+      ),
       memberships: [...(base.team.memberships ?? []), ...(other.team.memberships ?? [])].filter(
         (m, i, arr) => arr.findIndex((x) => x.teamId === m.teamId) === i
       ),

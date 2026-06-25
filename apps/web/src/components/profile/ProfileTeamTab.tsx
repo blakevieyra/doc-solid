@@ -52,6 +52,8 @@ function teamViewToMembers(team: TeamView): TeamMember[] {
     id: m.id,
     email: m.email,
     name: m.name,
+    username: m.username,
+    avatarUrl: m.avatarUrl,
     role: m.role,
     shareProfile: true,
     invitedAt: m.joinedAt,
@@ -62,6 +64,7 @@ function teamViewToMembers(team: TeamView): TeamMember[] {
 
 function applyTeamView(profile: UserProfile, team: TeamView): UserProfile {
   const fromView = teamViewToMembers(team);
+  const ownerEmail = team.ownerEmail ?? profile.team.ownerEmail;
   return {
     ...profile,
     team: {
@@ -75,7 +78,7 @@ function applyTeamView(profile: UserProfile, team: TeamView): UserProfile {
       myRole: team.myRole,
       shareBusinessProfile: team.shareBusinessProfile,
       shareOrganizationProfile: team.shareOrganizationProfile,
-      members: mergeTeamMembersByEmail(profile.team.members, fromView),
+      members: mergeTeamMembersByEmail(ownerEmail, profile.team.members, fromView),
     },
   };
 }
@@ -115,15 +118,17 @@ export function ProfileTeamTab() {
     null;
   const isOwner = teamView?.isOwner ?? profile.team.myRole === "owner";
   const selfEmail = (session?.email ?? profile.account.email).toLowerCase();
+  const ownerEmail = teamView?.ownerEmail ?? profile.team.ownerEmail ?? null;
   const displayMembers = useMemo(
     () =>
       mergeTeamMemberDisplays(
         selfEmail,
+        ownerEmail,
         teamView?.members,
         profileMembersToDisplay(profile, selfEmail),
         contactsToDisplay(profile.library?.contacts ?? [], selfEmail)
       ),
-    [teamView, profile, selfEmail]
+    [teamView, profile, selfEmail, ownerEmail]
   );
   const orgName = teamView?.orgName || profile.team.orgName || profile.business.name || profile.organization.name;
   const onTeam = profile.team.enabled || (teamView?.members.length ?? 0) > 1 || !!profile.team.myRole;
@@ -138,6 +143,7 @@ export function ProfileTeamTab() {
           if (view.members.length === 0) return current;
           const mergedMembers = mergeTeamMemberDisplays(
             (session?.email ?? current.account.email).toLowerCase(),
+            view.ownerEmail ?? current.team.ownerEmail,
             view.members,
             profileMembersToDisplay(current, (session?.email ?? current.account.email).toLowerCase()),
             contactsToDisplay(current.library?.contacts ?? [], (session?.email ?? current.account.email).toLowerCase())
@@ -337,7 +343,11 @@ export function ProfileTeamTab() {
         invitedAt: new Date().toISOString(),
         status: "pending",
       };
-      const next = mergeTeamMembersByEmail(profile.team.members, [member]);
+      const next = mergeTeamMembersByEmail(
+        profile.team.ownerEmail ?? session?.email ?? profile.account.email,
+        profile.team.members,
+        [member]
+      );
       await updateProfile({
         team: {
           ...profile.team,
