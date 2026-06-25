@@ -752,6 +752,16 @@ button, input, select, textarea {
 .team-member-row strong { display: block; font-size: 0.9rem; }
 .team-member-row span { font-size: 0.75rem; color: var(--text-muted); }
 .team-invite-form { display: grid; gap: 0.75rem; max-width: 400px; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.add-recipient-form {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 0.75rem;
+}
+.add-recipient-form-compact { margin-top: 0.75rem; padding-top: 0.75rem; }
+.add-recipient-form-title { font-size: 0.875rem; font-weight: 600; margin: 0; }
+.add-recipient-form-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .billing-current { padding: 1rem; background: #f8fafc; border-radius: 10px; display: flex; flex-direction: column; gap: 0.35rem; }
 .billing-status { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: var(--success); }
 .billing-status-pending { color: var(--warning); }

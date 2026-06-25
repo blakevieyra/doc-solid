@@ -13,6 +13,7 @@ import { recordDocumentShareAudit } from "@/lib/documents/share-audit";
 import { canUseFeature } from "@/lib/subscription/plans";
 import { emptyCounterpartySignatureFields } from "@/lib/documents/signature-access";
 import { TeamMemberPickerRow } from "@/components/TeamMemberPickerRow";
+import { AddRecipientForm } from "@/components/AddRecipientForm";
 
 export type SendToContactMode = "share" | "signature";
 
@@ -85,6 +86,11 @@ export function SendToContactModal({
     );
   }
 
+  function handleRecipientAdded(email: string) {
+    setSelected((prev) => (prev.includes(email) ? prev : [...prev, email]));
+    setError("");
+  }
+
   async function handleSend() {
     setError("");
     if (!teamAllowed) {
@@ -92,7 +98,7 @@ export function SendToContactModal({
       return;
     }
     if (selected.length === 0) {
-      setError("Select at least one recipient.");
+      setError("Select at least one recipient, or add one below.");
       return;
     }
     if (mode === "signature" && selectedFields.length === 0) {
@@ -148,36 +154,37 @@ export function SendToContactModal({
           </div>
         )}
 
+        {mode === "signature" && availableFields.length > 0 && (
+          <div className="field-group">
+            <label>Signature fields to request</label>
+            <ul className="team-share-list">
+              {availableFields.map((f) => (
+                <li key={f.id}>
+                  <label className="security-toggle">
+                    <input
+                      type="checkbox"
+                      checked={selectedFields.includes(f.id)}
+                      onChange={() => toggleField(f.id)}
+                      disabled={!teamAllowed}
+                    />
+                    <div>
+                      <strong>{f.label}</strong>
+                      <span>{f.id}</span>
+                    </div>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {recipients.length === 0 ? (
-          <p className="field-help">
-            Add contacts on <Link href="/team">Team</Link> under Document contacts, then return here.
-          </p>
+          <p className="field-help">No recipients yet — add a contact or team member below.</p>
         ) : (
           <>
-            {mode === "signature" && availableFields.length > 0 && (
-              <div className="field-group">
-                <label>Signature fields to request</label>
-                <ul className="team-share-list">
-                  {availableFields.map((f) => (
-                    <li key={f.id}>
-                      <label className="security-toggle">
-                        <input
-                          type="checkbox"
-                          checked={selectedFields.includes(f.id)}
-                          onChange={() => toggleField(f.id)}
-                          disabled={!teamAllowed}
-                        />
-                        <div>
-                          <strong>{f.label}</strong>
-                          <span>{f.id}</span>
-                        </div>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
+            <p className="field-help" style={{ marginBottom: "0.5rem" }}>
+              Select who should receive this document ({recipients.length} available).
+            </p>
             <ul className="team-share-list">
               {recipients.map((r) => (
                 <li key={r.id}>
@@ -192,33 +199,39 @@ export function SendToContactModal({
                 </li>
               ))}
             </ul>
-
-            <div className="field-group">
-              <label>Message</label>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                rows={3}
-                disabled={!teamAllowed}
-              />
-            </div>
-
-            {error && <p className="field-error">{error}</p>}
-            <div className="modal-actions">
-              <button type="button" className="btn btn-secondary" onClick={onClose}>
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={selected.length === 0 || sent || !teamAllowed}
-                onClick={() => void handleSend()}
-              >
-                {sent ? "Sent ✓" : `${title} (${selected.length || 0})`}
-              </button>
-            </div>
           </>
         )}
+
+        <AddRecipientForm
+          onAdded={handleRecipientAdded}
+          disabled={!teamAllowed}
+          compact={recipients.length > 0}
+        />
+
+        <div className="field-group">
+          <label>Message</label>
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            rows={3}
+            disabled={!teamAllowed}
+          />
+        </div>
+
+        {error && <p className="field-error">{error}</p>}
+        <div className="modal-actions">
+          <button type="button" className="btn btn-secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={selected.length === 0 || sent || !teamAllowed}
+            onClick={() => void handleSend()}
+          >
+            {sent ? "Sent ✓" : `${title} (${selected.length || 0})`}
+          </button>
+        </div>
       </div>
     </div>
   );

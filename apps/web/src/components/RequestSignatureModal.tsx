@@ -13,6 +13,7 @@ import { getEmailRecipients } from "@/lib/team/recipients";
 import { canUseFeature } from "@/lib/subscription/plans";
 import { emptyCounterpartySignatureFields } from "@/lib/documents/signature-access";
 import { TeamMemberPickerRow } from "@/components/TeamMemberPickerRow";
+import { AddRecipientForm } from "@/components/AddRecipientForm";
 
 export interface RequestSignatureModalProps {
   documentTitle: string;
@@ -75,18 +76,19 @@ export function RequestSignatureModal({
     );
   }
 
+  function handleRecipientAdded(email: string) {
+    setSelectedMembers((prev) => (prev.includes(email) ? prev : [...prev, email]));
+    setError("");
+  }
+
   async function handleSend() {
     setError("");
     if (!teamAllowed) {
       setError("Team sharing is a Pro feature. Upgrade to request signatures from team members.");
       return;
     }
-    if (!profile.team.enabled) {
-      setError("Enable team sharing on the Team page first.");
-      return;
-    }
     if (selectedMembers.length === 0) {
-      setError("Select at least one team member.");
+      setError("Select at least one recipient, or add one below.");
       return;
     }
     if (selectedFields.length === 0) {
@@ -141,39 +143,39 @@ export function RequestSignatureModal({
           </div>
         )}
 
+        {availableFields.length > 0 ? (
+          <div className="field-group">
+            <label>Signature fields to request</label>
+            <ul className="team-share-list">
+              {availableFields.map((f) => (
+                <li key={f.id}>
+                  <label className="security-toggle">
+                    <input
+                      type="checkbox"
+                      checked={selectedFields.includes(f.id)}
+                      onChange={() => toggleField(f.id)}
+                      disabled={!teamAllowed}
+                    />
+                    <div>
+                      <strong>{f.label}</strong>
+                      <span>{f.id}</span>
+                    </div>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : (
+          <p className="field-help">All counterparty signature fields are already signed or none are available.</p>
+        )}
+
         {members.length === 0 ? (
-          <p className="field-help">
-            No recipients yet. Add team members or document contacts on{" "}
-            <Link href="/team">Team</Link>.
-          </p>
+          <p className="field-help">No recipients yet — add a contact or team member below.</p>
         ) : (
           <>
-            {availableFields.length > 0 ? (
-              <div className="field-group">
-                <label>Signature fields to request</label>
-                <ul className="team-share-list">
-                  {availableFields.map((f) => (
-                    <li key={f.id}>
-                      <label className="security-toggle">
-                        <input
-                          type="checkbox"
-                          checked={selectedFields.includes(f.id)}
-                          onChange={() => toggleField(f.id)}
-                          disabled={!teamAllowed}
-                        />
-                        <div>
-                          <strong>{f.label}</strong>
-                          <span>{f.id}</span>
-                        </div>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <p className="field-help">All counterparty signature fields are already signed or none are available.</p>
-            )}
-
+            <p className="field-help" style={{ marginBottom: "0.5rem" }}>
+              Select who should sign ({members.length} available).
+            </p>
             <ul className="team-share-list">
               {members.map((m) => (
                 <li key={m.id}>
@@ -188,30 +190,37 @@ export function RequestSignatureModal({
                 </li>
               ))}
             </ul>
-            <div className="field-group">
-              <label>Message</label>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Add instructions for the signer..."
-                rows={3}
-                disabled={!teamAllowed}
-              />
-            </div>
-            {error && <p className="field-error">{error}</p>}
-            <div className="modal-actions">
-              <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-              <button
-                type="button"
-                className="btn btn-primary"
-                disabled={selectedMembers.length === 0 || selectedFields.length === 0 || sent || !teamAllowed}
-                onClick={handleSend}
-              >
-                {sent ? "Sent ✓" : `Request Signature (${selectedMembers.length || 0})`}
-              </button>
-            </div>
           </>
         )}
+
+        <AddRecipientForm
+          onAdded={handleRecipientAdded}
+          disabled={!teamAllowed}
+          compact={members.length > 0}
+        />
+
+        <div className="field-group">
+          <label>Message</label>
+          <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Add instructions for the signer..."
+            rows={3}
+            disabled={!teamAllowed}
+          />
+        </div>
+        {error && <p className="field-error">{error}</p>}
+        <div className="modal-actions">
+          <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={selectedMembers.length === 0 || selectedFields.length === 0 || sent || !teamAllowed}
+            onClick={() => void handleSend()}
+          >
+            {sent ? "Sent ✓" : `Request Signature (${selectedMembers.length || 0})`}
+          </button>
+        </div>
       </div>
     </div>
   );
