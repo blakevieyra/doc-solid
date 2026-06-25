@@ -153,6 +153,17 @@ button, input, select, textarea {
   word-break: break-word;
 }
 
+.field-group .security-toggle input[type="checkbox"] {
+  width: auto;
+  min-width: 1rem;
+  flex-shrink: 0;
+  margin-top: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+}
+
 .field-group input:focus,
 .field-group select:focus,
 .field-group textarea:focus {
@@ -280,9 +291,13 @@ button, input, select, textarea {
   display: flex; gap: 0.875rem; padding: 1rem; border: 1px solid var(--border);
   border-radius: 10px; cursor: pointer; align-items: flex-start;
 }
-.security-toggle input { margin-top: 0.25rem; accent-color: var(--primary); }
+.security-toggle input { margin-top: 0.25rem; accent-color: var(--primary); flex-shrink: 0; }
 .security-toggle strong { display: block; font-size: 0.9rem; }
-.security-toggle span { font-size: 0.8125rem; color: var(--text-muted); }
+.security-toggle .team-member-picker-text > span,
+.security-toggle .signature-field-picker-text > span {
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
 .security-notice {
   display: flex; gap: 0.75rem; padding: 1rem; background: #eff6ff;
   border-radius: 10px; font-size: 0.8125rem; color: #1e40af; align-items: flex-start;
@@ -981,12 +996,16 @@ a.quick-action-card { text-decoration: none; color: inherit; }
 .delete-list { margin: 1rem 0; padding-left: 1.25rem; font-size: 0.875rem; color: var(--text-muted); }
 .delete-confirm-input { width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 8px; margin-top: 0.5rem; font-family: monospace; }
 .team-share-list { list-style: none; margin: 1rem 0; display: flex; flex-direction: column; gap: 0.5rem; }
-.team-member-picker-row { align-items: center; }
-.signature-field-picker-row { align-items: center; }
+.team-member-picker-row { align-items: center; width: 100%; }
+.signature-field-picker-row {
+  align-items: center;
+  width: 100%;
+}
 .signature-field-picker-body {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex: 1;
   min-width: 0;
 }
 .signature-field-picker-icon {
@@ -1004,12 +1023,18 @@ a.quick-action-card { text-decoration: none; color: inherit; }
   line-height: 1;
   flex-shrink: 0;
 }
+.signature-field-picker-text {
+  flex: 1;
+  min-width: 0;
+}
 .signature-field-picker-text strong { display: block; font-size: 0.9rem; }
 .signature-field-picker-text span {
   display: block;
   font-size: 0.8125rem;
   color: var(--text-muted);
 }
+.team-share-list > li { min-width: 0; }
+.team-share-list .security-toggle { width: 100%; box-sizing: border-box; }
 .team-member-picker-body {
   display: flex;
   align-items: center;

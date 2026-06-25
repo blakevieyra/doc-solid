@@ -15,9 +15,9 @@ export function SignatureFieldPickerRow({
     <label className="security-toggle signature-field-picker-row">
       <input type="checkbox" checked={checked} onChange={onToggle} disabled={disabled} />
       <div className="signature-field-picker-body">
-        <span className="signature-field-picker-icon" aria-hidden>
+        <div className="signature-field-picker-icon" aria-hidden>
           ✍
-        </span>
+        </div>
         <div className="signature-field-picker-text">
           <strong>{label}</strong>
           <span>Recipient signature field</span>

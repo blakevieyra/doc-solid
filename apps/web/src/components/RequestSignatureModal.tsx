@@ -181,9 +181,11 @@ export function RequestSignatureModal({
         )}
 
         {canRequestSignatures && (
-          <div className="field-group">
-            <label>Signature fields to request</label>
-            <ul className="team-share-list">
+          <>
+            <p className="field-help" style={{ marginBottom: "0.5rem", fontWeight: 500, color: "var(--text)" }}>
+              Signature fields to request
+            </p>
+            <ul className="team-share-list" style={{ marginTop: 0 }}>
               {availableFields.map((f) => (
                 <li key={f.id}>
                   <SignatureFieldPickerRow
@@ -194,7 +196,7 @@ export function RequestSignatureModal({
                 </li>
               ))}
             </ul>
-          </div>
+          </>
         )}
 
         {canRequestSignatures && (
