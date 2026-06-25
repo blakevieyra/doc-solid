@@ -71,16 +71,48 @@ async function smokeApisUnauthed() {
   }
 }
 
+async function obtainSignupToken(email) {
+  const send = await fetch(`${BASE}/api/auth/verify-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "send", email }),
+  });
+  const sendBody = await send.json();
+  if (!send.ok) return { token: null, reason: sendBody.error ?? `send ${send.status}` };
+
+  const code = sendBody.devCode;
+  if (!code) {
+    return { token: null, reason: "email verification required (no dev code in production)" };
+  }
+
+  const confirm = await fetch(`${BASE}/api/auth/verify-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "confirm", email, code }),
+  });
+  const confirmBody = await confirm.json();
+  if (!confirm.ok || !confirmBody.signupToken) {
+    return { token: null, reason: confirmBody.error ?? `confirm ${confirm.status}` };
+  }
+  return { token: confirmBody.signupToken, reason: null };
+}
+
 async function smokeAuthFlow() {
   console.log("\n=== SMOKE: Auth + profile + documents flow ===");
   const email = `smoke-${Date.now()}@docsolid-test.invalid`;
   const password = "SmokeTest123!";
   const name = "Smoke Tester";
 
+  const verification = await obtainSignupToken(email);
+  if (!verification.token) {
+    log("WARN", "Auth registration flow", `skipped — ${verification.reason}`);
+    return null;
+  }
+
   const reg = await fetch(`${BASE}/api/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password, name }),
+    body: JSON.stringify({ email, password, name, signupToken: verification.token }),
   });
   const regBody = await reg.json();
   const cookie = reg.headers.get("set-cookie")?.split(";")[0] ?? "";
@@ -330,16 +362,26 @@ async function stressTests() {
     `POST /api/auth/register (${Math.min(10, STRESS_CONCURRENCY)}x2 unique)`,
     async () => {
       const email = `stress-${Date.now()}-${Math.random().toString(36).slice(2)}@test.invalid`;
+      const verification = await obtainSignupToken(email);
       const start = performance.now();
+      if (!verification.token) {
+        return { status: 503, ms: Math.round(performance.now() - start) };
+      }
       const res = await fetch(`${BASE}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password: "StressTest123!", name: "Stress User" }),
+        body: JSON.stringify({
+          email,
+          password: "StressTest123!",
+          name: "Stress User",
+          signupToken: verification.token,
+        }),
       });
       return { status: res.status, ms: Math.round(performance.now() - start) };
     },
     10,
-    2
+    2,
+    [200, 503]
   );
 }
 
