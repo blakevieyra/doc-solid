@@ -9,10 +9,10 @@ import {
   redactDocumentFields,
   type SecurityFinding,
   type SecurityScanResult,
-} from "@/lib/ai/securityScan";
-import { saveScanResult } from "@/lib/ai/scanStore";
+} from "@/lib/security/document-scan";
+import { saveScanResult } from "@/lib/security/scan-store";
 
-export function AISecurityScanModal({
+export function SecurityScanModal({
   documentTitle,
   templateId,
   values,
@@ -26,7 +26,7 @@ export function AISecurityScanModal({
   onRedact?: (redacted: Record<string, string>, scan: SecurityScanResult, applied: SecurityFinding[]) => void;
 }) {
   const { profile } = useProfile();
-  const isPro = canUseFeature(profile.subscription, "aiSecurityScan");
+  const isPro = canUseFeature(profile.subscription, "securityScan");
   const userId = profile.account.accountId || null;
 
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
@@ -44,8 +44,8 @@ export function AISecurityScanModal({
   if (!isPro) {
     return (
       <div className="modal-overlay" role="dialog" aria-modal="true" onClick={onClose}>
-        <div className="modal-card ai-scan-modal" onClick={(e) => e.stopPropagation()}>
-          <div className="ai-scan-pro-badge">Pro Feature</div>
+        <div className="modal-card sec-scan-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="sec-scan-pro-badge">Pro Feature</div>
           <h2>Security Scan & Redaction</h2>
           <p className="field-help">
             Scan documents for sensitive data (SSN, tax IDs, payment info) and redact before sharing.
@@ -92,20 +92,21 @@ export function AISecurityScanModal({
 
   const riskClass =
     !result ? ""
-    : result.riskScore >= 60 ? "ai-risk-high"
-    : result.riskScore >= 25 ? "ai-risk-medium"
-    : "ai-risk-low";
+    : result.riskScore >= 60 ? "sec-risk-high"
+    : result.riskScore >= 25 ? "sec-risk-medium"
+    : "sec-risk-low";
 
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" onClick={onClose}>
-      <div className="modal-card ai-scan-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-card sec-scan-modal" onClick={(e) => e.stopPropagation()}>
         <h2>Security Scan & Redaction</h2>
         <p className="field-help">Review sensitive data in &quot;{documentTitle}&quot; and choose what to redact.</p>
 
-        <div className="ai-privacy-notice">
+        <div className="sec-privacy-notice">
           <strong>Privacy notice</strong>
           <p>
-            Scanning runs locally in your browser. Results save to Profile → Security. Document content is not sent to third-party AI services.
+            Scanning runs locally in your browser using pattern matching. Results save to Profile → Security.
+            Document content is not sent to external services.
           </p>
           <label className="security-toggle">
             <input
@@ -132,9 +133,9 @@ export function AISecurityScanModal({
         )}
 
         {result && (
-          <div className={`ai-scan-result ${riskClass}`}>
-            <div className="ai-scan-score-row">
-              <span className="ai-scan-score">{result.riskScore}</span>
+          <div className={`sec-scan-result ${riskClass}`}>
+            <div className="sec-scan-score-row">
+              <span className="sec-scan-score">{result.riskScore}</span>
               <div>
                 <strong>Risk score</strong>
                 <p>{result.summary}</p>
@@ -144,11 +145,11 @@ export function AISecurityScanModal({
               <p className="field-help">No sensitive patterns found. Document looks safe to share.</p>
             ) : (
               <>
-                <p className="field-help ai-redact-hint">Select items to redact, then apply. Redacted fields become [REDACTED] in your document.</p>
-                <ul className="ai-findings-list">
+                <p className="field-help sec-redact-hint">Select items to redact, then apply. Redacted fields become [REDACTED] in your document.</p>
+                <ul className="sec-findings-list">
                   {result.findings.map((f) => (
-                    <li key={f.id} className={`ai-finding ai-finding-${f.risk}`}>
-                      <label className="ai-finding-select">
+                    <li key={f.id} className={`sec-finding sec-finding-${f.risk}`}>
+                      <label className="sec-finding-select">
                         <input
                           type="checkbox"
                           checked={selectedIds.has(f.id)}
@@ -156,7 +157,7 @@ export function AISecurityScanModal({
                         />
                         <div>
                           <strong>{f.label}</strong>
-                          <span className="ai-finding-field">{f.fieldId ?? "document"} · {f.masked}</span>
+                          <span className="sec-finding-field">{f.fieldId ?? "document"} · {f.masked}</span>
                           <span className="field-help">{f.recommendation}</span>
                         </div>
                       </label>
@@ -166,7 +167,7 @@ export function AISecurityScanModal({
               </>
             )}
             {saved && !applied && (
-              <p className="field-success">Scan saved to Profile → Security → AI Scan History</p>
+              <p className="field-success">Scan saved to Profile → Security → Scan History</p>
             )}
             {applied && (
               <p className="field-success">Redaction applied and saved.</p>

@@ -5,7 +5,7 @@ export type PlanFeature =
   | "teamSharing"
   | "unlimitedDocs"
   | "emailShare"
-  | "aiSecurityScan"
+  | "securityScan"
   | "documentPackets"
   | "cloudSync"
   | "letterheadThemes";
@@ -59,7 +59,7 @@ export const PLANS: PlanDefinition[] = [
       "Unlimited documents",
       "Unlimited favorites & packets",
       "Clean PDF export",
-      "AI security scan & redaction",
+      "Security scan & redaction",
       "Team profile sharing (up to 5)",
       "Cloud sync & file portal",
       "Email & share links",
@@ -133,7 +133,7 @@ export function canUseFeature(subscription: Subscription, feature: PlanFeature):
     case "pdfClean":
     case "unlimitedDocs":
     case "emailShare":
-    case "aiSecurityScan":
+    case "securityScan":
     case "cloudSync":
       return eff.isProActive;
     case "teamSharing":

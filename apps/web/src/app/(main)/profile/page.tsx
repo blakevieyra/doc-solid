@@ -340,7 +340,7 @@ export default function ProfilePage() {
                 )}
                 {!effective.isProActive && (
                   <p className="field-help">
-                    Free: 10 docs/month, watermarked PDFs, 20 favorites, 3 packets. Pro unlocks unlimited docs, clean PDFs, AI scan, and team sharing.
+                    Free: 10 docs/month, watermarked PDFs, 20 favorites, 3 packets. Pro unlocks unlimited docs, clean PDFs, security scan, and team sharing.
                   </p>
                 )}
               </div>

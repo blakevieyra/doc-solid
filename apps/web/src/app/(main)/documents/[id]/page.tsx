@@ -26,7 +26,7 @@ import { canCreateDocumentThisMonth } from "@/lib/documents/limits";
 import { TeamShareModal } from "@/components/TeamShareModal";
 import { RequestSignatureModal } from "@/components/RequestSignatureModal";
 import { EmailDocumentModal } from "@/components/EmailDocumentModal";
-import { AISecurityScanModal } from "@/components/AISecurityScanModal";
+import { SecurityScanModal } from "@/components/SecurityScanModal";
 import { DocumentComplianceBar } from "@/components/DocumentComplianceBar";
 import { SignatureField } from "@/components/SignatureField";
 import { updateSavedDocumentFields, deleteSavedDocument } from "@/lib/documents/persist";
@@ -73,7 +73,7 @@ function DocumentEditorPageContent() {
   const [showShare, setShowShare] = useState(false);
   const [showRequestSig, setShowRequestSig] = useState(false);
   const [showEmail, setShowEmail] = useState(false);
-  const [showAiScan, setShowAiScan] = useState(false);
+  const [showSecurityScan, setShowSecurityScan] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [docStatus, setDocStatus] = useState<"DRAFT" | "FINAL" | "ARCHIVED">("DRAFT");
@@ -510,7 +510,7 @@ function DocumentEditorPageContent() {
         meta={fullTemplate}
         values={values}
         status={savedLocalId ? docStatus : "DRAFT"}
-        onScanRedact={() => setShowAiScan(true)}
+        onScanRedact={() => setShowSecurityScan(true)}
         onMarkFinal={
           savedLocalId
             ? async () => {
@@ -768,12 +768,12 @@ function DocumentEditorPageContent() {
           />
         )}
 
-        {showAiScan && (
-          <AISecurityScanModal
+        {showSecurityScan && (
+          <SecurityScanModal
             documentTitle={assignedNumber ? `${meta.name} #${assignedNumber}` : meta.name}
             templateId={meta.id}
             values={values}
-            onClose={() => setShowAiScan(false)}
+            onClose={() => setShowSecurityScan(false)}
             onRedact={async (redacted) => {
               setValues(redacted);
               if (savedLocalId) {

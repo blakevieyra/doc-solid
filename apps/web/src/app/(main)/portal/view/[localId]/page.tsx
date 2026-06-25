@@ -10,7 +10,7 @@ import { DocumentPreview } from "@/components/DocumentPreview";
 import { EmailDocumentModal } from "@/components/EmailDocumentModal";
 import { RequestSignatureModal } from "@/components/RequestSignatureModal";
 import { RequestReviewModal } from "@/components/RequestReviewModal";
-import { AISecurityScanModal } from "@/components/AISecurityScanModal";
+import { SecurityScanModal } from "@/components/SecurityScanModal";
 import { DocumentComplianceBar } from "@/components/DocumentComplianceBar";
 import { useProfile } from "@/components/ProfileProvider";
 import { exportDocumentPdf, documentPdfFilename } from "@/lib/pdf/exportDocument";
@@ -34,7 +34,7 @@ function SavedDocumentPageContent() {
   const [showEmail, setShowEmail] = useState(false);
   const [showRequestSig, setShowRequestSig] = useState(false);
   const [showRequestReview, setShowRequestReview] = useState(false);
-  const [showAiScan, setShowAiScan] = useState(false);
+  const [showSecurityScan, setShowSecurityScan] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [shareContext, setShareContext] = useState<ReturnType<typeof getShareById>>(null);
 
@@ -204,7 +204,7 @@ function SavedDocumentPageContent() {
         meta={fullTemplate}
         values={values}
         status={docStatus}
-        onScanRedact={() => setShowAiScan(true)}
+        onScanRedact={() => setShowSecurityScan(true)}
         onMarkFinal={
           isSharedPreview
             ? undefined
@@ -247,12 +247,12 @@ function SavedDocumentPageContent() {
         />
       )}
 
-      {showAiScan && (
-        <AISecurityScanModal
+      {showSecurityScan && (
+        <SecurityScanModal
           documentTitle={title}
           templateId={templateId}
           values={values}
-          onClose={() => setShowAiScan(false)}
+          onClose={() => setShowSecurityScan(false)}
           onRedact={(redacted) => void handleRedact(redacted)}
         />
       )}

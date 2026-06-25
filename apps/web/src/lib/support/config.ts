@@ -8,7 +8,7 @@ export const FAQ_ITEMS = [
   },
   {
     q: "What's the difference between Free and Pro?",
-    a: "Free includes 10 documents per month with watermarked PDFs. Pro unlocks unlimited documents, clean PDF export, AI security scan with optional redaction, team profile sharing, email/share links, and cloud sync.",
+    a: "Free includes 10 documents per month with watermarked PDFs. Pro unlocks unlimited documents, clean PDF export, security scan with optional redaction, team profile sharing, email/share links, and cloud sync.",
   },
   {
     q: "Is my data secure?",

@@ -165,10 +165,20 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     }).catch(() => {});
   }, [loading, session, authMode, profile.subscription.stripeCustomerId, profile.account.email, userId, sessionPin]);
 
+  const refreshTeamShared = useCallback(async () => {
+    if (authMode !== "server" || !session) {
+      setTeamShared(null);
+      return;
+    }
+    const view = await fetchTeamView();
+    setTeamShared(view?.sharedProfile ?? null);
+  }, [authMode, session]);
+
   const persist = useCallback(
     async (next: UserProfile, pin?: string) => {
+      let saved: UserProfile;
       try {
-        await saveProfile(next, userId, pin ?? sessionPin ?? undefined);
+        saved = await saveProfile(next, userId, pin ?? sessionPin ?? undefined);
       } catch {
         addNotification({
           type: "system",
@@ -177,10 +187,17 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         });
         throw new Error("local profile save failed");
       }
-      setProfile(next);
+
+      let final = saved;
       if (authMode === "server") {
-        const synced = await pushServerProfile(next);
-        if (!synced.ok) {
+        const synced = await pushServerProfile(saved);
+        if (synced.ok) {
+          final = mergeProfiles(saved, synced.profile);
+          if (final.updatedAt !== saved.updatedAt) {
+            final = await saveProfile(final, userId, pin ?? sessionPin ?? undefined);
+          }
+          void refreshTeamShared();
+        } else {
           addNotification({
             type: "system",
             title: "Saved on this device",
@@ -188,8 +205,10 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
           });
         }
       }
+
+      setProfile(final);
     },
-    [sessionPin, userId, authMode]
+    [sessionPin, userId, authMode, refreshTeamShared]
   );
 
   const updateProfile = useCallback(
@@ -278,12 +297,8 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   }, [userId]);
 
   useEffect(() => {
-    if (authMode !== "server" || !session) {
-      setTeamShared(null);
-      return;
-    }
-    void fetchTeamView().then((view) => setTeamShared(view?.sharedProfile ?? null));
-  }, [authMode, session?.userId]);
+    void refreshTeamShared();
+  }, [refreshTeamShared]);
 
   const documentProfile = useMemo(
     () => resolveDocumentProfile(profile, teamShared),

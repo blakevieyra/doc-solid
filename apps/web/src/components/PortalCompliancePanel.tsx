@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { LocalDocument } from "@doc-solid/storage";
-import { scanDocumentFields, type SecurityScanResult } from "@/lib/ai/securityScan";
-import { saveScanResult } from "@/lib/ai/scanStore";
+import { scanDocumentFields, type SecurityScanResult } from "@/lib/security/document-scan";
+import { saveScanResult } from "@/lib/security/scan-store";
 import { useProfile } from "@/components/ProfileProvider";
 import { canUseFeature } from "@/lib/subscription/plans";
 
@@ -25,7 +25,7 @@ export function PortalCompliancePanel({
   const [scanning, setScanning] = useState(false);
   const [batchResults, setBatchResults] = useState<SecurityScanResult[]>([]);
 
-  const pro = canUseFeature(profile.subscription, "aiSecurityScan");
+  const pro = canUseFeature(profile.subscription, "securityScan");
   const accountId = profile.account.accountId;
 
   const highRiskCount = useMemo(
@@ -51,14 +51,14 @@ export function PortalCompliancePanel({
       <div className="portal-compliance-header">
         <div>
           <h2 className="section-title" style={{ marginTop: 0 }}>Security & Compliance</h2>
-          <p className="field-help">AI scan checks saved files for sensitive data before you share them.</p>
+          <p className="field-help">Security scan checks saved files for sensitive data before you share them.</p>
         </div>
         {pro ? (
           <button type="button" className="btn btn-accent" onClick={() => void scanAll()} disabled={scanning || documents.length === 0}>
             {scanning ? "Scanning…" : `Scan all files (${Math.min(documents.length, 20)})`}
           </button>
         ) : (
-          <Link href="/profile?tab=billing" className="btn btn-secondary">Upgrade for AI Scan</Link>
+          <Link href="/profile?tab=billing" className="btn btn-secondary">Upgrade for Security Scan</Link>
         )}
       </div>
 
@@ -78,7 +78,7 @@ export function PortalCompliancePanel({
             {batchResults.map((r) => (
               <li key={r.id}>
                 <span>{r.documentTitle}</span>
-                <span className={`ai-risk-${r.findings.length ? (r.riskScore >= 70 ? "high" : "medium") : "low"}`}>
+                <span className={`sec-risk-${r.findings.length ? (r.riskScore >= 70 ? "high" : "medium") : "low"}`}>
                   {r.findings.length === 0 ? "Clean" : `${r.findings.length} finding(s)`}
                 </span>
               </li>
@@ -89,7 +89,7 @@ export function PortalCompliancePanel({
 
       {!pro && (
         <p className="field-help" style={{ marginTop: "0.75rem" }}>
-          Pro includes AI security scan with redaction. <Link href="/profile?tab=security">View Security Center</Link>
+          Pro includes security scan with redaction. <Link href="/profile?tab=security">View Security Center</Link>
         </p>
       )}
     </section>

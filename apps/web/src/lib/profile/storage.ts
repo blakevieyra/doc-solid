@@ -186,7 +186,11 @@ export async function loadProfile(userId?: string | null, unlockPin?: string): P
   return profile;
 }
 
-export async function saveProfile(profile: UserProfile, userId?: string | null, lockPin?: string): Promise<void> {
+export async function saveProfile(
+  profile: UserProfile,
+  userId?: string | null,
+  lockPin?: string
+): Promise<UserProfile> {
   const toSave = structuredClone(profile);
   toSave.updatedAt = new Date().toISOString();
   const key = getProfileStorageKey(userId ?? null);
@@ -197,6 +201,7 @@ export async function saveProfile(profile: UserProfile, userId?: string | null, 
   } else {
     localStorage.setItem(key, JSON.stringify(toSave));
   }
+  return toSave;
 }
 
 export function clearProfile(userId?: string | null): void {

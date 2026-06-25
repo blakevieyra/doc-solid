@@ -60,7 +60,7 @@ import { syncDocumentsFromCloud } from "@/lib/documents/cloud-sync";
 
 import { PortalScanButton } from "@/components/PortalCompliancePanel";
 
-import { AISecurityScanModal } from "@/components/AISecurityScanModal";
+import { SecurityScanModal } from "@/components/SecurityScanModal";
 import { DocumentAuditTrail } from "@/components/DocumentAuditTrail";
 import { ReturnShareModal } from "@/components/ReturnShareModal";
 import { SendToContactModal } from "@/components/SendToContactModal";
@@ -104,7 +104,7 @@ export default function PortalPage() {
 
 
 
-  const pro = canUseFeature(profile.subscription, "aiSecurityScan");
+  const pro = canUseFeature(profile.subscription, "securityScan");
   const teamSharing = canUseFeature(profile.subscription, "teamSharing");
   const userEmail = session?.email ?? profile.account.email ?? "";
   const userName = session?.name ?? profile.account.displayName ?? "You";
@@ -934,7 +934,7 @@ export default function PortalPage() {
 
 
       {scanDoc && (
-        <AISecurityScanModal
+        <SecurityScanModal
           documentTitle={scanDoc.title}
           templateId={scanDoc.templateId}
           values={scanDoc.fieldData as Record<string, string>}

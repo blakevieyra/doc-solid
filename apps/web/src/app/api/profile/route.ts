@@ -17,7 +17,9 @@ async function withReconciledSubscription(profile: UserProfile, email: string): 
   ) {
     return profile;
   }
-  return { ...profile, subscription, updatedAt: new Date().toISOString() };
+  // Subscription-only changes must not bump updatedAt — that caused stale server
+  // business/personal data to win over fresher local edits during profile merge.
+  return { ...profile, subscription };
 }
 
 export async function GET(req: NextRequest) {
@@ -29,27 +31,39 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ profile: structuredClone(DEFAULT_PROFILE) });
   }
 
+  const storedUpdatedAt = profile.updatedAt;
+  const onboardingBefore = profile.onboardingComplete;
+  let dirty = false;
+
   if (resolveOnboardingComplete(profile, { userCreatedAt: auth.user.createdAt }) && !profile.onboardingComplete) {
-    profile = {
-      ...profile,
-      onboardingComplete: true,
-      updatedAt: new Date().toISOString(),
-    };
+    profile = { ...profile, onboardingComplete: true };
+    dirty = true;
   }
 
   if (
     (profile.subscription.status === "active" || profile.subscription.status === "trialing") &&
     !profile.onboardingComplete
   ) {
-    profile = {
-      ...profile,
-      onboardingComplete: true,
-      updatedAt: new Date().toISOString(),
-    };
+    profile = { ...profile, onboardingComplete: true };
+    dirty = true;
   }
 
-  profile = await withReconciledSubscription(profile, auth.user.email);
-  await saveUserProfile(auth.user.id, profile);
+  const reconciled = await withReconciledSubscription(profile, auth.user.email);
+  if (reconciled !== profile) {
+    profile = reconciled;
+    dirty = true;
+  }
+
+  if (dirty) {
+    profile = {
+      ...profile,
+      updatedAt:
+        profile.onboardingComplete && !onboardingBefore
+          ? new Date().toISOString()
+          : storedUpdatedAt,
+    };
+    await saveUserProfile(auth.user.id, profile);
+  }
 
   return NextResponse.json({ profile });
 }

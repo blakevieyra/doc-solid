@@ -24,7 +24,7 @@ export function DocumentComplianceBar({
   compact = false,
 }: DocumentComplianceBarProps) {
   const { profile } = useProfile();
-  const canScan = canUseFeature(profile.subscription, "aiSecurityScan");
+  const canScan = canUseFeature(profile.subscription, "securityScan");
   const audit = useMemo(() => auditDocumentCompleteness(meta, values), [meta, values]);
 
   const progressPct = audit.totalRequired

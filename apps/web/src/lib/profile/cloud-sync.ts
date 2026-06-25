@@ -1,4 +1,4 @@
-import type { UserProfile } from "./types";
+import type { Address, UserProfile } from "./types";
 import { mergeTeamMembersByEmail } from "@/lib/team/members-merge";
 import { mergeSubscriptions } from "@/lib/profile/subscription-merge";
 
@@ -12,6 +12,20 @@ function resolveTeamOwnerEmail(a: UserProfile, b: UserProfile): string | null {
   return null;
 }
 
+function mergeSection<T>(primary: T, secondary: T): T {
+  return { ...secondary, ...primary };
+}
+
+function mergeAddress(primary: Address, secondary: Address): Address {
+  return {
+    street: primary.street || secondary.street,
+    city: primary.city || secondary.city,
+    state: primary.state || secondary.state,
+    zip: primary.zip || secondary.zip,
+    country: primary.country || secondary.country,
+  };
+}
+
 export async function fetchServerProfile(): Promise<UserProfile | null> {
   const res = await fetch("/api/profile", { credentials: "include", cache: "no-store" });
   if (res.status === 401 || res.status === 503) return null;
@@ -22,14 +36,17 @@ export async function fetchServerProfile(): Promise<UserProfile | null> {
 
 export async function pushServerProfile(
   profile: UserProfile
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<{ ok: true; profile: UserProfile } | { ok: false; error: string }> {
   const res = await fetch("/api/profile", {
     method: "PUT",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ profile }),
   });
-  if (res.ok) return { ok: true };
+  if (res.ok) {
+    const data = (await res.json()) as { profile: UserProfile };
+    return { ok: true, profile: data.profile };
+  }
   let error = "Could not save profile to your account";
   try {
     const data = (await res.json()) as { error?: string };
@@ -40,52 +57,66 @@ export async function pushServerProfile(
   return { ok: false, error };
 }
 
-/** Prefer server profile when it was updated more recently, but never lose logos or onboarding progress. */
+/** Merge local and server profiles without losing user-edited business/personal/org fields. */
 export function mergeProfiles(local: UserProfile, server: UserProfile): UserProfile {
   const localTs = new Date(local.updatedAt).getTime();
   const serverTs = new Date(server.updatedAt).getTime();
-  const base = serverTs >= localTs ? server : local;
-  const other = serverTs >= localTs ? local : server;
+  const localNewer = localTs > serverTs;
+  const primary = localNewer ? local : server;
+  const secondary = localNewer ? server : local;
   const ownerEmail = resolveTeamOwnerEmail(local, server);
+
+  const business = mergeSection(primary.business, secondary.business);
+  business.address = mergeAddress(primary.business.address, secondary.business.address);
+  business.logo = primary.business.logo ?? secondary.business.logo;
+
+  const personal = mergeSection(primary.personal, secondary.personal);
+  personal.address = mergeAddress(primary.personal.address, secondary.personal.address);
+  personal.photo = primary.personal.photo ?? secondary.personal.photo;
+
+  const organization = mergeSection(primary.organization, secondary.organization);
+  organization.address = mergeAddress(primary.organization.address, secondary.organization.address);
+  organization.logo = primary.organization.logo ?? secondary.organization.logo;
+
   return {
-    ...base,
-    business: {
-      ...base.business,
-      logo: base.business.logo ?? other.business.logo,
-    },
-    organization: {
-      ...base.organization,
-      logo: base.organization.logo ?? other.organization.logo,
-    },
-    onboardingComplete: base.onboardingComplete || other.onboardingComplete,
+    ...primary,
+    updatedAt: new Date(Math.max(localTs, serverTs)).toISOString(),
+    business,
+    personal,
+    organization,
+    account: mergeSection(primary.account, secondary.account),
+    preferences: mergeSection(primary.preferences, secondary.preferences),
+    signature: mergeSection(primary.signature, secondary.signature),
+    security: mergeSection(primary.security, secondary.security),
+    onboardingComplete: local.onboardingComplete || server.onboardingComplete,
     subscription: mergeSubscriptions(local.subscription, server.subscription),
     team: {
-      ...base.team,
-      ...other.team,
-      teamId: base.team.teamId || other.team.teamId,
-      orgName: base.team.orgName || other.team.orgName,
-      ownerEmail: ownerEmail ?? base.team.ownerEmail ?? other.team.ownerEmail,
-      ownerName: base.team.ownerName || other.team.ownerName,
+      ...primary.team,
+      ...secondary.team,
+      teamId: primary.team.teamId || secondary.team.teamId,
+      orgName: primary.team.orgName || secondary.team.orgName,
+      ownerEmail: ownerEmail ?? primary.team.ownerEmail ?? secondary.team.ownerEmail,
+      ownerName: primary.team.ownerName || secondary.team.ownerName,
       members: mergeTeamMembersByEmail(
-        ownerEmail ?? base.team.ownerEmail ?? other.team.ownerEmail,
-        base.team.members,
-        other.team.members
+        ownerEmail ?? primary.team.ownerEmail ?? secondary.team.ownerEmail,
+        primary.team.members,
+        secondary.team.members
       ),
-      memberships: [...(base.team.memberships ?? []), ...(other.team.memberships ?? [])].filter(
+      memberships: [...(primary.team.memberships ?? []), ...(secondary.team.memberships ?? [])].filter(
         (m, i, arr) => arr.findIndex((x) => x.teamId === m.teamId) === i
       ),
     },
     library: {
-      ...base.library,
-      ...other.library,
+      ...primary.library,
+      ...secondary.library,
       favoriteTemplateIds:
-        base.library.favoriteTemplateIds.length >= other.library.favoriteTemplateIds.length
-          ? base.library.favoriteTemplateIds
-          : other.library.favoriteTemplateIds,
+        primary.library.favoriteTemplateIds.length >= secondary.library.favoriteTemplateIds.length
+          ? primary.library.favoriteTemplateIds
+          : secondary.library.favoriteTemplateIds,
       contacts:
-        (base.library.contacts?.length ?? 0) >= (other.library.contacts?.length ?? 0)
-          ? base.library.contacts
-          : other.library.contacts,
+        (primary.library.contacts?.length ?? 0) >= (secondary.library.contacts?.length ?? 0)
+          ? primary.library.contacts
+          : secondary.library.contacts,
     },
   };
 }

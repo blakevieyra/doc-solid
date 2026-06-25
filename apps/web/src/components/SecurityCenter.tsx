@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useProfile } from "@/components/ProfileProvider";
 import { useAuth } from "@/components/AuthProvider";
 import { DeleteDataModal } from "./DeleteDataModal";
-import { AIScanHistory } from "./AIScanHistory";
+import { SecurityScanHistory } from "./SecurityScanHistory";
 import { ComplianceRecommendations } from "./ComplianceRecommendations";
 
 export function SecurityCenter() {
@@ -123,7 +123,7 @@ export function SecurityCenter() {
 
       <ComplianceRecommendations />
 
-      <AIScanHistory />
+      <SecurityScanHistory />
 
       <div className="security-section card-inner security-danger">
         <h3 className="section-title">Delete All Data</h3>

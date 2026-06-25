@@ -43,7 +43,7 @@ function buildFeatures() {
     },
     {
       icon: IconShield,
-      title: "AI Security Scan",
+      title: "Security Scan",
       desc: "Pro: scan for SSNs, tax IDs, and payment data locally in your browser — then redact before you share.",
       pro: true,
     },
@@ -111,7 +111,7 @@ export default function HomePage() {
           <div className="container">
             <h2>Everything you need to ship documents today</h2>
             <p className="landing-section-lead">
-              From {CATALOG_STATS.total}+ templates to AES-256-GCM encrypted profiles and Pro-only AI redaction —
+              From {CATALOG_STATS.total}+ templates to AES-256-GCM encrypted profiles and Pro-only sensitive-data redaction —
               DocSolid keeps your workflow fast, shareable, and protected.
             </p>
             <div className="landing-features-grid">
@@ -126,7 +126,7 @@ export default function HomePage() {
           <div className="container landing-pricing-inner">
             <h2>Simple pricing</h2>
             <p>
-              Free to start with watermarked PDFs. Pro unlocks clean exports, AI scan & redaction, team sharing,
+              Free to start with watermarked PDFs. Pro unlocks clean exports, security scan & redaction, team sharing,
               cloud sync, unlimited documents, and priority support.
             </p>
             <div className="landing-pricing-cards">
@@ -140,7 +140,7 @@ export default function HomePage() {
                 <span className="landing-pro-badge">Most Popular</span>
                 <strong>Pro Monthly</strong>
                 <span className="landing-price">${monthly.price}/mo</span>
-                <span>AI security scan · Clean PDFs · Team sharing · Cloud sync · Priority support</span>
+                <span>Security scan · Clean PDFs · Team sharing · Cloud sync · Priority support</span>
                 <Link href="/signup" className="btn btn-primary">Start Pro Trial</Link>
               </div>
               <div className="card landing-price-card">

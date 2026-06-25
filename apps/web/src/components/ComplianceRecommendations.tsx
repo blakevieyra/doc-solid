@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { useProfile } from "./ProfileProvider";
-import { loadScanHistory } from "@/lib/ai/scanStore";
+import { loadScanHistory } from "@/lib/security/scan-store";
 
 const BASE_COMPLIANCE_TIPS = [
   "Scan documents before emailing or sharing externally.",
