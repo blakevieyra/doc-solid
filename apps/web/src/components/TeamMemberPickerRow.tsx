@@ -42,6 +42,13 @@ export function TeamMemberIdentity({
       ? resolveMemberAvatarUrl(profile, recipient.email, recipient.avatarUrl, selfEmail)
       : recipient.avatarUrl ?? null;
 
+  const selfKey = selfEmail?.trim().toLowerCase();
+  const isSelf = selfKey && recipient.email.trim().toLowerCase() === selfKey;
+  const displayName =
+    isSelf && profile
+      ? profile.personal.fullName || profile.account.displayName || recipient.name
+      : recipient.name;
+
   return (
     <div className="team-member-picker-body">
       {avatarUrl ? (
@@ -52,7 +59,7 @@ export function TeamMemberIdentity({
         </span>
       )}
       <div className="team-member-picker-text">
-        <strong>{recipient.name}</strong>
+        <strong>{displayName}</strong>
         <span>{subtitle}</span>
       </div>
     </div>

@@ -7,8 +7,6 @@ export function resolveMemberAvatarUrl(
   stored?: string | null,
   selfEmail?: string
 ): string | null {
-  if (stored?.trim()) return stored.trim();
-
   const key = email.trim().toLowerCase();
   const self = (
     selfEmail ??
@@ -25,9 +23,12 @@ export function resolveMemberAvatarUrl(
       profile.personal.photo ||
       profile.business.logo ||
       profile.organization.logo ||
+      stored?.trim() ||
       null
     );
   }
+
+  if (stored?.trim()) return stored.trim();
 
   const member = profile.team.members.find((m) => m.email.trim().toLowerCase() === key);
   if (member?.avatarUrl) return member.avatarUrl;

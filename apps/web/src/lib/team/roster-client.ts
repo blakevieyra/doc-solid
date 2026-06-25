@@ -29,6 +29,11 @@ export interface TeamView {
   members: TeamMemberView[];
 }
 
+export function dispatchTeamRefresh(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent("docsolid:team-refresh"));
+}
+
 export async function fetchTeamView(): Promise<TeamView | null> {
   const res = await fetch("/api/team/roster", { credentials: "include", cache: "no-store" });
   if (res.status === 401 || res.status === 503) return null;

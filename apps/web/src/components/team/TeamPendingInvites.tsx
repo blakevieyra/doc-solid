@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useProfile } from "@/components/ProfileProvider";
 import { useNotifications } from "@/components/NotificationProvider";
-import { fetchTeamView } from "@/lib/team/roster-client";
+import { fetchTeamView, dispatchTeamRefresh } from "@/lib/team/roster-client";
 import type { TeamRole, UserProfile } from "@/lib/profile/types";
 
 interface PendingInvite {
@@ -97,15 +97,18 @@ export function TeamPendingInvites({ highlightInviteId }: { highlightInviteId?: 
                 id: m.id,
                 email: m.email,
                 name: m.name,
+                username: m.username,
+                avatarUrl: m.avatarUrl,
                 role: m.role,
                 shareProfile: true,
                 invitedAt: m.joinedAt,
                 acceptedAt: m.joinedAt,
-                status: "active" as const,
+                status: m.status ?? "active",
               })),
             },
           }));
         }
+        dispatchTeamRefresh();
         notify({
           type: "team",
           title: "Joined team",

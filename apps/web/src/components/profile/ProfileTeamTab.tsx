@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { useProfile } from "@/components/ProfileProvider";
 import { createInvite } from "@/lib/team/invites";
-import { fetchTeamView, syncTeamRoster, type TeamView } from "@/lib/team/roster-client";
+import { fetchTeamView, syncTeamRoster, dispatchTeamRefresh, type TeamView } from "@/lib/team/roster-client";
 import { roleLabel, mergeTeamMemberDisplays, profileMembersToDisplay, contactsToDisplay } from "@/lib/team/display";
 import { TeamMemberIdentity } from "@/components/TeamMemberPickerRow";
 import { canUseFeature, maxTeamMembers } from "@/lib/subscription/plans";
@@ -128,17 +128,34 @@ export function ProfileTeamTab() {
   const isOwner = teamView?.isOwner ?? profile.team.ownerEmail?.toLowerCase() === selfEmail;
   const ownerEmail = teamView?.ownerEmail ?? profile.team.ownerEmail ?? null;
   const displayMembers = useMemo(() => {
+    let members: ReturnType<typeof mergeTeamMemberDisplays>;
     if (teamView?.members?.length) {
-      return mergeTeamMemberDisplays(selfEmail, ownerEmail, teamView.members);
+      members = mergeTeamMemberDisplays(selfEmail, ownerEmail, teamView.members);
+    } else {
+      members = mergeTeamMemberDisplays(
+        selfEmail,
+        ownerEmail,
+        profileMembersToDisplay(profile, selfEmail),
+        contactsToDisplay(profile.library?.contacts ?? [], selfEmail)
+      );
     }
-    return mergeTeamMemberDisplays(
-      selfEmail,
-      ownerEmail,
-      profileMembersToDisplay(profile, selfEmail),
-      contactsToDisplay(profile.library?.contacts ?? [], selfEmail)
+    return members.map((m) =>
+      m.isYou
+        ? {
+            ...m,
+            name: profile.personal.fullName || profile.account.displayName || m.name,
+            username: profile.personal.username || m.username,
+            avatarUrl: profile.personal.photo || m.avatarUrl,
+          }
+        : m
     );
   }, [teamView, profile, selfEmail, ownerEmail]);
   const orgName = teamView?.orgName || profile.team.orgName || profile.business.name || profile.organization.name;
+  const [workspaceName, setWorkspaceName] = useState(orgName);
+
+  useEffect(() => {
+    setWorkspaceName(orgName);
+  }, [orgName]);
   const onTeam = profile.team.enabled || (teamView?.members.length ?? 0) > 1 || !!profile.team.myRole;
 
   const refreshTeam = useCallback(async () => {
@@ -167,6 +184,45 @@ export function ProfileTeamTab() {
   useEffect(() => {
     void refreshTeam();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const handler = () => void refreshTeam();
+    window.addEventListener("docsolid:team-refresh", handler);
+    return () => window.removeEventListener("docsolid:team-refresh", handler);
+  }, [refreshTeam]);
+
+  useEffect(() => {
+    if (profile.team.teamId) void refreshTeam();
+  }, [profile.team.teamId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function saveWorkspaceName(name: string) {
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === orgName) return;
+    await updateProfile({
+      team: { ...profile.team, orgName: trimmed, enabled: true },
+    });
+    if (isOwner && authMode === "server" && teamId) {
+      await syncTeamRoster({
+        teamId,
+        orgName: trimmed,
+        ownerName: session?.name ?? profile.account.displayName,
+        ownerEmail: session?.email ?? profile.account.email,
+        shareBusinessProfile: profile.team.shareBusinessProfile,
+        shareOrganizationProfile: profile.team.shareOrganizationProfile,
+        members: profile.team.members
+          .filter((m) => m.status !== "pending")
+          .map((m) => ({
+            email: m.email,
+            name: m.email.toLowerCase() === selfEmail
+              ? profile.personal.fullName || profile.account.displayName || m.name
+              : m.name,
+            role: m.role,
+            joinedAt: m.acceptedAt ?? m.invitedAt,
+          })),
+      });
+      await refreshTeam();
+    }
+  }
 
   async function pushRosterMembers(members: TeamMember[]) {
     if (authMode !== "server" || !teamId) return;
@@ -424,10 +480,32 @@ export function ProfileTeamTab() {
       {!loadingTeam && onTeam && (
         <div className="team-summary-card">
           <div className="team-summary-header">
-            <div>
-              <h4 className="team-summary-name">{orgName}</h4>
-              {teamView?.ownerName && !isOwner && (
-                <p className="field-help">Team admin: {teamView.ownerName}</p>
+            <div className="team-summary-title-block">
+              {isOwner && teamAllowed ? (
+                <div className="field-group">
+                  <label className="field-label">Workspace name</label>
+                  <input
+                    type="text"
+                    value={workspaceName}
+                    onChange={(e) => setWorkspaceName(e.target.value)}
+                    onBlur={(e) => void saveWorkspaceName(e.target.value)}
+                  />
+                </div>
+              ) : (
+                <>
+                  <h4 className="team-summary-name">{orgName}</h4>
+                  {teamView?.ownerName && !isOwner && (
+                    <p className="field-help">Team admin: {teamView.ownerName}</p>
+                  )}
+                </>
+              )}
+              {isOwner && (
+                <p className="field-help">Your display name and photo are edited in Profile → Personal.</p>
+              )}
+              {!isOwner && (
+                <p className="field-help">
+                  Update your name and photo in <Link href="/profile?tab=personal">Profile → Personal</Link>.
+                </p>
               )}
             </div>
             <span className="team-role-badge">{roleLabel(teamView?.myRole ?? profile.team.myRole ?? "editor")}</span>

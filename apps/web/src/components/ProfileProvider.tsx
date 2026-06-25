@@ -25,7 +25,7 @@ import {
   buildDocumentAutofill,
   type TeamSharedProfile,
 } from "@/lib/profile/document-branding";
-import { fetchTeamView } from "@/lib/team/roster-client";
+import { fetchTeamView, dispatchTeamRefresh } from "@/lib/team/roster-client";
 import { fetchServerProfile, pushServerProfile, mergeProfiles } from "@/lib/profile/cloud-sync";
 import { addNotification } from "@/lib/notifications/store";
 import { hashPin, verifyPin } from "@/lib/profile/security";
@@ -223,6 +223,13 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       }
 
       setProfile(final);
+      if (
+        final.personal.photo !== next.personal.photo ||
+        final.personal.fullName !== next.personal.fullName ||
+        final.account.displayName !== next.account.displayName
+      ) {
+        dispatchTeamRefresh();
+      }
     },
     [sessionPin, userId, authMode, refreshTeamShared, markSaved]
   );

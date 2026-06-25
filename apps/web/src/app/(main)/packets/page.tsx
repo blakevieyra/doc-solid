@@ -21,6 +21,7 @@ import {
   removePacketItem,
   movePacketItem,
   normalizePacketItems,
+  updatePacket,
 } from "@/lib/documents/packets";
 import { exportMultipleElementsPdf, packetPdfFilename } from "@/lib/pdf/exportDocument";
 import { getFavoriteTemplateIds } from "@/lib/documents/favorites";
@@ -64,6 +65,8 @@ export default function PacketsPage() {
   const [msg, setMsg] = useState("");
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [showContentsPanel, setShowContentsPanel] = useState(false);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [renaming, setRenaming] = useState(false);
 
   const packets = getPackets(profile);
   const favorites = getFavoriteTemplateIds(profile);
@@ -113,6 +116,27 @@ export default function PacketsPage() {
     });
     if (activePacketId === id) setActivePacketId(null);
   }
+
+  async function handleRenamePacket(name: string) {
+    if (!activePacket) return;
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === activePacket.name) {
+      setRenaming(false);
+      return;
+    }
+    await updateProfile({
+      library: {
+        ...profile.library,
+        packets: updatePacket(profile, activePacket.id, { name: trimmed }),
+      },
+    });
+    setRenaming(false);
+  }
+
+  useEffect(() => {
+    if (activePacket) setRenameDraft(activePacket.name);
+    setRenaming(false);
+  }, [activePacket?.id, activePacket?.name]);
 
   async function handleAddTemplate(templateId: string) {
     if (!activePacket) return;
@@ -238,7 +262,39 @@ export default function PacketsPage() {
             <>
               <div className="card packets-header">
                 <div className="packets-header-text">
-                  <h2>{activePacket.name}</h2>
+                  {renaming ? (
+                    <div className="packets-rename-row">
+                      <input
+                        type="text"
+                        className="packets-rename-input"
+                        value={renameDraft}
+                        autoFocus
+                        onChange={(e) => setRenameDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") void handleRenamePacket(renameDraft);
+                          if (e.key === "Escape") {
+                            setRenameDraft(activePacket.name);
+                            setRenaming(false);
+                          }
+                        }}
+                        onBlur={() => void handleRenamePacket(renameDraft)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="packets-title-row">
+                      <h2>{activePacket.name}</h2>
+                      <button
+                        type="button"
+                        className="btn btn-secondary btn-sm packets-rename-btn"
+                        onClick={() => {
+                          setRenameDraft(activePacket.name);
+                          setRenaming(true);
+                        }}
+                      >
+                        Rename
+                      </button>
+                    </div>
+                  )}
                   <div className="packets-stat-row">
                     <span className="packets-stat">
                       <strong>{activePacket.templateIds.length}</strong> template{activePacket.templateIds.length !== 1 ? "s" : ""}

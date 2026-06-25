@@ -273,14 +273,13 @@ async function enrichMembersWithIdentity<T extends {
 }>(members: T[]): Promise<T[]> {
   return Promise.all(
     members.map(async (m) => {
-      if (m.avatarUrl) return m;
       const identity = await loadPublicIdentityForEmail(m.email).catch(() => null);
       if (!identity) return m;
       return {
         ...m,
-        name: m.name || identity.name,
-        username: m.username ?? identity.username,
-        avatarUrl: identity.avatarUrl ?? null,
+        name: identity.name || m.name,
+        username: identity.username ?? m.username,
+        avatarUrl: identity.avatarUrl ?? m.avatarUrl ?? null,
       };
     })
   );
