@@ -9,6 +9,7 @@ export interface TeamMemberView {
   role: TeamRole;
   joinedAt: string;
   isYou: boolean;
+  status?: "pending" | "active";
 }
 
 export interface TeamView {

@@ -1,4 +1,5 @@
 import type { UserProfile } from "./types";
+import { mergeTeamMembersByEmail } from "@/lib/team/members-merge";
 
 export async function fetchServerProfile(): Promise<UserProfile | null> {
   const res = await fetch("/api/profile", { credentials: "include", cache: "no-store" });
@@ -45,5 +46,27 @@ export function mergeProfiles(local: UserProfile, server: UserProfile): UserProf
       logo: base.organization.logo ?? other.organization.logo,
     },
     onboardingComplete: base.onboardingComplete || other.onboardingComplete,
+    team: {
+      ...base.team,
+      ...other.team,
+      teamId: base.team.teamId || other.team.teamId,
+      orgName: base.team.orgName || other.team.orgName,
+      members: mergeTeamMembersByEmail(base.team.members, other.team.members),
+      memberships: [...(base.team.memberships ?? []), ...(other.team.memberships ?? [])].filter(
+        (m, i, arr) => arr.findIndex((x) => x.teamId === m.teamId) === i
+      ),
+    },
+    library: {
+      ...base.library,
+      ...other.library,
+      favoriteTemplateIds:
+        base.library.favoriteTemplateIds.length >= other.library.favoriteTemplateIds.length
+          ? base.library.favoriteTemplateIds
+          : other.library.favoriteTemplateIds,
+      contacts:
+        (base.library.contacts?.length ?? 0) >= (other.library.contacts?.length ?? 0)
+          ? base.library.contacts
+          : other.library.contacts,
+    },
   };
 }

@@ -3,13 +3,8 @@ import { prisma } from "@doc-solid/database";
 import { requireAuth } from "@/lib/server/session";
 import { getUserProfile } from "@/lib/server/users";
 import { enforceRateLimit } from "@/lib/server/rate-limit";
-import {
-  getTeamRoster,
-  saveTeamRoster,
-  mapDbRole,
-  type TeamRoster,
-  type TeamRosterMember,
-} from "@/lib/server/team-roster";
+import { getTeamRoster, saveTeamRoster, mapDbRole, type TeamRoster, type TeamRosterMember } from "@/lib/server/team-roster";
+import { getPendingInvitesForTeam } from "@/lib/server/team-member-invites";
 import type { TeamRole, UserProfile } from "@/lib/profile/types";
 import { formatAddress } from "@/lib/profile/types";
 import type { TeamSharedProfile } from "@/lib/profile/document-branding";
@@ -23,6 +18,7 @@ export interface TeamMemberView {
   role: TeamRole;
   joinedAt: string;
   isYou: boolean;
+  status?: "pending" | "active";
 }
 
 export interface TeamView {
@@ -45,7 +41,7 @@ function memberId(email: string): string {
 }
 
 function toMemberViews(
-  members: Array<{ email: string; name: string; role: TeamRole; joinedAt: string }>,
+  members: Array<{ email: string; name: string; role: TeamRole; joinedAt: string; status?: "pending" | "active" }>,
   selfEmail: string
 ): TeamMemberView[] {
   return members.map((m) => ({
@@ -55,6 +51,7 @@ function toMemberViews(
     role: m.role,
     joinedAt: m.joinedAt,
     isYou: m.email.toLowerCase() === selfEmail.toLowerCase(),
+    status: m.status ?? "active",
   }));
 }
 
@@ -114,6 +111,7 @@ function fromProfileTeam(profile: UserProfile, selfEmail: string, selfName: stri
         name: m.name,
         role: m.role,
         joinedAt: m.acceptedAt ?? m.invitedAt,
+        status: m.status ?? (m.acceptedAt ? "active" : "pending"),
       })),
       selfEmail
     ),
@@ -188,9 +186,9 @@ async function fromOrganization(userId: string, selfEmail: string, selfName: str
 }
 
 function mergeMemberLists(
-  ...lists: Array<Array<{ email: string; name: string; role: TeamRole; joinedAt: string }>>
-): Array<{ email: string; name: string; role: TeamRole; joinedAt: string }> {
-  const byEmail = new Map<string, { email: string; name: string; role: TeamRole; joinedAt: string }>();
+  ...lists: Array<Array<{ email: string; name: string; role: TeamRole; joinedAt: string; status?: "pending" | "active" }>>
+): Array<{ email: string; name: string; role: TeamRole; joinedAt: string; status?: "pending" | "active" }> {
+  const byEmail = new Map<string, { email: string; name: string; role: TeamRole; joinedAt: string; status?: "pending" | "active" }>();
   for (const list of lists) {
     for (const m of list) {
       const key = m.email.toLowerCase();
@@ -200,6 +198,10 @@ function mergeMemberLists(
         name: m.name || prev?.name || m.email,
         role: m.role,
         joinedAt: prev?.joinedAt && prev.joinedAt <= m.joinedAt ? prev.joinedAt : m.joinedAt,
+        status:
+          m.status === "pending" || prev?.status === "pending"
+            ? "pending"
+            : m.status ?? prev?.status ?? "active",
       });
     }
   }
@@ -225,12 +227,14 @@ async function buildTeamView(userId: string, email: string, name: string): Promi
     joinedAt: m.joinedAt,
   })) ?? [];
 
-  const profileMembers = profileView?.members.map((m) => ({
-    email: m.email,
-    name: m.name,
-    role: m.role,
-    joinedAt: m.joinedAt,
-  })) ?? [];
+  const profileMembers =
+    profile?.team.members.map((m) => ({
+      email: m.email,
+      name: m.name,
+      role: m.role,
+      joinedAt: m.acceptedAt ?? m.invitedAt,
+      status: (m.status ?? (m.acceptedAt ? "active" : "pending")) as "pending" | "active",
+    })) ?? [];
 
   const contactMembers =
     profile?.library?.contacts.map((c) => ({
@@ -248,6 +252,19 @@ async function buildTeamView(userId: string, email: string, name: string): Promi
   })) ?? [];
 
   const mergedMembers = mergeMemberLists(orgMembers, profileMembers, contactMembers, rosterMembers);
+
+  const pendingInvites = teamId ? await getPendingInvitesForTeam(teamId) : [];
+  for (const invite of pendingInvites) {
+    const key = invite.inviteeEmail.toLowerCase();
+    if (mergedMembers.some((m) => m.email.toLowerCase() === key)) continue;
+    mergedMembers.push({
+      email: invite.inviteeEmail,
+      name: invite.inviteeName,
+      role: invite.role,
+      joinedAt: invite.createdAt,
+      status: "pending",
+    });
+  }
 
   let base: TeamView;
   if (roster && roster.members.length > 0) {
@@ -348,12 +365,14 @@ export async function GET(req: NextRequest) {
         shareBusinessProfile: teamWithShared.shareBusinessProfile,
         shareOrganizationProfile: teamWithShared.shareOrganizationProfile,
         createdAt: teamWithShared.createdAt ?? existing?.createdAt,
-        members: teamWithShared.members.map((m) => ({
-          email: m.email.toLowerCase(),
-          name: m.name,
-          role: m.role,
-          joinedAt: m.joinedAt,
-        })),
+        members: teamWithShared.members
+          .filter((m) => m.status !== "pending")
+          .map((m) => ({
+            email: m.email.toLowerCase(),
+            name: m.name,
+            role: m.role,
+            joinedAt: m.joinedAt,
+          })),
         updatedAt: new Date().toISOString(),
       });
     }

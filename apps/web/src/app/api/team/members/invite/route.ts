@@ -3,7 +3,9 @@ import { requireAuth } from "@/lib/server/session";
 import { enforceRateLimit } from "@/lib/server/rate-limit";
 import { createTeamMemberInvite } from "@/lib/server/team-member-invites";
 import { getTeamRoster } from "@/lib/server/team-roster";
-import type { TeamRole } from "@/lib/profile/types";
+import { getUserProfile, saveUserProfile } from "@/lib/server/users";
+import { mergeTeamMembersByEmail } from "@/lib/team/members-merge";
+import type { TeamMember, TeamRole } from "@/lib/profile/types";
 
 export const runtime = "nodejs";
 
@@ -59,6 +61,46 @@ export async function POST(req: NextRequest) {
       inviteeName,
       role: body.role ?? "editor",
     });
+
+    const ownerProfile = await getUserProfile(auth.user.id);
+    if (ownerProfile) {
+      const now = new Date().toISOString();
+      const ownerMember: TeamMember = {
+        id: `tm_${inviterEmail.replace(/[^a-z0-9]/g, "_")}`,
+        email: inviterEmail,
+        name: auth.user.name,
+        role: "owner",
+        shareProfile: true,
+        invitedAt: ownerProfile.createdAt ?? now,
+        acceptedAt: ownerProfile.createdAt ?? now,
+        status: "active",
+      };
+      const pendingMember: TeamMember = {
+        id: `tm_${inviteeEmail.replace(/[^a-z0-9]/g, "_")}`,
+        email: inviteeEmail,
+        name: inviteeName,
+        role: body.role ?? "editor",
+        shareProfile: true,
+        invitedAt: now,
+        status: "pending",
+      };
+      const members = mergeTeamMembersByEmail(ownerProfile.team.members, [ownerMember, pendingMember]);
+
+      await saveUserProfile(auth.user.id, {
+        ...ownerProfile,
+        team: {
+          ...ownerProfile.team,
+          enabled: true,
+          teamId,
+          orgName,
+          ownerEmail: inviterEmail,
+          ownerName: auth.user.name,
+          myRole: "owner",
+          members,
+        },
+        updatedAt: now,
+      });
+    }
 
     return NextResponse.json({
       invite: {

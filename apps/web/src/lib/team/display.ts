@@ -44,6 +44,10 @@ export function mergeTeamMemberDisplays(
         role: m.role === "owner" || prev?.role === "owner" ? "owner" : m.role || prev?.role || "editor",
         joinedAt: prev?.joinedAt && prev.joinedAt <= m.joinedAt ? prev.joinedAt : m.joinedAt,
         isYou: key === self,
+        status:
+          m.status === "pending" || prev?.status === "pending"
+            ? "pending"
+            : m.status ?? prev?.status ?? "active",
       });
     }
   }

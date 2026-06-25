@@ -109,6 +109,18 @@ export async function getTeamMemberInvite(id: string): Promise<PendingTeamMember
   }
 }
 
+export async function getPendingInvitesForTeam(teamId: string): Promise<PendingTeamMemberInvite[]> {
+  const ids = await readIdList(teamPendingKey(teamId));
+  const invites: PendingTeamMemberInvite[] = [];
+  for (const id of ids) {
+    const invite = await getTeamMemberInvite(id);
+    if (!invite || invite.status !== "pending") continue;
+    if (new Date(invite.expiresAt) < new Date()) continue;
+    invites.push(invite);
+  }
+  return invites.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
 export async function getPendingInvitesForUser(email: string): Promise<PendingTeamMemberInvite[]> {
   const ids = await readIdList(userInvitesKey(email));
   const invites: PendingTeamMemberInvite[] = [];

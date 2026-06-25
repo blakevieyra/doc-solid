@@ -10,6 +10,7 @@ import { roleLabel, mergeTeamMemberDisplays, profileMembersToDisplay, contactsTo
 import { TeamMemberIdentity } from "@/components/TeamMemberPickerRow";
 import { canUseFeature, maxTeamMembers } from "@/lib/subscription/plans";
 import type { AppContact, TeamMember, TeamRole, UserProfile } from "@/lib/profile/types";
+import { mergeTeamMembersByEmail } from "@/lib/team/members-merge";
 
 function Field({
   label,
@@ -53,11 +54,13 @@ function teamViewToMembers(team: TeamView): TeamMember[] {
     role: m.role,
     shareProfile: true,
     invitedAt: m.joinedAt,
-    acceptedAt: m.joinedAt,
+    acceptedAt: m.status === "pending" ? undefined : m.joinedAt,
+    status: m.status ?? "active",
   }));
 }
 
 function applyTeamView(profile: UserProfile, team: TeamView): UserProfile {
+  const fromView = teamViewToMembers(team);
   return {
     ...profile,
     team: {
@@ -71,7 +74,7 @@ function applyTeamView(profile: UserProfile, team: TeamView): UserProfile {
       myRole: team.myRole,
       shareBusinessProfile: team.shareBusinessProfile,
       shareOrganizationProfile: team.shareOrganizationProfile,
-      members: teamViewToMembers(team),
+      members: mergeTeamMembersByEmail(profile.team.members, fromView),
     },
   };
 }
@@ -232,11 +235,12 @@ export function ProfileTeamTab() {
         invitedAt: new Date().toISOString(),
         status: "pending",
       };
-      const next = [...profile.team.members.filter((m) => m.email !== member.email), member];
+      const next = mergeTeamMembersByEmail(profile.team.members, [member]);
       await updateProfile({ team: { ...profile.team, members: next, enabled: true, teamId } });
       setNewMemberEmail("");
       setNewMemberName("");
       setActionMsg("Request sent — they will appear on your team once they accept.");
+      await refreshTeam();
     } catch (err) {
       setActionMsg(err instanceof Error ? err.message : "Invite failed");
     } finally {
