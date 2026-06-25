@@ -12,12 +12,19 @@ import { RequestSignatureModal } from "@/components/RequestSignatureModal";
 import { RequestReviewModal } from "@/components/RequestReviewModal";
 import { SecurityScanModal } from "@/components/SecurityScanModal";
 import { DocumentComplianceBar } from "@/components/DocumentComplianceBar";
+import { ReturnShareModal } from "@/components/ReturnShareModal";
 import { useProfile } from "@/components/ProfileProvider";
+import { useAuth } from "@/components/AuthProvider";
 import { exportDocumentPdf, documentPdfFilename } from "@/lib/pdf/exportDocument";
 import { canUseFeature } from "@/lib/subscription/plans";
 import { resolveDocumentNumber } from "@/lib/documents/document-number";
 import { updateSavedDocumentFields } from "@/lib/documents/persist";
 import { loadShares, getShareById } from "@/lib/team/invites";
+import {
+  getShareSigningHref,
+  markShareOpened,
+  shareWasReturnedBy,
+} from "@/lib/team/share-document";
 
 function SavedDocumentPageContent() {
   const params = useParams();
@@ -25,6 +32,7 @@ function SavedDocumentPageContent() {
   const shareId = searchParams?.get("shareId");
   const localId = params?.localId as string | undefined;
   const { profile, documentProfile } = useProfile();
+  const { session } = useAuth();
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [templateId, setTemplateId] = useState("");
@@ -37,6 +45,10 @@ function SavedDocumentPageContent() {
   const [showSecurityScan, setShowSecurityScan] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [shareContext, setShareContext] = useState<ReturnType<typeof getShareById>>(null);
+  const [showReturnShare, setShowReturnShare] = useState(false);
+
+  const userEmail = session?.email ?? profile.account.email ?? "";
+  const userName = session?.name ?? profile.account.displayName ?? profile.personal.fullName ?? "";
 
   const cleanPdf = canUseFeature(profile.subscription, "pdfClean");
 
@@ -84,9 +96,19 @@ function SavedDocumentPageContent() {
     });
   }, [localId, shareId]);
 
+  useEffect(() => {
+    if (loading || !localId) return;
+    const share = shareId
+      ? getShareById(shareId)
+      : loadShares().find((s) => s.documentId === localId);
+    if (!share?.fieldDataSnapshot) return;
+    markShareOpened(share.id, { email: userEmail, name: userName });
+    setShareContext(getShareById(share.id));
+  }, [localId, shareId, loading, userEmail, userName]);
+
   async function handleRedact(redacted: Record<string, string>) {
     setValues(redacted);
-    if (!localId || isSharedPreview) return;
+    if (!localId || shareContext?.fieldDataSnapshot) return;
     const updated = await updateSavedDocumentFields(localId, redacted);
     if (updated) setDocStatus(updated.status);
   }
@@ -142,9 +164,9 @@ function SavedDocumentPageContent() {
   const relatedShare = shareContext ?? loadShares().find((s) => s.documentId === localId);
   const isSharedPreview = Boolean(relatedShare?.fieldDataSnapshot);
   const isCompletedShare = Boolean(relatedShare?.completedAt);
-  const signHref = relatedShare?.documentTemplateId
-    ? `/documents/${relatedShare.documentTemplateId}?localId=${localId}&sign=1&shareId=${relatedShare.id}`
-    : null;
+  const signHref = relatedShare ? getShareSigningHref(relatedShare) : null;
+  const returnedByMe = relatedShare ? shareWasReturnedBy(relatedShare, userEmail) : false;
+  const canReturnWithComment = isSharedPreview && !isCompletedShare && !returnedByMe;
 
   return (
     <AppShell wide>
@@ -173,6 +195,15 @@ function SavedDocumentPageContent() {
               <Link href={signHref} className="btn btn-primary btn-sm">
                 Review & comment
               </Link>
+            )}
+            {canReturnWithComment && (
+              <button
+                type="button"
+                className="btn btn-secondary btn-sm"
+                onClick={() => setShowReturnShare(true)}
+              >
+                Return with comment
+              </button>
             )}
             {!isSharedPreview && (
               <>
@@ -259,6 +290,14 @@ function SavedDocumentPageContent() {
           values={values}
           onClose={() => setShowSecurityScan(false)}
           onRedact={(redacted) => void handleRedact(redacted)}
+        />
+      )}
+
+      {showReturnShare && relatedShare && (
+        <ReturnShareModal
+          share={relatedShare}
+          onClose={() => setShowReturnShare(false)}
+          onReturned={() => setShareContext(getShareById(relatedShare.id))}
         />
       )}
     </AppShell>

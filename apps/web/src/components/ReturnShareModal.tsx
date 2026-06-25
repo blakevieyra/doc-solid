@@ -48,7 +48,7 @@ export function ReturnShareModal({ share, onClose, onReturned }: ReturnShareModa
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" onClick={onClose}>
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
-        <h2>Return to sender</h2>
+        <h2>Return with comment</h2>
         <p className="field-help">
           Tell {share.fromName} what needs to be fixed on &quot;{share.documentTitle}&quot;.
         </p>
@@ -73,7 +73,7 @@ export function ReturnShareModal({ share, onClose, onReturned }: ReturnShareModa
             disabled={!comment.trim() || sent}
             onClick={handleReturn}
           >
-            {sent ? "Returned ✓" : "Return with comments"}
+            {sent ? "Returned ✓" : "Send comment"}
           </button>
         </div>
       </div>

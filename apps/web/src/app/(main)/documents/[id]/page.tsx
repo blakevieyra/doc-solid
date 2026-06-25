@@ -46,7 +46,7 @@ import {
   stampSignatureLock,
 } from "@/lib/documents/signature-lock";
 import { getShareById } from "@/lib/team/invites";
-import { completeShareSigning, markShareOpened, returnShareCorrection } from "@/lib/team/share-document";
+import { completeShareSigning, markShareOpened, returnShareCorrection, shareNeedsSigningFlow, getSharePreviewHref } from "@/lib/team/share-document";
 import { useNotifications } from "@/components/NotificationProvider";
 import { peekNextDocumentNumber } from "@/lib/documents/sequencing";
 import { ensureDocumentNumber, resolveDocumentNumber } from "@/lib/documents/document-number";
@@ -101,6 +101,14 @@ function DocumentEditorPageContent() {
 
   useEffect(() => {
     if (!shareId || !signingMode) return;
+    const share = getShareById(shareId);
+    if (share && !shareNeedsSigningFlow(share)) {
+      router.replace(getSharePreviewHref(share));
+    }
+  }, [shareId, signingMode, router]);
+
+  useEffect(() => {
+    if (!shareId || !signingMode) return;
     markShareOpened(shareId, {
       email: session?.email ?? profile.account.email ?? "",
       name: session?.name ?? profile.account.displayName ?? profile.personal.fullName ?? "",
@@ -117,12 +125,14 @@ function DocumentEditorPageContent() {
 
   useEffect(() => {
     if (!signingMode || !template || !meta || assignedFieldIds.length > 0) return;
+    const share = shareId ? getShareById(shareId) : null;
+    if (share?.shareType !== "signature_request") return;
     const full = { ...meta, sections: template.sections };
     const empty = emptyCounterpartySignatureFields(full, values);
     if (empty.length > 0) {
       setAssignedFieldIds(empty.map((f) => f.id));
     }
-  }, [signingMode, template, meta, values, assignedFieldIds.length]);
+  }, [signingMode, template, meta, values, assignedFieldIds.length, shareId]);
 
   useEffect(() => {
     if (!template || initialized) return;
@@ -264,6 +274,8 @@ function DocumentEditorPageContent() {
   const activeShare = shareId ? getShareById(shareId) : null;
   const shareSnapshot = activeShare?.fieldDataSnapshot as Record<string, string> | undefined;
   const lockShareBranding = Boolean(shareSnapshot);
+  const isSignatureShare = activeShare?.shareType === "signature_request";
+  const isReviewShare = activeShare?.shareType === "review_request";
   const isRecipientSigning = Boolean(
     signingMode &&
     shareId &&
@@ -490,6 +502,8 @@ function DocumentEditorPageContent() {
       )
     : [];
 
+  const showSigningFields = isSignatureShare && signingSignatureFields.length > 0;
+
   return (
     <AppShell wide>
       <div className="editor-header">
@@ -560,14 +574,18 @@ function DocumentEditorPageContent() {
             </div>
 
             <aside className={`signing-panel card${isMobileEditor && mobilePane !== "form" ? " editor-pane-hidden" : ""}`}>
-              <h2 className="section-title" style={{ marginTop: 0 }}>Your signature</h2>
+              <h2 className="section-title" style={{ marginTop: 0 }}>
+                {showSigningFields ? "Your signature" : isReviewShare ? "Your review" : "Respond to sender"}
+              </h2>
               <p className="field-help">
-                Complete the field(s) below, or return a correction note to the sender.
+                {showSigningFields
+                  ? "Complete the signature field(s) below, or return a comment to the sender."
+                  : isReviewShare
+                    ? "Review this document and return a comment if anything needs to change."
+                    : "Return a comment to the sender if anything needs to change."}
               </p>
 
-              {signingSignatureFields.length === 0 ? (
-                <p className="field-help">No signature fields were assigned on this request.</p>
-              ) : (
+              {showSigningFields ? (
                 signingSignatureFields.map(({ field }) => (
                   <FieldInput
                     key={field.id}
@@ -582,34 +600,42 @@ function DocumentEditorPageContent() {
                     signatureAccessCtx={signatureAccessCtx}
                   />
                 ))
-              )}
+              ) : isSignatureShare ? (
+                <p className="field-help">No signature fields were assigned on this request.</p>
+              ) : null}
 
               <div className="field-group" style={{ marginTop: "1rem" }}>
-                <label htmlFor="correction-comment">Return with correction (optional)</label>
+                <label htmlFor="correction-comment">Return with comment</label>
                 <textarea
                   id="correction-comment"
                   rows={4}
                   value={correctionComment}
                   onChange={(e) => setCorrectionComment(e.target.value)}
-                  placeholder="Explain what needs to be changed before you can sign…"
+                  placeholder={
+                    showSigningFields
+                      ? "Explain what needs to be changed before you can sign…"
+                      : "Share feedback or note anything that needs to change…"
+                  }
                 />
               </div>
 
               {correctionSent && (
-                <p className="field-success">Correction sent to {activeShare?.fromName}. Returning to My Files…</p>
+                <p className="field-success">Comment sent to {activeShare?.fromName}. Returning to My Files…</p>
               )}
 
               <div className="signing-panel-actions">
-                <button type="button" className="btn btn-primary btn-block" onClick={() => void handleSave()}>
-                  {counterpartyGate.ok ? "Complete & return signed document" : "Save signature progress"}
-                </button>
+                {showSigningFields && (
+                  <button type="button" className="btn btn-primary btn-block" onClick={() => void handleSave()}>
+                    {counterpartyGate.ok ? "Complete & return signed document" : "Save signature progress"}
+                  </button>
+                )}
                 <button
                   type="button"
-                  className="btn btn-secondary btn-block"
+                  className={showSigningFields ? "btn btn-secondary btn-block" : "btn btn-primary btn-block"}
                   onClick={() => void handleReturnCorrection()}
                   disabled={!correctionComment.trim() || correctionSent}
                 >
-                  Return for correction
+                  Return with comment
                 </button>
               </div>
             </aside>

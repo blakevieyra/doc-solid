@@ -1428,6 +1428,7 @@ a.quick-action-card { text-decoration: none; color: inherit; }
   border-bottom: 1px solid var(--border);
 }
 .share-inbox-badge-archived { background: #e2e8f0; color: #475569; }
+.share-inbox-badge-muted { background: #f1f5f9; color: #64748b; }
 .share-inbox-subtitle { font-size: 0.8125rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin: 0 0 0.5rem; }
 .share-inbox-subtitle-archived { margin-top: 1.25rem; }
 .share-archived-hint { margin: 0 0 0.5rem; font-size: 0.8125rem; }

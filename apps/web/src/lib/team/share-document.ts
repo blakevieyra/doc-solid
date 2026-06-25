@@ -160,6 +160,45 @@ export async function keepShare(
   return syncShareToServer(shareId);
 }
 
+export function shareNeedsSigningFlow(share: DocumentShare): boolean {
+  return share.shareType === "signature_request" || share.shareType === "review_request";
+}
+
+export function getShareSigningHref(share: DocumentShare): string | null {
+  if (!share.documentTemplateId || !share.fieldDataSnapshot) return null;
+  if (!shareNeedsSigningFlow(share)) return null;
+  return `/documents/${share.documentTemplateId}?localId=${share.documentId}&sign=1&shareId=${share.id}`;
+}
+
+export function getSharePreviewHref(share: DocumentShare): string {
+  return `/portal/view/${share.documentId}?shareId=${share.id}`;
+}
+
+export function shareWasOpened(share: DocumentShare): boolean {
+  return (share.auditLog ?? []).some((e) => e.type === "opened");
+}
+
+/** Status badge for shares the current user sent */
+export function getSentShareStatusLabel(share: DocumentShare): string {
+  if (share.completedAt) {
+    if (share.shareType === "signature_request") return "Signed & returned";
+    if (share.shareType === "review_request") return "Review completed";
+    return "Completed";
+  }
+  const audit = share.auditLog ?? [];
+  if (audit.some((e) => e.type === "correction_requested")) return "Returned with comments";
+  const opened = shareWasOpened(share);
+
+  if (share.shareType === "share") {
+    return opened ? "Received" : "Sent";
+  }
+  if (share.shareType === "review_request") {
+    return opened ? "Received" : "Awaiting review";
+  }
+  if (audit.some((e) => e.type === "signed")) return "Partially signed";
+  return opened ? "Opened — awaiting signature" : "Awaiting response";
+}
+
 export function shareWasReturnedBy(
   share: DocumentShare,
   email: string
@@ -178,7 +217,7 @@ export function getShareAuditLabel(event: ShareAuditEvent): string {
     case "received":
       return "Received";
     case "opened":
-      return "Opened";
+      return "Received";
     case "signed":
       return "Signed";
     case "completed":

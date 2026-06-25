@@ -40,6 +40,9 @@ import type { DocumentShare } from "@/lib/team/invites";
 import { isShareRecipient, isShareSender } from "@/lib/team/invites";
 import {
   getShareAuditLabel,
+  getSharePreviewHref,
+  getShareSigningHref,
+  getSentShareStatusLabel,
   shareWasReturnedBy,
 } from "@/lib/team/share-document";
 import { loadSharesForUser } from "@/lib/team/shares-sync";
@@ -255,6 +258,16 @@ export default function PortalPage() {
     [sentShares]
   );
 
+  const sentAwaitingSignature = useMemo(
+    () => sentActiveShares.filter((s) => s.shareType === "signature_request"),
+    [sentActiveShares]
+  );
+
+  const sentOtherActive = useMemo(
+    () => sentActiveShares.filter((s) => s.shareType !== "signature_request"),
+    [sentActiveShares]
+  );
+
   const waitingSigShares = useMemo(
     () => activeShares.filter((s) => s.shareType === "signature_request"),
     [activeShares]
@@ -330,16 +343,10 @@ export default function PortalPage() {
     const auditLog = s.auditLog ?? [];
     const latestAudit = auditLog[auditLog.length - 1];
     const canOpen = Boolean(s.documentTemplateId && s.fieldDataSnapshot);
-    const previewHref = `/portal/view/${s.documentId}?shareId=${s.id}`;
-    const signHref =
-      canOpen && s.documentTemplateId
-        ? `/documents/${s.documentTemplateId}?localId=${s.documentId}&sign=1&shareId=${s.id}`
-        : null;
+    const previewHref = getSharePreviewHref(s);
+    const signHref = getShareSigningHref(s);
     const returnedByMe = shareWasReturnedBy(s, userEmail);
-    const showReturn =
-      !archived &&
-      !returnedByMe &&
-      (s.shareType === "signature_request" || s.shareType === "review_request");
+    const showReturn = !archived && !returnedByMe && !s.completedAt;
     const primaryLabel = archived
       ? "View"
       : s.shareType === "signature_request"
@@ -379,6 +386,9 @@ export default function PortalPage() {
               {!archived && s.shareType === "review_request" && (
                 <span className="share-inbox-badge">Review requested</span>
               )}
+              {!archived && (!s.shareType || s.shareType === "share") && (
+                <span className="share-inbox-badge share-inbox-badge-muted">Shared</span>
+              )}
             </span>
             <span className="share-inbox-oneline">
               From {s.fromName} · {new Date(s.createdAt).toLocaleDateString()}
@@ -408,7 +418,7 @@ export default function PortalPage() {
               )}
               {!archived && showReturn ? (
                 <button type="button" className="btn btn-secondary btn-sm" onClick={() => setReturnShare(s)}>
-                  Return
+                  Return with comment
                 </button>
               ) : !archived && returnedByMe ? (
                 <span className="btn btn-secondary btn-sm" style={{ opacity: 0.45, pointerEvents: "none" }}>
@@ -464,8 +474,9 @@ export default function PortalPage() {
     const auditLog = s.auditLog ?? [];
     const latestAudit = auditLog[auditLog.length - 1];
     const canOpen = Boolean(s.documentTemplateId && s.fieldDataSnapshot);
-    const previewHref = `/portal/view/${s.documentId}?shareId=${s.id}`;
+    const previewHref = getSharePreviewHref(s);
     const isCompleted = Boolean(s.completedAt);
+    const statusLabel = getSentShareStatusLabel(s);
 
     return (
       <li
@@ -487,9 +498,9 @@ export default function PortalPage() {
             <span className="share-inbox-title-line">
               <strong>{s.documentTitle}</strong>
               {isCompleted ? (
-                <span className="share-inbox-badge share-inbox-badge-archived">Signed & returned</span>
+                <span className="share-inbox-badge share-inbox-badge-archived">{statusLabel}</span>
               ) : (
-                <span className="share-inbox-badge">Awaiting response</span>
+                <span className="share-inbox-badge">{statusLabel}</span>
               )}
             </span>
             <span className="share-inbox-oneline">
@@ -629,14 +640,23 @@ export default function PortalPage() {
         <section className="portal-shares card portal-shares-sent" style={{ marginBottom: "1.5rem", padding: "1.25rem" }}>
           <h2 className="section-title" style={{ marginTop: 0 }}>Sent to your team</h2>
           <p className="field-help" style={{ marginBottom: "0.75rem" }}>
-            Track signature requests you sent. You&apos;ll get a notification when they sign or return a document.
+            Track documents you shared. You&apos;ll get a notification when they&apos;re opened, signed, or returned with comments.
           </p>
 
-          {sentActiveShares.length > 0 && (
+          {sentAwaitingSignature.length > 0 && (
             <>
               <h3 className="share-inbox-subtitle">Awaiting signature</h3>
               <ul className="share-inbox-list">
-                {sentActiveShares.map((s) => renderSentShareItem(s))}
+                {sentAwaitingSignature.map((s) => renderSentShareItem(s))}
+              </ul>
+            </>
+          )}
+
+          {sentOtherActive.length > 0 && (
+            <>
+              <h3 className="share-inbox-subtitle">Sent documents</h3>
+              <ul className="share-inbox-list">
+                {sentOtherActive.map((s) => renderSentShareItem(s))}
               </ul>
             </>
           )}
