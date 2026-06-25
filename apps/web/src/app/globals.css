@@ -1642,6 +1642,47 @@ a.quick-action-card { text-decoration: none; color: inherit; }
     margin-bottom: -0.15rem;
   }
   .portal-type-chip { min-height: 44px; flex-shrink: 0; }
+  .share-inbox-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .share-inbox-summary {
+    width: 100%;
+  }
+  .share-inbox-title-line strong {
+    white-space: normal;
+    word-break: break-word;
+  }
+  .share-inbox-oneline {
+    white-space: normal;
+  }
+  .share-inbox-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    justify-content: stretch;
+  }
+  .share-inbox-actions .btn-primary {
+    grid-column: 1 / -1;
+  }
+  .share-inbox-actions .btn {
+    min-height: 44px;
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+  .account-stats-grid { grid-template-columns: 1fr 1fr; }
+  .quick-actions-grid { grid-template-columns: 1fr; }
+  .account-danger-actions {
+    flex-direction: column;
+  }
+  .account-danger-actions .btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+  }
   .profile-tab { min-height: 44px; padding: 0.625rem 1rem; flex-shrink: 0; }
   .profile-tab-groups { gap: 0.75rem; }
   .library-view-tab { min-height: 44px; padding: 0.5rem 0.875rem; }

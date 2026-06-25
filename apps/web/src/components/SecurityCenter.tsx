@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useProfile } from "@/components/ProfileProvider";
 import { useAuth } from "@/components/AuthProvider";
@@ -119,6 +120,10 @@ export function SecurityCenter() {
         <button type="button" className="btn btn-secondary" onClick={handleChangePassword} disabled={!currentPw || newPw !== confirmPw || newPw.length < 8}>
           Update Password
         </button>
+        <p className="field-help" style={{ marginTop: "0.75rem" }}>
+          Forgot your password?{" "}
+          <Link href="/forgot-password">Reset via email</Link>
+        </p>
       </div>
 
       <ComplianceRecommendations />

@@ -43,7 +43,6 @@ import {
   getSharePreviewHref,
   getShareSigningHref,
   getSentShareStatusLabel,
-  markShareComplete,
   shareWasReturnedBy,
 } from "@/lib/team/share-document";
 import { loadSharesForUser } from "@/lib/team/shares-sync";
@@ -107,7 +106,6 @@ export default function PortalPage() {
   const [scanDoc, setScanDoc] = useState<LocalDocument | null>(null);
   const [expandedShares, setExpandedShares] = useState<Record<string, boolean>>({});
   const [returnShare, setReturnShare] = useState<DocumentShare | null>(null);
-  const [completingShareId, setCompletingShareId] = useState<string | null>(null);
   const [sendTarget, setSendTarget] = useState<{ doc: LocalDocument; mode: "share" | "signature" } | null>(null);
   const [packetDoc, setPacketDoc] = useState<LocalDocument | null>(null);
   const [archivingId, setArchivingId] = useState<string | null>(null);
@@ -179,16 +177,6 @@ export default function PortalPage() {
         setShares(loaded);
         processShareNotifications(loaded, email);
       });
-    }
-  }
-
-  async function handleCompleteShare(share: DocumentShare) {
-    setCompletingShareId(share.id);
-    try {
-      await markShareComplete(share.id, actor);
-      refreshShares();
-    } finally {
-      setCompletingShareId(null);
     }
   }
 
@@ -357,7 +345,6 @@ export default function PortalPage() {
     const signHref = getShareSigningHref(s);
     const returnedByMe = shareWasReturnedBy(s, userEmail);
     const showReturn = !archived && !returnedByMe && !s.completedAt;
-    const showComplete = !archived && !s.completedAt && s.shareType !== "signature_request";
     const primaryLabel = archived
       ? "View"
       : s.shareType === "signature_request"
@@ -436,16 +423,6 @@ export default function PortalPage() {
                   Returned
                 </span>
               ) : null}
-              {showComplete && (
-                <button
-                  type="button"
-                  className="btn btn-secondary btn-sm"
-                  disabled={completingShareId === s.id}
-                  onClick={() => void handleCompleteShare(s)}
-                >
-                  {completingShareId === s.id ? "Completing…" : "Complete"}
-                </button>
-              )}
             </div>
         </div>
 

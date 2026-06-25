@@ -16,7 +16,7 @@ interface ProfileAccountTabProps {
 
 export function ProfileAccountTab({ onNavigate }: ProfileAccountTabProps) {
   const { profile, updateProfile } = useProfile();
-  const { user, logout, authMode } = useAuth();
+  const { user, logout } = useAuth();
   const router = useRouter();
   const { count, loading } = useDocumentStats();
   const [showDelete, setShowDelete] = useState(false);
@@ -63,20 +63,6 @@ export function ProfileAccountTab({ onNavigate }: ProfileAccountTabProps) {
         <p className="field-readonly-value account-id-value">{accountId || "Assigning…"}</p>
         <span className="field-help">System-generated — reference this ID when contacting support</span>
       </div>
-      {authMode === "server" && primaryEmail && (
-        <div className="field-group">
-          <label>Password</label>
-          <p className="field-readonly-value">••••••••</p>
-          <Link
-            href={`/forgot-password?email=${encodeURIComponent(primaryEmail)}`}
-            className="btn btn-secondary btn-sm"
-            style={{ marginTop: "0.5rem" }}
-          >
-            Reset password
-          </Link>
-          <span className="field-help">We&apos;ll email a one-time code to set a new password.</span>
-        </div>
-      )}
       <div className="field-group">
         <label>Preferred profile for documents</label>
         <p className="field-readonly-value">
