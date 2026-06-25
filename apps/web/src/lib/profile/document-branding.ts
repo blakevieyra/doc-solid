@@ -1,6 +1,7 @@
 import type { UserProfile } from "./types";
 import { formatAddress, parseAddressString } from "./types";
 import { buildOwnerSignatureValue } from "./signature";
+import { resolveProfileIdentity } from "./profile-identity";
 
 /** Org profile shared with team members via roster API */
 export interface TeamSharedProfile {
@@ -76,25 +77,22 @@ export function resolveDocumentBranding(
   companyName: string;
   tagline: string;
 } {
+  const identity = resolveProfileIdentity(profile);
+
   const logo =
     values.logo?.trim() ||
-    profile.business.logo ||
-    profile.organization.logo ||
+    identity.logo ||
     null;
 
   const companyName =
     values.businessName?.trim() ||
-    profile.business.name ||
-    profile.organization.name ||
-    profile.personal.fullName ||
-    profile.team.orgName ||
+    identity.name ||
     profile.account.displayName ||
     "Your Company";
 
   const tagline =
     values.orgMission?.trim() ||
-    profile.business.tagline ||
-    profile.organization.mission ||
+    identity.tagline ||
     "";
 
   return { logo, companyName, tagline };
@@ -120,30 +118,25 @@ export function resolveDocumentLetterhead(
   values: Record<string, string>
 ): DocumentLetterhead {
   const branding = resolveDocumentBranding(profile, values);
+  const identity = resolveProfileIdentity(profile);
 
   const address =
     values.businessAddress?.trim() ||
-    formatAddress(profile.business.address) ||
-    formatAddress(profile.organization.address) ||
+    identity.address ||
     formatAddress(profile.personal.address);
 
   const phone =
     values.businessPhone?.trim() ||
-    profile.business.phone ||
-    profile.organization.phone ||
-    profile.personal.phone;
+    identity.phone;
 
   const email =
     values.businessEmail?.trim() ||
-    profile.business.email ||
-    profile.organization.email ||
-    profile.personal.email ||
+    identity.email ||
     profile.account.email;
 
   const website =
     values.businessWebsite?.trim() ||
-    profile.business.website ||
-    profile.organization.website;
+    identity.website;
 
   const pocName =
     values.personName?.trim() ||
@@ -181,42 +174,25 @@ export function snapshotBrandingIntoValues(
   values: Record<string, string>
 ): Record<string, string> {
   const next = { ...values };
+  const identity = resolveProfileIdentity(profile);
 
-  if (!next.logo?.trim()) {
-    const logo = profile.business.logo ?? profile.organization.logo;
-    if (logo) next.logo = logo;
+  if (!next.logo?.trim() && identity.logo) {
+    next.logo = identity.logo;
   }
-  if (!next.businessName?.trim()) {
-    const name =
-      profile.business.name ||
-      profile.organization.name ||
-      profile.personal.fullName ||
-      profile.team.orgName;
-    if (name) next.businessName = name;
+  if (!next.businessName?.trim() && identity.name) {
+    next.businessName = identity.name;
   }
-  if (!next.businessEmail?.trim()) {
-    const email =
-      profile.business.email ||
-      profile.organization.email ||
-      profile.personal.email;
-    if (email) next.businessEmail = email;
+  if (!next.businessEmail?.trim() && identity.email) {
+    next.businessEmail = identity.email;
   }
-  if (!next.businessPhone?.trim()) {
-    const phone =
-      profile.business.phone ||
-      profile.organization.phone ||
-      profile.personal.phone;
-    if (phone) next.businessPhone = phone;
+  if (!next.businessPhone?.trim() && identity.phone) {
+    next.businessPhone = identity.phone;
   }
-  if (!next.businessWebsite?.trim() && profile.business.website) {
-    next.businessWebsite = profile.business.website;
+  if (!next.businessWebsite?.trim() && identity.website) {
+    next.businessWebsite = identity.website;
   }
-  if (!next.businessAddress?.trim()) {
-    const addr =
-      formatAddress(profile.business.address) ||
-      formatAddress(profile.organization.address) ||
-      formatAddress(profile.personal.address);
-    if (addr) next.businessAddress = addr;
+  if (!next.businessAddress?.trim() && identity.address) {
+    next.businessAddress = identity.address;
   }
   if (!next.personName?.trim() && profile.personal.fullName) {
     next.personName = profile.personal.fullName;
@@ -239,22 +215,24 @@ export function snapshotBrandingIntoValues(
 
 export function buildDocumentAutofill(profile: UserProfile): Record<string, string> {
   const today = new Date().toISOString().split("T")[0];
+  const identity = resolveProfileIdentity(profile);
+
   return {
-    businessName: profile.business.name,
-    logo: profile.business.logo ?? profile.organization.logo ?? "",
-    businessAddress: formatAddress(profile.business.address),
-    businessPhone: profile.business.phone,
-    businessEmail: profile.business.email,
-    businessWebsite: profile.business.website || profile.organization.website,
-    taxId: profile.security.encryptSensitive ? "" : profile.business.taxId,
+    businessName: identity.name,
+    logo: identity.logo ?? "",
+    businessAddress: identity.address,
+    businessPhone: identity.phone,
+    businessEmail: identity.email,
+    businessWebsite: identity.website,
+    taxId: profile.security.encryptSensitive ? "" : identity.taxId,
     personName: profile.personal.fullName,
     personTitle: profile.personal.title,
     personAddress: formatAddress(profile.personal.address),
     personEmail: profile.personal.email,
     personPhone: profile.personal.phone,
-    providerName: profile.business.name,
-    providerAddress: formatAddress(profile.business.address),
-    disclosingParty: profile.business.name,
+    providerName: identity.name,
+    providerAddress: identity.address,
+    disclosingParty: identity.name,
     orgMission: profile.organization.mission,
     documentDate: today,
     invoiceDate: today,

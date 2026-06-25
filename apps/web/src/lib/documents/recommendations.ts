@@ -179,7 +179,20 @@ export function getRecommendationHeading(
   if (industry) {
     return `Popular for ${getIndustryLabel(resolveIndustryKey(industry, profileType))}`;
   }
-  if (profileType === "individual") return "Popular for individuals";
-  if (profileType === "organization") return "Popular for organizations";
+  if (profileType === "individual") return "Recommended for you";
+  if (profileType === "organization") return "Recommended for your organization";
   return "Recommended for your business";
+}
+
+export function resolveRecommendationIndustry(profile: {
+  profileType: ProfileType;
+  business: { industry?: string };
+}): string | undefined {
+  if (profile.profileType === "organization") {
+    return profile.business.industry || "nonprofit";
+  }
+  if (profile.profileType === "individual") {
+    return profile.business.industry || "freelance";
+  }
+  return profile.business.industry || undefined;
 }

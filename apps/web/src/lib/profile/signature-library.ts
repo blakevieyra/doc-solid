@@ -204,3 +204,15 @@ export function applyProfileSignaturePatch(
     signature: current.signature,
   };
 }
+
+/** Switch default signature context when account profile type changes */
+export function syncSignatureContextForProfileType(
+  profile: UserProfile,
+): Pick<UserProfile, "signatures" | "signature"> | null {
+  const library = ensureSignatureLibrary(profile);
+  const expected = defaultActiveSignatureContext(profile.profileType);
+  if (library.activeContext === expected) return null;
+  return patchSignatureLibrary(profile, expected, library.byContext[expected], {
+    setActive: true,
+  });
+}

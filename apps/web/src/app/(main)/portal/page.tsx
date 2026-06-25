@@ -71,6 +71,7 @@ import { archiveSavedDocument, unarchiveSavedDocument, updateSavedDocumentFields
 import {
   getFavoriteLocalIds,
   getFavoriteTemplateIds,
+  getPortalFavoriteCount,
   isSavedDocFavorite,
   toggleFavoriteLocal,
 } from "@/lib/documents/favorites";
@@ -126,6 +127,7 @@ export default function PortalPage() {
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
     [documents, profile, favoriteTemplateIds, favoriteLocalIds]
   );
+  const favoriteChipCount = getPortalFavoriteCount(profile, documents);
 
   async function handleToggleFileFavorite(localId: string) {
     const result = toggleFavoriteLocal(profile, localId);
@@ -687,7 +689,7 @@ export default function PortalPage() {
                 className={`portal-type-chip portal-type-chip-fav${portalFilter === FAVORITES_FILTER ? " active" : ""}`}
                 onClick={() => selectPortalFilter(portalFilter === FAVORITES_FILTER ? "types" : FAVORITES_FILTER)}
               >
-                ★ Favorites ({favoriteSavedDocs.length})
+                ★ Favorites ({favoriteChipCount})
               </button>
             )}
 

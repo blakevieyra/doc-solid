@@ -27,6 +27,16 @@ export function isSavedDocFavorite(
   );
 }
 
+/** Saved files matching favorites, or template favorite count when none are saved yet */
+export function getPortalFavoriteCount(
+  profile: UserProfile,
+  documents: Array<{ localId: string; templateId: string }>,
+): number {
+  const savedMatches = documents.filter((d) => isSavedDocFavorite(profile, d)).length;
+  const templateCount = getFavoriteTemplateIds(profile).length;
+  return savedMatches > 0 ? savedMatches : templateCount;
+}
+
 export function toggleFavorite(
   profile: UserProfile,
   templateId: string

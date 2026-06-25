@@ -24,6 +24,7 @@ import { OwnerSignatureSettings } from "@/components/SignatureField";
 import {
   getRecommendedDocuments,
   getRecommendationHeading,
+  resolveRecommendationIndustry,
 } from "@/lib/documents/recommendations";
 
 type Tab = "account" | "business" | "personal" | "organization" | "preferences" | "billing" | "security" | "import" | "support";
@@ -186,11 +187,11 @@ export default function ProfilePage() {
 
   const recommended = getRecommendedDocuments(
     profile.profileType,
-    profile.business.industry || undefined
+    resolveRecommendationIndustry(profile),
   );
   const recHeading = getRecommendationHeading(
     profile.profileType,
-    profile.business.industry || undefined
+    resolveRecommendationIndustry(profile),
   );
 
   function handleExport() {

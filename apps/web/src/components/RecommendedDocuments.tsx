@@ -29,13 +29,16 @@ export function RecommendedDocuments({
 
   async function handleToggleFavorite(templateId: string) {
     setFavMsg("");
-    const result = toggleFavorite(profile, templateId);
-    if (result.error) {
-      setFavMsg(result.error);
-      return;
-    }
-    await updateProfile({
-      library: { ...profile.library, favoriteTemplateIds: result.favorites },
+    await updateProfile((current) => {
+      const result = toggleFavorite(current, templateId);
+      if (result.error) {
+        setFavMsg(result.error);
+        return current;
+      }
+      return {
+        ...current,
+        library: { ...current.library, favoriteTemplateIds: result.favorites },
+      };
     });
   }
 

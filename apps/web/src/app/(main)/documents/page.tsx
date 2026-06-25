@@ -18,7 +18,9 @@ import { getFavoriteTemplateIds, isFavorite, toggleFavorite } from "@/lib/docume
 import {
   getRecommendedDocuments,
   getRecommendationHeading,
+  resolveRecommendationIndustry,
 } from "@/lib/documents/recommendations";
+import { profileSettingsHint } from "@/lib/profile/profile-identity";
 
 type LibraryView = "all" | "favorites";
 
@@ -33,12 +35,20 @@ export default function DocumentsPage() {
   const favorites = getFavoriteTemplateIds(profile);
 
   const recommended = useMemo(
-    () => getRecommendedDocuments(profile.profileType, profile.business.industry || undefined),
-    [profile.profileType, profile.business.industry]
+    () =>
+      getRecommendedDocuments(
+        profile.profileType,
+        resolveRecommendationIndustry(profile),
+      ),
+    [profile],
   );
   const recHeading = useMemo(
-    () => getRecommendationHeading(profile.profileType, profile.business.industry || undefined),
-    [profile.profileType, profile.business.industry]
+    () =>
+      getRecommendationHeading(
+        profile.profileType,
+        resolveRecommendationIndustry(profile),
+      ),
+    [profile],
   );
 
   const filtered = useMemo(() => {
@@ -55,13 +65,16 @@ export default function DocumentsPage() {
 
   async function handleToggleFavorite(templateId: string) {
     setFavMsg("");
-    const result = toggleFavorite(profile, templateId);
-    if (result.error) {
-      setFavMsg(result.error);
-      return;
-    }
-    await updateProfile({
-      library: { ...profile.library, favoriteTemplateIds: result.favorites },
+    await updateProfile((current) => {
+      const result = toggleFavorite(current, templateId);
+      if (result.error) {
+        setFavMsg(result.error);
+        return current;
+      }
+      return {
+        ...current,
+        library: { ...current.library, favoriteTemplateIds: result.favorites },
+      };
     });
   }
 
@@ -71,7 +84,7 @@ export default function DocumentsPage() {
         <RecommendedDocuments
           documents={recommended}
           heading={recHeading}
-          subtitle="Tailored to your profile and industry. Update industry in Profile → Business."
+          subtitle={profileSettingsHint(profile.profileType)}
         />
       )}
 

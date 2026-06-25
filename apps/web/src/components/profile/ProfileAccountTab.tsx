@@ -9,6 +9,7 @@ import { getPlan } from "@/lib/subscription/plans";
 import { getAccountAge, useDocumentStats } from "@/lib/account/stats";
 import { DeleteDataModal } from "@/components/DeleteDataModal";
 import type { ProfileType } from "@/lib/profile/types";
+import { syncSignatureContextForProfileType } from "@/lib/profile/signature-library";
 
 interface ProfileAccountTabProps {
   onNavigate: (tab: string) => void;
@@ -64,7 +65,14 @@ export function ProfileAccountTab({ onNavigate }: ProfileAccountTabProps) {
         <label>Profile Type</label>
         <select
           value={profile.profileType}
-          onChange={(e) => updateProfile({ profileType: e.target.value as ProfileType })}
+          onChange={(e) => {
+            const profileType = e.target.value as ProfileType;
+            void updateProfile((current) => {
+              const next = { ...current, profileType };
+              const signaturePatch = syncSignatureContextForProfileType(next);
+              return signaturePatch ? { ...next, ...signaturePatch } : next;
+            });
+          }}
         >
           <option value="business">Business</option>
           <option value="individual">Individual</option>
