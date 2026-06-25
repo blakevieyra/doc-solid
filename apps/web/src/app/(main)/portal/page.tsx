@@ -43,8 +43,10 @@ import {
   getSharePreviewHref,
   getShareSigningHref,
   getSentShareStatusLabel,
+  getShareReturnComments,
   shareWasReturnedBy,
 } from "@/lib/team/share-document";
+import { ShareReturnCommentsPanel } from "@/components/ShareReturnCommentsPanel";
 import { loadSharesForUser } from "@/lib/team/shares-sync";
 import { processShareNotifications } from "@/lib/notifications/share-events";
 
@@ -470,6 +472,9 @@ export default function PortalPage() {
     const rowExpanded = expandedShares[s.id] === true;
     const auditLog = s.auditLog ?? [];
     const latestAudit = auditLog[auditLog.length - 1];
+    const returnComments = getShareReturnComments(s);
+    const hasReturnComments = returnComments.length > 0;
+    const latestReturnComment = returnComments[returnComments.length - 1];
     const canOpen = Boolean(s.documentTemplateId && s.fieldDataSnapshot);
     const previewHref = getSharePreviewHref(s);
     const isCompleted = Boolean(s.completedAt);
@@ -502,14 +507,32 @@ export default function PortalPage() {
             </span>
             <span className="share-inbox-oneline">
               To {s.toName} · {new Date(s.createdAt).toLocaleDateString()}
-              {latestAudit ? ` · ${getShareAuditLabel(latestAudit)}` : ""}
+              {hasReturnComments
+                ? ` · Returned with comments`
+                : latestAudit
+                  ? ` · ${getShareAuditLabel(latestAudit)}`
+                  : ""}
             </span>
+            {hasReturnComments && !rowExpanded && latestReturnComment?.details && (
+              <span className="share-inbox-comment-preview">
+                {latestReturnComment.details}
+              </span>
+            )}
           </div>
 
           <div className="share-inbox-actions">
+            {hasReturnComments && (
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={() => setExpandedShares((prev) => ({ ...prev, [s.id]: !rowExpanded }))}
+              >
+                {rowExpanded ? "Hide comments" : "Read comments"}
+              </button>
+            )}
             {canOpen ? (
-              <Link href={previewHref} className="btn btn-primary btn-sm">
-                {isCompleted ? "View signed copy" : "View status"}
+              <Link href={previewHref} className="btn btn-secondary btn-sm">
+                {isCompleted ? "View signed copy" : hasReturnComments ? "View document" : "View status"}
               </Link>
             ) : (
               <span className="btn btn-primary btn-sm" style={{ opacity: 0.45, pointerEvents: "none" }}>
@@ -521,20 +544,25 @@ export default function PortalPage() {
 
         {rowExpanded && (
           <div className="share-inbox-details">
-            {s.message && <p className="field-help">{s.message}</p>}
+            {hasReturnComments && <ShareReturnCommentsPanel share={s} />}
+            {s.message && <p className="field-help">Your message: {s.message}</p>}
             {isCompleted && s.completedAt && (
               <p className="field-help">
                 Completed {new Date(s.completedAt).toLocaleString()}
               </p>
             )}
-            {latestAudit && (
-              <p className="doc-audit-latest">
-                <strong>{getShareAuditLabel(latestAudit)}</strong>
-                {" · "}
-                {new Date(latestAudit.timestamp).toLocaleString()}
-                {latestAudit.actorName ? ` · ${latestAudit.actorName}` : ""}
-                {latestAudit.details ? ` — ${latestAudit.details}` : ""}
-              </p>
+            {auditLog.length > 0 && (
+              <ul className="share-audit-log">
+                {[...auditLog].reverse().map((event, i) => (
+                  <li key={`${event.type}-${event.timestamp}-${i}`}>
+                    <strong>{getShareAuditLabel(event)}</strong>
+                    {" · "}
+                    {new Date(event.timestamp).toLocaleString()}
+                    {event.actorName ? ` · ${event.actorName}` : ""}
+                    {event.details && event.type !== "correction_requested" ? ` — ${event.details}` : ""}
+                  </li>
+                ))}
+              </ul>
             )}
           </div>
         )}

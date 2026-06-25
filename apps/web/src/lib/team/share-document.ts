@@ -78,7 +78,12 @@ async function syncShareToServer(shareId: string): Promise<DocumentShare | null>
 export function markShareOpened(shareId: string, viewer: { email: string; name: string }): void {
   const share = getShareById(shareId);
   if (!share) return;
-  const alreadyOpened = share.auditLog?.some((e) => e.type === "opened" && e.actorEmail === viewer.email);
+  const viewerKey = viewer.email.trim().toLowerCase();
+  const recipientKey = share.toEmail.trim().toLowerCase();
+  if (viewerKey !== recipientKey) return;
+  const alreadyOpened = share.auditLog?.some(
+    (e) => e.type === "opened" && e.actorEmail?.trim().toLowerCase() === viewerKey,
+  );
   if (alreadyOpened) return;
   recordShareAudit(shareId, "opened", {
     actorEmail: viewer.email,
@@ -191,7 +196,20 @@ export function getSharePreviewHref(share: DocumentShare): string {
 }
 
 export function shareWasOpened(share: DocumentShare): boolean {
-  return (share.auditLog ?? []).some((e) => e.type === "opened");
+  const recipientKey = share.toEmail.trim().toLowerCase();
+  return (share.auditLog ?? []).some(
+    (e) => e.type === "opened" && e.actorEmail?.trim().toLowerCase() === recipientKey,
+  );
+}
+
+export function getShareReturnComments(share: DocumentShare): ShareAuditEvent[] {
+  return (share.auditLog ?? []).filter(
+    (e) => e.type === "correction_requested" && Boolean(e.details?.trim()),
+  );
+}
+
+export function shareHasReturnComments(share: DocumentShare): boolean {
+  return getShareReturnComments(share).length > 0;
 }
 
 /** Status badge for shares the current user sent */

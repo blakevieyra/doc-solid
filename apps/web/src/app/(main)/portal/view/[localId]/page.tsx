@@ -19,13 +19,15 @@ import { exportDocumentPdf, documentPdfFilename } from "@/lib/pdf/exportDocument
 import { canUseFeature } from "@/lib/subscription/plans";
 import { resolveDocumentNumber } from "@/lib/documents/document-number";
 import { updateSavedDocumentFields } from "@/lib/documents/persist";
-import { loadShares, getShareById } from "@/lib/team/invites";
+import { isShareSender, loadShares, getShareById } from "@/lib/team/invites";
 import {
   getShareSigningHref,
   markShareComplete,
   markShareOpened,
+  shareHasReturnComments,
   shareWasReturnedBy,
 } from "@/lib/team/share-document";
+import { ShareReturnCommentsPanel } from "@/components/ShareReturnCommentsPanel";
 
 function SavedDocumentPageContent() {
   const params = useParams();
@@ -168,6 +170,9 @@ function SavedDocumentPageContent() {
   const isCompletedShare = Boolean(relatedShare?.completedAt);
   const signHref = relatedShare ? getShareSigningHref(relatedShare) : null;
   const returnedByMe = relatedShare ? shareWasReturnedBy(relatedShare, userEmail) : false;
+  const isSenderViewing = relatedShare ? isShareSender(relatedShare, userEmail) : false;
+  const showReturnComments =
+    relatedShare && isSenderViewing && shareHasReturnComments(relatedShare);
   const canReturnWithComment = isSharedPreview && !isCompletedShare && !returnedByMe;
   const canCompleteShare =
     isSharedPreview && !isCompletedShare && relatedShare?.shareType !== "signature_request";
@@ -271,6 +276,10 @@ function SavedDocumentPageContent() {
               }
         }
       />
+
+      {showReturnComments && relatedShare && (
+        <ShareReturnCommentsPanel share={relatedShare} />
+      )}
 
       <div className="doc-preview-sheet">
         <DocumentPreview
