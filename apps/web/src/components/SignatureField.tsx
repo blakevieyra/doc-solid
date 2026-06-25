@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { UserProfile, SignatureSettings } from "@/lib/profile/types";
+import type { UserProfile, SignatureSettings, SignatureContext } from "@/lib/profile/types";
 import type { MissingField } from "@/lib/documents/completeness";
 import type { SignatureFieldAccess } from "@/lib/documents/signature-access";
 import type { SignatureLockMeta } from "@/lib/documents/signature-lock";
@@ -11,9 +11,15 @@ import {
   resolveOwnerIdentity,
   serializeSignaturePayload,
   signatureMatchesOwnerIdentity,
-  syncSignatureSettings,
   type SignaturePayload,
 } from "@/lib/profile/signature";
+import {
+  ensureSignatureLibrary,
+  getSignatureSettings,
+  patchSignatureLibrary,
+  SIGNATURE_CONTEXT_LABELS,
+  SIGNATURE_CONTEXTS,
+} from "@/lib/profile/signature-library";
 
 type SignatureMode = "saved" | "draw";
 
@@ -237,36 +243,44 @@ function OwnerSignatureField({
   value: string;
   onChange: (v: string) => void;
   profile: UserProfile;
-  onSaveToProfile?: (sig: SignatureSettings) => void;
+  onSaveToProfile?: (sig: SignatureSettings, context: SignatureContext) => void;
   signingBlocked?: boolean;
   missingPrerequisites?: MissingField[];
 }) {
-  const saved = syncSignatureSettings(profile);
-  const identity = resolveOwnerIdentity(profile);
+  const library = ensureSignatureLibrary(profile);
+  const [selectedContext, setSelectedContext] = useState<SignatureContext>(
+    () => library.activeContext,
+  );
+  const saved = getSignatureSettings(profile, selectedContext);
+  const identity = resolveOwnerIdentity(profile, selectedContext);
   const ownerName = (saved.signerName || identity.signerName).trim();
   const parsed = parseSignatureValue(value);
-  const canUseSaved = Boolean(ownerName || saved.drawnSignature);
+  const canUseSaved = SIGNATURE_CONTEXTS.some((ctx) => {
+    const contextSig = getSignatureSettings(profile, ctx);
+    const contextIdentity = resolveOwnerIdentity(profile, ctx);
+    return Boolean((contextSig.signerName || contextIdentity.signerName).trim() || contextSig.drawnSignature);
+  });
   const [mode, setMode] = useState<SignatureMode>(() => {
     if (parsed?.mode === "drawn") return "draw";
     if (value && parsed) return "saved";
     if (canUseSaved) return "saved";
     return "draw";
   });
-  const [typedTitle] = useState(saved.signerTitle || identity.signerTitle);
-  const [typedEntity] = useState(saved.entityName || identity.entityName);
+  const typedTitle = saved.signerTitle || identity.signerTitle;
+  const typedEntity = saved.entityName || identity.entityName;
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
 
   const applyPayload = useCallback(
     (payload: SignaturePayload) => {
-      if (!signatureMatchesOwnerIdentity(payload, profile)) {
+      if (!signatureMatchesOwnerIdentity(payload, profile, selectedContext)) {
         window.alert("You can only sign with your own name from your profile.");
         return;
       }
       onChange(serializeSignaturePayload(payload));
     },
-    [onChange, profile]
+    [onChange, profile, selectedContext]
   );
 
   const blockedMessage =
@@ -285,7 +299,7 @@ function OwnerSignatureField({
       window.alert("Add your name in Profile → Personal (or Business) before applying your signature.");
       return;
     }
-    let val = buildOwnerSignatureValue(profile);
+    let val = buildOwnerSignatureValue(profile, selectedContext);
     if (!val) {
       val = serializeSignaturePayload({
         v: 1,
@@ -326,14 +340,17 @@ function OwnerSignatureField({
       mode: "drawn",
     });
     if (onSaveToProfile) {
-      onSaveToProfile({
-        ...saved,
-        signerName: ownerName,
-        signerTitle: typedTitle.trim() || saved.signerTitle,
-        entityName: typedEntity.trim() || saved.entityName,
-        drawnSignature: image,
-        useDrawnSignature: true,
-      });
+      onSaveToProfile(
+        {
+          ...saved,
+          signerName: ownerName,
+          signerTitle: typedTitle.trim() || saved.signerTitle,
+          entityName: typedEntity.trim() || saved.entityName,
+          drawnSignature: image,
+          useDrawnSignature: true,
+        },
+        selectedContext,
+      );
     }
   }
 
@@ -423,7 +440,23 @@ function OwnerSignatureField({
 
       {mode === "saved" && (
         <div className="signature-saved-panel">
-          <SignaturePreview value={buildOwnerSignatureValue(profile)} label={label} compact />
+          <div className="signature-mode-tabs signature-context-tabs">
+            {SIGNATURE_CONTEXTS.map((ctx) => (
+              <button
+                key={ctx}
+                type="button"
+                className={`signature-tab${selectedContext === ctx ? " active" : ""}`}
+                onClick={() => setSelectedContext(ctx)}
+              >
+                {SIGNATURE_CONTEXT_LABELS[ctx]}
+              </button>
+            ))}
+          </div>
+          <SignaturePreview
+            value={buildOwnerSignatureValue(profile, selectedContext)}
+            label={label}
+            compact
+          />
           <button
             type="button"
             className="btn btn-primary btn-sm"
@@ -434,7 +467,8 @@ function OwnerSignatureField({
           </button>
           <p className="field-help">
             Signs as <strong>{ownerName || "your profile name"}</strong>
-            {saved.entityName ? ` on behalf of ${saved.entityName}` : ""}. Update in Profile → Personal.
+            {saved.entityName ? ` on behalf of ${saved.entityName}` : ""}. Manage all saved
+            signatures in Profile → Personal.
           </p>
         </div>
       )}
@@ -520,7 +554,7 @@ export function SignatureField({
   value: string;
   onChange: (v: string) => void;
   profile: UserProfile;
-  onSaveToProfile?: (sig: SignatureSettings) => void;
+  onSaveToProfile?: (sig: SignatureSettings, context: SignatureContext) => void;
   accessMode: SignatureFieldAccess;
   lockMeta?: SignatureLockMeta | null;
   isOwnerField?: boolean;
@@ -594,23 +628,50 @@ export function OwnerSignatureSettings({
   onChange,
 }: {
   profile: UserProfile;
-  onChange: (sig: SignatureSettings) => void;
+  onChange: (patch: Pick<UserProfile, "signatures" | "signature">) => void;
 }) {
-  const sig = syncSignatureSettings(profile);
-  const previewValue = buildOwnerSignatureValue({ ...profile, signature: sig });
+  const library = ensureSignatureLibrary(profile);
+  const [editContext, setEditContext] = useState<SignatureContext>(() => library.activeContext);
+  const sig = getSignatureSettings(profile, editContext);
+  const previewValue = buildOwnerSignatureValue({ ...profile, signature: sig }, editContext);
+  const isDefault = library.activeContext === editContext;
+
+  function updateSig(next: SignatureSettings) {
+    onChange(patchSignatureLibrary(profile, editContext, next));
+  }
+
+  function setDefaultContext() {
+    onChange(patchSignatureLibrary(profile, editContext, sig, { setActive: true }));
+  }
 
   return (
     <section className="owner-signature-settings">
-      <h3 className="section-title">Saved Signature</h3>
+      <h3 className="section-title">Saved Signatures</h3>
       <p className="field-help">
-        Used automatically on contracts, bills of sale, NDAs, and other important forms. Pulled from your profile information.
+        Save a separate signature for personal, business, and organization profiles. Choose which
+        one applies by default on new documents, or switch when signing.
       </p>
+      <div className="signature-mode-tabs signature-context-tabs">
+        {SIGNATURE_CONTEXTS.map((ctx) => (
+          <button
+            key={ctx}
+            type="button"
+            className={`signature-tab${editContext === ctx ? " active" : ""}`}
+            onClick={() => setEditContext(ctx)}
+          >
+            {SIGNATURE_CONTEXT_LABELS[ctx]}
+            {library.activeContext === ctx && (
+              <span className="signature-default-badge">Default</span>
+            )}
+          </button>
+        ))}
+      </div>
       <div className="field-group">
         <label>Signer Name</label>
         <input
           type="text"
           value={sig.signerName}
-          onChange={(e) => onChange({ ...sig, signerName: e.target.value })}
+          onChange={(e) => updateSig({ ...sig, signerName: e.target.value })}
           placeholder="Legal name as it appears on documents"
         />
       </div>
@@ -619,30 +680,47 @@ export function OwnerSignatureSettings({
         <input
           type="text"
           value={sig.signerTitle}
-          onChange={(e) => onChange({ ...sig, signerTitle: e.target.value })}
-          placeholder="Owner, CEO, Individual, etc."
+          onChange={(e) => updateSig({ ...sig, signerTitle: e.target.value })}
+          placeholder={
+            editContext === "individual"
+              ? "Individual, Owner, etc."
+              : editContext === "organization"
+                ? "Executive Director, Board Member, etc."
+                : "CEO, Authorized Signer, etc."
+          }
         />
       </div>
-      <div className="field-group">
-        <label>Signing On Behalf Of</label>
-        <input
-          type="text"
-          value={sig.entityName}
-          onChange={(e) => onChange({ ...sig, entityName: e.target.value })}
-          placeholder="Business or organization name (leave blank for personal)"
-        />
-      </div>
+      {editContext !== "individual" && (
+        <div className="field-group">
+          <label>Signing On Behalf Of</label>
+          <input
+            type="text"
+            value={sig.entityName}
+            onChange={(e) => updateSig({ ...sig, entityName: e.target.value })}
+            placeholder={
+              editContext === "organization"
+                ? profile.organization.name || "Organization name"
+                : profile.business.name || "Business name"
+            }
+          />
+        </div>
+      )}
       <label className="security-toggle">
         <input
           type="checkbox"
           checked={sig.useDrawnSignature}
-          onChange={(e) => onChange({ ...sig, useDrawnSignature: e.target.checked })}
+          onChange={(e) => updateSig({ ...sig, useDrawnSignature: e.target.checked })}
         />
         <div>
           <strong>Use drawn signature when available</strong>
           <span>Otherwise shows your name in cursive on documents</span>
         </div>
       </label>
+      {!isDefault && (
+        <button type="button" className="btn btn-secondary btn-sm" onClick={setDefaultContext}>
+          Use {SIGNATURE_CONTEXT_LABELS[editContext]} as default when signing
+        </button>
+      )}
       {previewValue && (
         <div className="signature-profile-preview card-inner">
           <span className="field-help">Preview on documents</span>
@@ -650,7 +728,8 @@ export function OwnerSignatureSettings({
         </div>
       )}
       <p className="field-help">
-        Draw your signature on any document form using the Draw tab under a signature field.
+        Draw your signature on any document form using the Draw tab under a signature field. Each
+        profile type keeps its own drawn signature.
       </p>
     </section>
   );

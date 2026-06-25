@@ -11,6 +11,7 @@ import {
 } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { DEFAULT_PROFILE, type UserProfile } from "@/lib/profile/types";
+import { applyProfileSignaturePatch } from "@/lib/profile/signature-library";
 import {
   loadProfile,
   saveProfile,
@@ -54,6 +55,7 @@ interface ProfileContextValue {
 const ProfileContext = createContext<ProfileContextValue | null>(null);
 
 function mergeProfilePatch(current: UserProfile, patch: Partial<UserProfile>): UserProfile {
+  const signaturePatch = applyProfileSignaturePatch(current, patch);
   return {
     ...current,
     ...patch,
@@ -65,12 +67,14 @@ function mergeProfilePatch(current: UserProfile, patch: Partial<UserProfile>): U
     team: patch.team ? { ...current.team, ...patch.team, members: patch.team.members ?? current.team.members } : current.team,
     account: patch.account ? { ...current.account, ...patch.account } : current.account,
     preferences: patch.preferences ? { ...current.preferences, ...patch.preferences } : current.preferences,
-    signature: patch.signature ? { ...current.signature, ...patch.signature } : current.signature,
+    signatures: signaturePatch.signatures ?? current.signatures,
+    signature: signaturePatch.signature ?? current.signature,
     library: patch.library
       ? {
           ...current.library,
           ...patch.library,
           favoriteTemplateIds: patch.library.favoriteTemplateIds ?? current.library.favoriteTemplateIds,
+          favoriteLocalIds: patch.library.favoriteLocalIds ?? current.library.favoriteLocalIds,
           packets: patch.library.packets ?? current.library.packets,
           contacts: patch.library.contacts ?? current.library.contacts,
         }
@@ -115,7 +119,9 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
             (merged.organization.logo && !server.organization.logo);
           const favoritesRecovered =
             merged.library.favoriteTemplateIds.length >
-            (server.library?.favoriteTemplateIds?.length ?? 0);
+              (server.library?.favoriteTemplateIds?.length ?? 0) ||
+            (merged.library.favoriteLocalIds?.length ?? 0) >
+              (server.library?.favoriteLocalIds?.length ?? 0);
           local = merged;
           if (logosRecovered || favoritesRecovered) {
             await saveProfile(local, userId, sessionPin ?? undefined);

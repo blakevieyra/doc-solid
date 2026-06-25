@@ -5,8 +5,26 @@ export function getFavoriteTemplateIds(profile: UserProfile): string[] {
   return profile.library?.favoriteTemplateIds ?? [];
 }
 
+export function getFavoriteLocalIds(profile: UserProfile): string[] {
+  return profile.library?.favoriteLocalIds ?? [];
+}
+
 export function isFavorite(profile: UserProfile, templateId: string): boolean {
   return getFavoriteTemplateIds(profile).includes(templateId);
+}
+
+export function isLocalDocFavorite(profile: UserProfile, localId: string): boolean {
+  return getFavoriteLocalIds(profile).includes(localId);
+}
+
+export function isSavedDocFavorite(
+  profile: UserProfile,
+  doc: { localId: string; templateId: string },
+): boolean {
+  return (
+    isLocalDocFavorite(profile, doc.localId) ||
+    isFavorite(profile, doc.templateId)
+  );
 }
 
 export function toggleFavorite(
@@ -27,4 +45,15 @@ export function toggleFavorite(
     };
   }
   return { favorites: [...current, templateId] };
+}
+
+export function toggleFavoriteLocal(
+  profile: UserProfile,
+  localId: string,
+): { favorites: string[] } {
+  const current = getFavoriteLocalIds(profile);
+  if (current.includes(localId)) {
+    return { favorites: current.filter((id) => id !== localId) };
+  }
+  return { favorites: [...current, localId] };
 }

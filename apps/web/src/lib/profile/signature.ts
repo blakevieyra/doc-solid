@@ -1,4 +1,9 @@
-import type { UserProfile, SignatureSettings } from "./types";
+import type { UserProfile, SignatureSettings, SignatureContext } from "./types";
+import {
+  getActiveSignatureContext,
+  getSignatureSettings,
+  resolveOwnerIdentityForContext,
+} from "./signature-library";
 
 export interface SignaturePayload {
   v: 1;
@@ -11,57 +16,30 @@ export interface SignaturePayload {
 
 const SIGNATURE_PREFIX = "ds-sig:";
 
-export function resolveOwnerIdentity(profile: UserProfile): {
+export function resolveOwnerIdentity(
+  profile: UserProfile,
+  context?: SignatureContext,
+): {
   signerName: string;
   signerTitle: string;
   entityName: string;
 } {
-  const { profileType } = profile;
-
-  if (profileType === "individual") {
-    return {
-      signerName: profile.personal.fullName || profile.account.displayName,
-      signerTitle: profile.personal.title || "Individual",
-      entityName: "",
-    };
-  }
-
-  if (profileType === "organization") {
-    return {
-      signerName: profile.personal.fullName || profile.account.displayName,
-      signerTitle: profile.personal.title || "Authorized Representative",
-      entityName: profile.organization.name,
-    };
-  }
-
-  // business or mixed — prefer business entity with personal signer
-  return {
-    signerName: profile.personal.fullName || profile.account.displayName,
-    signerTitle: profile.personal.title || "Authorized Signer",
-    entityName: profile.business.name || profile.organization.name,
-  };
+  const ctx = context ?? getActiveSignatureContext(profile);
+  return resolveOwnerIdentityForContext(profile, ctx);
 }
 
-export function syncSignatureSettings(profile: UserProfile): SignatureSettings {
-  const identity = resolveOwnerIdentity(profile);
-  const existing = profile.signature ?? {
-    signerName: "",
-    signerTitle: "",
-    entityName: "",
-    drawnSignature: null,
-    useDrawnSignature: true,
-  };
-
-  return {
-    ...existing,
-    signerName: existing.signerName || identity.signerName,
-    signerTitle: existing.signerTitle || identity.signerTitle,
-    entityName: existing.entityName || identity.entityName,
-  };
+export function syncSignatureSettings(
+  profile: UserProfile,
+  context?: SignatureContext,
+): SignatureSettings {
+  return getSignatureSettings(profile, context);
 }
 
-export function buildOwnerSignatureValue(profile: UserProfile): string {
-  const sig = syncSignatureSettings(profile);
+export function buildOwnerSignatureValue(
+  profile: UserProfile,
+  context?: SignatureContext,
+): string {
+  const sig = syncSignatureSettings(profile, context);
   if (!sig.signerName && !sig.drawnSignature) return "";
 
   const payload: SignaturePayload = {
@@ -181,10 +159,11 @@ export function shouldAutofillOwnerSignature(
 
 export function signatureMatchesOwnerIdentity(
   payload: SignaturePayload,
-  profile: UserProfile
+  profile: UserProfile,
+  context?: SignatureContext,
 ): boolean {
-  const identity = resolveOwnerIdentity(profile);
-  const sig = syncSignatureSettings(profile);
+  const identity = resolveOwnerIdentity(profile, context);
+  const sig = syncSignatureSettings(profile, context);
   const expected = (sig.signerName || identity.signerName).trim().toLowerCase();
   if (!expected) return false;
   return payload.name.trim().toLowerCase() === expected;

@@ -5,6 +5,7 @@ import {
   type Address,
 } from "./types";
 import { syncSignatureSettings, buildOwnerSignatureValue } from "./signature";
+import { ensureSignatureLibrary } from "./signature-library";
 import { resolveOnboardingComplete } from "./onboarding";
 import { buildDocumentAutofill } from "./document-branding";
 
@@ -103,7 +104,17 @@ function migrateLegacyProfile(raw: string): UserProfile | null {
 }
 
 function syncSignatureFromProfile(profile: UserProfile): UserProfile["signature"] {
-  return syncSignatureSettings(profile);
+  const library = ensureSignatureLibrary(profile);
+  return library.byContext[library.activeContext];
+}
+
+function attachSignatureLibrary(profile: UserProfile): UserProfile {
+  const library = ensureSignatureLibrary(profile);
+  return {
+    ...profile,
+    signatures: library,
+    signature: library.byContext[library.activeContext],
+  };
 }
 
 function normalizeProfile(raw: Partial<UserProfile>): UserProfile {
@@ -125,10 +136,12 @@ function normalizeProfile(raw: Partial<UserProfile>): UserProfile {
     account: { ...base.account, ...raw.account },
     preferences: { ...base.preferences, ...raw.preferences },
     signature: { ...base.signature, ...raw.signature },
+    signatures: raw.signatures,
     library: {
       ...base.library,
       ...raw.library,
       favoriteTemplateIds: raw.library?.favoriteTemplateIds ?? base.library.favoriteTemplateIds,
+      favoriteLocalIds: raw.library?.favoriteLocalIds ?? base.library.favoriteLocalIds,
       packets: raw.library?.packets ?? base.library.packets,
       contacts: raw.library?.contacts ?? base.library.contacts,
     },
@@ -147,7 +160,7 @@ function normalizeProfile(raw: Partial<UserProfile>): UserProfile {
     merged.account.email =
       merged.business.email || merged.personal.email || merged.organization.email || "";
   }
-  return merged;
+  return attachSignatureLibrary(merged);
 }
 
 export async function loadProfile(userId?: string | null, unlockPin?: string): Promise<UserProfile> {

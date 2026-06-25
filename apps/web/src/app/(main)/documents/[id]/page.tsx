@@ -20,6 +20,7 @@ import { useProfile } from "@/components/ProfileProvider";
 import { pushCloudDocument } from "@/lib/documents/cloud-sync";
 import { useAuth } from "@/components/AuthProvider";
 import { getProfileFieldValue } from "@/lib/profile/storage";
+import { patchSignatureLibrary } from "@/lib/profile/signature-library";
 import { exportDocumentPdf } from "@/lib/pdf/exportDocument";
 import { canUseFeature } from "@/lib/subscription/plans";
 import { canCreateDocumentThisMonth } from "@/lib/documents/limits";
@@ -560,7 +561,9 @@ function DocumentEditorPageContent() {
                     onChange={(v) => setField(field.id, v)}
                     profile={profile}
                     docCategory={meta.category}
-                    onSaveSignature={(sig) => updateProfile({ signature: sig })}
+                    onSaveSignature={(sig, context) =>
+                      updateProfile(patchSignatureLibrary(profile, context, sig))
+                    }
                     signatureAccessCtx={signatureAccessCtx}
                   />
                 ))
@@ -676,7 +679,9 @@ function DocumentEditorPageContent() {
                   onTotalsChange={setTotals}
                   profile={profile}
                   docCategory={meta.category}
-                  onSaveSignature={(sig) => updateProfile({ signature: sig })}
+                  onSaveSignature={(sig, context) =>
+                    updateProfile(patchSignatureLibrary(profile, context, sig))
+                  }
                   signingBlocked={
                     sigAccess === "owner-sign"
                       ? !signingGate.ok
@@ -822,7 +827,10 @@ function FieldInput({
   onTotalsChange?: (totals: { subtotal: string; taxAmount: string; total: string }) => void;
   profile: ReturnType<typeof useProfile>["profile"];
   docCategory?: string;
-  onSaveSignature?: (sig: import("@/lib/profile/types").SignatureSettings) => void;
+  onSaveSignature?: (
+    sig: import("@/lib/profile/types").SignatureSettings,
+    context: import("@/lib/profile/types").SignatureContext,
+  ) => void;
   signingBlocked?: boolean;
   missingPrerequisites?: import("@/lib/documents/completeness").MissingField[];
   signatureAccessCtx: SignatureAccessContext;

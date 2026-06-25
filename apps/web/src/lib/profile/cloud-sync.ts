@@ -1,6 +1,7 @@
 import type { Address, UserProfile } from "./types";
 import { mergeTeamMembersByEmail } from "@/lib/team/members-merge";
 import { mergeSubscriptions } from "@/lib/profile/subscription-merge";
+import { ensureSignatureLibrary, mergeSignatureLibraries } from "./signature-library";
 
 function resolveTeamOwnerEmail(a: UserProfile, b: UserProfile): string | null {
   for (const profile of [a, b]) {
@@ -82,6 +83,15 @@ export function mergeProfiles(local: UserProfile, server: UserProfile): UserProf
   organization.address = mergeAddress(primary.organization.address, secondary.organization.address);
   organization.logo = primary.organization.logo ?? secondary.organization.logo;
 
+  const primarySignatures = ensureSignatureLibrary(primary);
+  const secondarySignatures = ensureSignatureLibrary(secondary);
+  const mergedSignatures = mergeSignatureLibraries(
+    localNewer ? primarySignatures : secondarySignatures,
+    localNewer ? secondarySignatures : primarySignatures,
+  );
+  mergedSignatures.activeContext = (localNewer ? primarySignatures : secondarySignatures).activeContext;
+  const signature = mergedSignatures.byContext[mergedSignatures.activeContext];
+
   return {
     ...primary,
     updatedAt: new Date(Math.max(localTs, serverTs)).toISOString(),
@@ -90,7 +100,8 @@ export function mergeProfiles(local: UserProfile, server: UserProfile): UserProf
     organization,
     account: mergeSection(primary.account, secondary.account),
     preferences: mergeSection(primary.preferences, secondary.preferences),
-    signature: mergeSection(primary.signature, secondary.signature),
+    signatures: mergedSignatures,
+    signature,
     security: mergeSection(primary.security, secondary.security),
     onboardingComplete: local.onboardingComplete || server.onboardingComplete,
     subscription: mergeSubscriptions(local.subscription, server.subscription),
@@ -116,6 +127,10 @@ export function mergeProfiles(local: UserProfile, server: UserProfile): UserProf
       favoriteTemplateIds: mergeUniqueStrings(
         primary.library?.favoriteTemplateIds ?? [],
         secondary.library?.favoriteTemplateIds ?? []
+      ),
+      favoriteLocalIds: mergeUniqueStrings(
+        primary.library?.favoriteLocalIds ?? [],
+        secondary.library?.favoriteLocalIds ?? []
       ),
       packets:
         (primary.library?.packets?.length ?? 0) >= (secondary.library?.packets?.length ?? 0)

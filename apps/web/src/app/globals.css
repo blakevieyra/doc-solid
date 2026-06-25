@@ -1901,6 +1901,13 @@ button.portal-stat-filter.active .portal-stat-value {
   gap: 0.5rem;
   min-width: 0;
 }
+.portal-file-card-with-fav { position: relative; padding-top: 2.25rem; }
+.portal-file-card-with-fav > .favorite-btn {
+  position: absolute;
+  top: 0.65rem;
+  right: 0.65rem;
+  z-index: 2;
+}
 .portal-file-card-head {
   display: flex;
   justify-content: space-between;
@@ -1964,6 +1971,16 @@ button.portal-stat-filter.active .portal-stat-value {
   font-weight: 500;
 }
 .signature-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.signature-context-tabs { margin-bottom: 0.5rem; }
+.signature-default-badge {
+  margin-left: 0.35rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+}
+.signature-tab.active .signature-default-badge { opacity: 1; }
 .signature-saved-panel,
 .signature-draw-panel,
 .signature-type-panel { display: flex; flex-direction: column; gap: 0.625rem; }

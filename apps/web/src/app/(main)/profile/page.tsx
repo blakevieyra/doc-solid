@@ -305,7 +305,7 @@ export default function ProfilePage() {
               <AddressBlock label="Personal Address" address={profile.personal.address} onChange={(a) => updateProfile({ personal: { ...profile.personal, address: a } })} />
               <OwnerSignatureSettings
                 profile={profile}
-                onChange={(signature) => updateProfile({ signature })}
+                onChange={(patch) => updateProfile(patch)}
               />
             </div>
           )}

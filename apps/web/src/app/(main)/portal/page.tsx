@@ -65,9 +65,15 @@ import { DocumentAuditTrail } from "@/components/DocumentAuditTrail";
 import { ReturnShareModal } from "@/components/ReturnShareModal";
 import { SendToContactModal } from "@/components/SendToContactModal";
 import { AddToPacketModal } from "@/components/AddToPacketModal";
+import { FavoriteButton } from "@/components/FavoriteButton";
 import { canUseFeature } from "@/lib/subscription/plans";
 import { archiveSavedDocument, unarchiveSavedDocument, updateSavedDocumentFields } from "@/lib/documents/persist";
-import { getFavoriteTemplateIds } from "@/lib/documents/favorites";
+import {
+  getFavoriteLocalIds,
+  getFavoriteTemplateIds,
+  isSavedDocFavorite,
+  toggleFavoriteLocal,
+} from "@/lib/documents/favorites";
 import { createDocumentAuditEvent } from "@/lib/documents/audit";
 
 
@@ -76,7 +82,7 @@ export default function PortalPage() {
 
   const { session, authMode } = useAuth();
 
-  const { profile } = useProfile();
+  const { profile, updateProfile } = useProfile();
 
   const [documents, setDocuments] = useState<LocalDocument[]>([]);
 
@@ -110,14 +116,23 @@ export default function PortalPage() {
   const userName = session?.name ?? profile.account.displayName ?? "You";
   const actor = { email: userEmail, name: userName };
   const favoriteTemplateIds = getFavoriteTemplateIds(profile);
+  const favoriteLocalIds = getFavoriteLocalIds(profile);
+  const hasAnyFavorites = favoriteTemplateIds.length > 0 || favoriteLocalIds.length > 0;
 
   const favoriteSavedDocs = useMemo(
     () =>
       documents
-        .filter((d) => favoriteTemplateIds.includes(d.templateId))
+        .filter((d) => isSavedDocFavorite(profile, d))
         .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
-    [documents, favoriteTemplateIds]
+    [documents, profile, favoriteTemplateIds, favoriteLocalIds]
   );
+
+  async function handleToggleFileFavorite(localId: string) {
+    const result = toggleFavoriteLocal(profile, localId);
+    await updateProfile({
+      library: { ...profile.library, favoriteLocalIds: result.favorites },
+    });
+  }
 
 
 
@@ -212,11 +227,11 @@ export default function PortalPage() {
         sortDir: "desc",
       });
       if (templateId === FAVORITES_FILTER) {
-        return base.filter((d) => favoriteTemplateIds.includes(d.templateId));
+        return base.filter((d) => isSavedDocFavorite(profile, d));
       }
       return base;
     },
-    [documents, query, domain, category, templateId, status, portalFilter, favoriteTemplateIds]
+    [documents, query, domain, category, templateId, status, portalFilter, profile, favoriteTemplateIds, favoriteLocalIds]
   );
 
   const inboxShares = useMemo(
@@ -653,20 +668,20 @@ export default function PortalPage() {
       )}
 
 
-      {(usedTemplateIds.length > 0 || favoriteTemplateIds.length > 0) && showFileGrid && (
+      {(usedTemplateIds.length > 0 || hasAnyFavorites) && showFileGrid && (
 
         <div className={`portal-type-index card${portalFilter === "types" ? " portal-type-index-highlight" : ""}`} style={{ marginBottom: "1rem", padding: "1rem" }}>
 
           <div className="portal-type-index-head">
             <h3 className="section-title" style={{ marginTop: 0, fontSize: "0.95rem" }}>By type</h3>
-            {favoriteTemplateIds.length > 0 && (
-              <Link href="/documents" className="btn btn-secondary btn-sm">Manage favorites</Link>
+            {hasAnyFavorites && (
+              <Link href="/documents" className="btn btn-secondary btn-sm">Manage template favorites</Link>
             )}
           </div>
 
           <div className="portal-type-chips">
 
-            {favoriteTemplateIds.length > 0 && (
+            {hasAnyFavorites && (
               <button
                 type="button"
                 className={`portal-type-chip portal-type-chip-fav${portalFilter === FAVORITES_FILTER ? " active" : ""}`}
@@ -836,7 +851,17 @@ export default function PortalPage() {
 
             return (
 
-              <article key={doc.localId} className="card portal-file-card">
+              <article key={doc.localId} className="card portal-file-card portal-file-card-with-fav">
+
+                <FavoriteButton
+                  active={isSavedDocFavorite(profile, doc)}
+                  size="sm"
+                  onToggle={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    void handleToggleFileFavorite(doc.localId);
+                  }}
+                />
 
                 <div className="portal-file-card-head">
 

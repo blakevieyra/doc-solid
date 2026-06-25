@@ -133,6 +133,15 @@ export interface SignatureSettings {
   useDrawnSignature: boolean;
 }
 
+/** Which profile identity a saved signature belongs to */
+export type SignatureContext = "individual" | "business" | "organization";
+
+export interface SignatureLibrary {
+  /** Default signature applied on documents */
+  activeContext: SignatureContext;
+  byContext: Record<SignatureContext, SignatureSettings>;
+}
+
 export interface SupportTicket {
   id: string;
   subject: string;
@@ -172,6 +181,8 @@ export interface AppContact {
 
 export interface UserLibrary {
   favoriteTemplateIds: string[];
+  /** Saved file local IDs starred on My Files */
+  favoriteLocalIds?: string[];
   packets: DocumentPacket[];
   contacts: AppContact[];
 }
@@ -188,7 +199,10 @@ export interface UserProfile {
   team: TeamSettings;
   account: AccountSettings;
   preferences: PreferencesSettings;
+  /** Active signature snapshot — mirrors signatures.byContext[activeContext] */
   signature: SignatureSettings;
+  /** Per-context saved signatures (personal, business, organization) */
+  signatures?: SignatureLibrary;
   library: UserLibrary;
   createdAt: string;
   updatedAt: string;
@@ -282,6 +296,7 @@ export const DEFAULT_PROFILE: UserProfile = {
   },
   library: {
     favoriteTemplateIds: [],
+    favoriteLocalIds: [],
     packets: [],
     contacts: [],
   },
