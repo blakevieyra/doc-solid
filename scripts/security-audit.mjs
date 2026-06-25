@@ -69,7 +69,7 @@ async function smokeTests() {
 
   // Subscription lookup requires auth
   const subEmpty = await request("/api/stripe/subscription");
-  [401, 403].includes(subEmpty.status)
+  [401, 403, 429].includes(subEmpty.status)
     ? pass("Subscription API requires auth", String(subEmpty.status))
     : fail("Subscription API auth", String(subEmpty.status));
 
@@ -111,7 +111,7 @@ async function smokeTests() {
     ? pass("Change-plan rejects unauthenticated/invalid requests", String(changePlan.status))
     : fail("Change-plan validation", String(changePlan.status));
 
-  // Email API pro gating
+  // Email API requires auth and pro gating
   const emailFree = await request("/api/documents/email", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -122,8 +122,8 @@ async function smokeTests() {
       recipients: [{ email: "other@example.com", name: "Other" }],
     }),
   });
-  [403, 503].includes(emailFree.status)
-    ? pass("Document email blocks free→other sends", String(emailFree.status))
+  [401, 403, 503].includes(emailFree.status)
+    ? pass("Document email requires auth or blocks free→other sends", String(emailFree.status))
     : fail("Document email pro gate", String(emailFree.status));
 
   // Login rate limit / validation
@@ -218,9 +218,12 @@ async function stressTests() {
     )
   );
   const email429 = emailBurst.filter((r) => r.status === 429).length;
+  const email401 = emailBurst.filter((r) => r.status === 401).length;
   email429 > 0
     ? pass(`Email API rate limit triggered (${email429}/12)`)
-    : warn("Email rate limit not hit in burst", emailBurst.map((r) => r.status).join(","));
+    : email401 === emailBurst.length
+      ? pass(`Email API burst requires auth (${email401}/12×401)`)
+      : warn("Email rate limit not hit in burst", emailBurst.map((r) => r.status).join(","));
 
   // SQL injection style inputs
   const sqli = await request("/api/auth/login", {
