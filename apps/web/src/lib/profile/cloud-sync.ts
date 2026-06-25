@@ -2,6 +2,16 @@ import type { UserProfile } from "./types";
 import { mergeTeamMembersByEmail } from "@/lib/team/members-merge";
 import { mergeSubscriptions } from "@/lib/profile/subscription-merge";
 
+function resolveTeamOwnerEmail(a: UserProfile, b: UserProfile): string | null {
+  for (const profile of [a, b]) {
+    const fromField = profile.team.ownerEmail?.trim().toLowerCase();
+    if (fromField) return fromField;
+    const ownerMember = profile.team.members.find((m) => m.role === "owner");
+    if (ownerMember?.email) return ownerMember.email.trim().toLowerCase();
+  }
+  return null;
+}
+
 export async function fetchServerProfile(): Promise<UserProfile | null> {
   const res = await fetch("/api/profile", { credentials: "include", cache: "no-store" });
   if (res.status === 401 || res.status === 503) return null;
@@ -36,6 +46,7 @@ export function mergeProfiles(local: UserProfile, server: UserProfile): UserProf
   const serverTs = new Date(server.updatedAt).getTime();
   const base = serverTs >= localTs ? server : local;
   const other = serverTs >= localTs ? local : server;
+  const ownerEmail = resolveTeamOwnerEmail(local, server);
   return {
     ...base,
     business: {
@@ -53,8 +64,10 @@ export function mergeProfiles(local: UserProfile, server: UserProfile): UserProf
       ...other.team,
       teamId: base.team.teamId || other.team.teamId,
       orgName: base.team.orgName || other.team.orgName,
+      ownerEmail: ownerEmail ?? base.team.ownerEmail ?? other.team.ownerEmail,
+      ownerName: base.team.ownerName || other.team.ownerName,
       members: mergeTeamMembersByEmail(
-        base.team.ownerEmail ?? other.team.ownerEmail,
+        ownerEmail ?? base.team.ownerEmail ?? other.team.ownerEmail,
         base.team.members,
         other.team.members
       ),

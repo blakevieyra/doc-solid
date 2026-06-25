@@ -7,6 +7,10 @@ import { getTeamRoster, saveTeamRoster, mapDbRole, type TeamRoster, type TeamRos
 import { getPendingInvitesForTeam } from "@/lib/server/team-member-invites";
 import { loadPublicIdentityForEmail } from "@/lib/server/public-identity";
 import { mergeMemberRole, mergeMemberStatus } from "@/lib/team/member-merge-utils";
+import {
+  ownerProfileNeedsRosterHeal,
+  syncOwnerProfileFromRoster,
+} from "@/lib/server/team-profile-sync";
 import type { TeamRole, UserProfile } from "@/lib/profile/types";
 import { formatAddress } from "@/lib/profile/types";
 import type { TeamSharedProfile } from "@/lib/profile/document-branding";
@@ -295,6 +299,7 @@ async function buildTeamView(userId: string, email: string, name: string): Promi
     name: m.name,
     role: m.role,
     joinedAt: m.joinedAt,
+    status: "active" as const,
   })) ?? [];
 
   const profileMembers =
@@ -333,10 +338,26 @@ async function buildTeamView(userId: string, email: string, name: string): Promi
 
   const mergedMembers = mergeMemberLists(ownerEmail, orgMembers, profileMembers, contactMembers, rosterMembers);
 
+  const rosterEmails = new Set(rosterMembers.map((m) => m.email.toLowerCase()));
+  for (let i = mergedMembers.length - 1; i >= 0; i--) {
+    const m = mergedMembers[i];
+    const key = m.email.toLowerCase();
+    const onRoster = rosterEmails.has(key);
+    if (onRoster) {
+      const rosterRow = rosterMembers.find((r) => r.email.toLowerCase() === key)!;
+      mergedMembers[i] = {
+        ...m,
+        role: mergeMemberRole(key, ownerEmail, rosterRow.role, m.role),
+        status: "active",
+        name: m.name || rosterRow.name,
+      };
+    }
+  }
+
   const pendingInvites = teamId ? await getPendingInvitesForTeam(teamId) : [];
   for (const invite of pendingInvites) {
     const key = invite.inviteeEmail.toLowerCase();
-    if (mergedMembers.some((m) => m.email.toLowerCase() === key)) continue;
+    if (rosterEmails.has(key) || mergedMembers.some((m) => m.email.toLowerCase() === key)) continue;
     mergedMembers.push({
       email: invite.inviteeEmail,
       name: invite.inviteeName,
@@ -427,8 +448,18 @@ export async function GET(req: NextRequest) {
 
   const teamWithShared = { ...team, sharedProfile };
 
+  const roster = teamWithShared.teamId ? await getTeamRoster(teamWithShared.teamId) : null;
+  const ownerProfile = teamWithShared.isOwner ? await getUserProfile(auth.user.id) : null;
+  if (
+    roster &&
+    ownerProfile &&
+    ownerProfileNeedsRosterHeal(roster, ownerProfile.team.members)
+  ) {
+    await syncOwnerProfileFromRoster(roster);
+  }
+
   if (teamWithShared.isOwner && teamWithShared.teamId && teamWithShared.members.length > 0) {
-    const existing = await getTeamRoster(teamWithShared.teamId!);
+    const existing = roster ?? (await getTeamRoster(teamWithShared.teamId!));
     const existingEmails = new Set((existing?.members ?? []).map((m) => m.email.toLowerCase()));
     const mergedEmails = new Set(teamWithShared.members.map((m) => m.email.toLowerCase()));
     const needsHeal =

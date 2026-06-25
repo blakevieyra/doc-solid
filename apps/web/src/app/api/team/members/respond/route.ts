@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@doc-solid/database";
-import { requireAuth } from "@/lib/server/session";
-import { enforceRateLimit } from "@/lib/server/rate-limit";
+import { requireAuth } from "@/lib/server/session";import { enforceRateLimit } from "@/lib/server/rate-limit";
 import {
   getTeamMemberInvite,
   updateTeamMemberInvite,
 } from "@/lib/server/team-member-invites";
-import { loadPublicIdentityForEmail } from "@/lib/server/public-identity";
+import { syncOwnerProfileFromRoster } from "@/lib/server/team-profile-sync";
 import { getTeamRoster, saveTeamRoster, type TeamRoster } from "@/lib/server/team-roster";
+import { loadPublicIdentityForEmail } from "@/lib/server/public-identity";
 import { getUserProfile, saveUserProfile } from "@/lib/server/users";
 import { pushServerNotification } from "@/lib/server/share-notifications";
 import type { TeamMember, TeamMembership, TeamRole, UserProfile } from "@/lib/profile/types";
@@ -30,16 +29,21 @@ function applyMembership(profile: UserProfile, roster: TeamRoster, myRole: TeamR
 
   const memberships = profile.team.memberships ?? [];
   const without = memberships.filter((m) => m.teamId !== roster.teamId);
-  const rosterMembers: TeamMember[] = roster.members.map((m) => ({
-    id: memberKey(m.email),
-    email: m.email,
-    name: m.name,
-    role: m.role,
-    shareProfile: true,
-    invitedAt: m.joinedAt,
-    acceptedAt: m.joinedAt,
-    status: "active",
-  }));
+  const ownerKey = roster.ownerEmail.toLowerCase();
+  const rosterMembers: TeamMember[] = roster.members.map((m) => {
+    const key = m.email.toLowerCase();
+    const role: TeamRole = key === ownerKey ? "owner" : m.role === "owner" ? "editor" : m.role;
+    return {
+      id: memberKey(m.email),
+      email: m.email,
+      name: m.name,
+      role,
+      shareProfile: true,
+      invitedAt: m.joinedAt,
+      acceptedAt: m.joinedAt,
+      status: "active",
+    };
+  });
 
   return {
     ...profile,
@@ -58,31 +62,6 @@ function applyMembership(profile: UserProfile, roster: TeamRoster, myRole: TeamR
     },
     updatedAt: new Date().toISOString(),
   };
-}
-
-async function syncOwnerMembers(roster: TeamRoster, joiner: TeamMember): Promise<void> {
-  const owner = await prisma.user.findUnique({ where: { email: roster.ownerEmail.toLowerCase() } });
-  if (!owner) return;
-  const profile = await getUserProfile(owner.id);
-  if (!profile) return;
-
-  const byEmail = new Map<string, TeamMember>();
-  for (const m of profile.team.members) {
-    byEmail.set(m.email.toLowerCase(), m);
-  }
-  byEmail.set(joiner.email.toLowerCase(), joiner);
-
-  await saveUserProfile(owner.id, {
-    ...profile,
-    team: {
-      ...profile.team,
-      enabled: true,
-      teamId: roster.teamId,
-      orgName: roster.orgName,
-      members: [...byEmail.values()],
-    },
-    updatedAt: new Date().toISOString(),
-  });
 }
 
 export async function POST(req: NextRequest) {
@@ -171,28 +150,33 @@ export async function POST(req: NextRequest) {
     invite.status = "accepted";
     await updateTeamMemberInvite(invite);
 
-    const joinerIdentity = await loadPublicIdentityForEmail(email).catch(() => null);
-    const joinerMember: TeamMember = {
-      id: memberKey(email),
-      email,
-      name: auth.user.name,
-      username: joinerIdentity?.username,
-      avatarUrl: joinerIdentity?.avatarUrl ?? null,
-      role: invite.role,
-      shareProfile: true,
-      invitedAt: invite.createdAt,
-      acceptedAt: now,
-      status: "active",
-    };
-
-    await syncOwnerMembers(roster, joinerMember);
+    await syncOwnerProfileFromRoster(roster);
 
     const joinerProfile = await getUserProfile(auth.user.id);
     if (joinerProfile) {
-      await saveUserProfile(
-        auth.user.id,
-        applyMembership(joinerProfile, roster, invite.role)
-      );
+      const joinerIdentity = await loadPublicIdentityForEmail(email).catch(() => null);
+      const enrichedRoster: TeamRoster = {
+        ...roster,
+        members: roster.members.map((m) =>
+          m.email.toLowerCase() === email
+            ? { ...m, name: auth.user.name || m.name, userId: auth.user.id }
+            : m
+        ),
+      };
+      const nextProfile = applyMembership(joinerProfile, enrichedRoster, invite.role);
+      if (joinerIdentity) {
+        const selfKey = email;
+        nextProfile.team.members = nextProfile.team.members.map((m) =>
+          m.email.toLowerCase() === selfKey
+            ? {
+                ...m,
+                username: joinerIdentity.username,
+                avatarUrl: joinerIdentity.avatarUrl ?? m.avatarUrl,
+              }
+            : m
+        );
+      }
+      await saveUserProfile(auth.user.id, nextProfile);
     }
 
     await pushServerNotification(invite.inviterEmail, {

@@ -63,8 +63,16 @@ function teamViewToMembers(team: TeamView): TeamMember[] {
 }
 
 function applyTeamView(profile: UserProfile, team: TeamView): UserProfile {
-  const fromView = teamViewToMembers(team);
   const ownerEmail = team.ownerEmail ?? profile.team.ownerEmail;
+  const members: TeamMember[] = teamViewToMembers(team).map((m) => {
+    const role: TeamRole =
+      ownerEmail && m.email.toLowerCase() === ownerEmail.toLowerCase()
+        ? "owner"
+        : m.role === "owner"
+          ? "editor"
+          : m.role;
+    return { ...m, role };
+  });
   return {
     ...profile,
     team: {
@@ -78,7 +86,7 @@ function applyTeamView(profile: UserProfile, team: TeamView): UserProfile {
       myRole: team.myRole,
       shareBusinessProfile: team.shareBusinessProfile,
       shareOrganizationProfile: team.shareOrganizationProfile,
-      members: mergeTeamMembersByEmail(ownerEmail, profile.team.members, fromView),
+      members,
     },
   };
 }
@@ -116,20 +124,20 @@ export function ProfileTeamTab() {
     profile.team.createdAt ??
     profile.createdAt ??
     null;
-  const isOwner = teamView?.isOwner ?? profile.team.myRole === "owner";
   const selfEmail = (session?.email ?? profile.account.email).toLowerCase();
+  const isOwner = teamView?.isOwner ?? profile.team.ownerEmail?.toLowerCase() === selfEmail;
   const ownerEmail = teamView?.ownerEmail ?? profile.team.ownerEmail ?? null;
-  const displayMembers = useMemo(
-    () =>
-      mergeTeamMemberDisplays(
-        selfEmail,
-        ownerEmail,
-        teamView?.members,
-        profileMembersToDisplay(profile, selfEmail),
-        contactsToDisplay(profile.library?.contacts ?? [], selfEmail)
-      ),
-    [teamView, profile, selfEmail, ownerEmail]
-  );
+  const displayMembers = useMemo(() => {
+    if (teamView?.members?.length) {
+      return mergeTeamMemberDisplays(selfEmail, ownerEmail, teamView.members);
+    }
+    return mergeTeamMemberDisplays(
+      selfEmail,
+      ownerEmail,
+      profileMembersToDisplay(profile, selfEmail),
+      contactsToDisplay(profile.library?.contacts ?? [], selfEmail)
+    );
+  }, [teamView, profile, selfEmail, ownerEmail]);
   const orgName = teamView?.orgName || profile.team.orgName || profile.business.name || profile.organization.name;
   const onTeam = profile.team.enabled || (teamView?.members.length ?? 0) > 1 || !!profile.team.myRole;
 
@@ -141,14 +149,7 @@ export function ProfileTeamTab() {
         setTeamView(view);
         await updateProfile((current) => {
           if (view.members.length === 0) return current;
-          const mergedMembers = mergeTeamMemberDisplays(
-            (session?.email ?? current.account.email).toLowerCase(),
-            view.ownerEmail ?? current.team.ownerEmail,
-            view.members,
-            profileMembersToDisplay(current, (session?.email ?? current.account.email).toLowerCase()),
-            contactsToDisplay(current.library?.contacts ?? [], (session?.email ?? current.account.email).toLowerCase())
-          );
-          return applyTeamView(current, { ...view, members: mergedMembers });
+          return applyTeamView(current, view);
         });
       }
     } finally {
