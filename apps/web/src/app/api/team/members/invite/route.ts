@@ -5,9 +5,25 @@ import { createTeamMemberInvite } from "@/lib/server/team-member-invites";
 import { getTeamRoster } from "@/lib/server/team-roster";
 import { getUserProfile, saveUserProfile } from "@/lib/server/users";
 import { mergeTeamMembersByEmail } from "@/lib/team/members-merge";
+import { notifyTeamMemberInvite } from "@/lib/email/notify";
+import { getEmailConfig } from "@/lib/email/config";
+import { loadPublicIdentityForEmail } from "@/lib/server/public-identity";
 import type { TeamMember, TeamRole } from "@/lib/profile/types";
 
 export const runtime = "nodejs";
+
+function resolveTeamId(
+  requested: string | undefined,
+  profile: Awaited<ReturnType<typeof getUserProfile>>,
+  userId: string
+): string {
+  return (
+    requested?.trim() ||
+    profile?.team.teamId?.trim() ||
+    profile?.account.accountId?.trim() ||
+    userId
+  );
+}
 
 export async function POST(req: NextRequest) {
   const auth = await requireAuth(req);
@@ -27,19 +43,29 @@ export async function POST(req: NextRequest) {
       role?: TeamRole;
     };
 
-    const teamId = body.teamId?.trim();
     const inviteeEmail = body.inviteeEmail?.trim().toLowerCase();
-    const inviteeName = body.inviteeName?.trim();
     const orgName = body.orgName?.trim() || "Team";
 
-    if (!teamId || !inviteeEmail || !inviteeName) {
-      return NextResponse.json({ error: "teamId, inviteeEmail, and inviteeName are required" }, { status: 400 });
+    if (!inviteeEmail) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
     const inviterEmail = auth.user.email.trim().toLowerCase();
     if (inviteeEmail === inviterEmail) {
       return NextResponse.json({ error: "You cannot invite yourself" }, { status: 400 });
     }
+
+    const identity = await loadPublicIdentityForEmail(inviteeEmail);
+    if (!identity) {
+      return NextResponse.json({
+        error: "No Doc Solid account found for this email. They must sign up before you can invite them.",
+      }, { status: 404 });
+    }
+
+    const inviteeName = identity.name;
+
+    const ownerProfile = await getUserProfile(auth.user.id);
+    const teamId = resolveTeamId(body.teamId, ownerProfile, auth.user.id);
 
     const roster = await getTeamRoster(teamId);
     if (roster) {
@@ -62,7 +88,6 @@ export async function POST(req: NextRequest) {
       role: body.role ?? "editor",
     });
 
-    const ownerProfile = await getUserProfile(auth.user.id);
     if (ownerProfile) {
       const now = new Date().toISOString();
       const ownerMember: TeamMember = {
@@ -79,6 +104,8 @@ export async function POST(req: NextRequest) {
         id: `tm_${inviteeEmail.replace(/[^a-z0-9]/g, "_")}`,
         email: inviteeEmail,
         name: inviteeName,
+        username: identity.username,
+        avatarUrl: identity.avatarUrl,
         role: body.role ?? "editor",
         shareProfile: true,
         invitedAt: now,
@@ -88,6 +115,10 @@ export async function POST(req: NextRequest) {
 
       await saveUserProfile(auth.user.id, {
         ...ownerProfile,
+        account: {
+          ...ownerProfile.account,
+          accountId: ownerProfile.account.accountId?.trim() || teamId,
+        },
         team: {
           ...ownerProfile.team,
           enabled: true,
@@ -102,14 +133,32 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const emailConfig = getEmailConfig();
+    const inviteLink = emailConfig
+      ? `${emailConfig.appUrl.replace(/\/$/, "")}/team?invite=${encodeURIComponent(invite.id)}`
+      : null;
+
+    const emailSent = await notifyTeamMemberInvite({
+      inviteeEmail,
+      inviteeName,
+      inviterName: auth.user.name,
+      orgName,
+      inviteId: invite.id,
+    });
+
     return NextResponse.json({
       invite: {
         id: invite.id,
         inviteeEmail: invite.inviteeEmail,
         inviteeName: invite.inviteeName,
+        inviteeUsername: identity.username,
+        inviteeAvatarUrl: identity.avatarUrl,
         status: invite.status,
         code: invite.code,
       },
+      teamId,
+      emailSent,
+      inviteLink,
     });
   } catch {
     return NextResponse.json({ error: "Failed to send team invite" }, { status: 500 });

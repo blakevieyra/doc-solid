@@ -179,6 +179,27 @@ export function subscriptionCanceledEmail(): { subject: string; html: string } {
   };
 }
 
+export function teamMemberInviteEmail(payload: {
+  inviteeName: string;
+  inviterName: string;
+  orgName: string;
+  acceptUrl: string;
+  signupUrl: string;
+}): { subject: string; html: string } {
+  return {
+    subject: `${payload.inviterName} invited you to ${payload.orgName} on DocSolid`,
+    html: layout(`
+      <h1 style="margin:0 0 12px;font-size:22px;color:#0f172a;">You're invited to a team</h1>
+      <p>Hi ${escapeHtml(payload.inviteeName)},</p>
+      <p><strong>${escapeHtml(payload.inviterName)}</strong> invited you to join <strong>${escapeHtml(payload.orgName)}</strong> on DocSolid.</p>
+      <p>Accept the invitation to share business profile auto-fill, receive documents, and collaborate with your team.</p>
+      ${btn(payload.acceptUrl, "Accept invitation")}
+      <p style="color:#64748b;font-size:13px;margin-top:20px;">Don't have a DocSolid account yet? <a href="${payload.signupUrl}" style="color:${BRAND_ACCENT};">Create a free account</a> using this email address, then open the accept link again.</p>
+      <p style="color:#64748b;font-size:13px;">This invitation expires in 7 days.</p>
+    `),
+  };
+}
+
 export function documentSharedEmail(payload: {
   recipientName?: string;
   senderName: string;

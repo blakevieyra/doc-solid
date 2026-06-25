@@ -11,6 +11,7 @@ import { TeamMemberIdentity } from "@/components/TeamMemberPickerRow";
 import { canUseFeature, maxTeamMembers } from "@/lib/subscription/plans";
 import type { AppContact, TeamMember, TeamRole, UserProfile } from "@/lib/profile/types";
 import { mergeTeamMembersByEmail } from "@/lib/team/members-merge";
+import { generateAccountId } from "@/lib/support/config";
 
 function Field({
   label,
@@ -90,10 +91,18 @@ export function ProfileTeamTab() {
   const [inviteCode, setInviteCode] = useState("");
   const [inviteCopied, setInviteCopied] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState("");
-  const [newMemberName, setNewMemberName] = useState("");
+  const [memberLookup, setMemberLookup] = useState<{
+    email: string;
+    name: string;
+    username?: string;
+    avatarUrl?: string | null;
+  } | null>(null);
+  const [memberLookupMsg, setMemberLookupMsg] = useState("");
+  const [lookingUpMember, setLookingUpMember] = useState(false);
   const [newContactEmail, setNewContactEmail] = useState("");
   const [contactLookupMsg, setContactLookupMsg] = useState("");
   const [actionMsg, setActionMsg] = useState("");
+  const [actionIsError, setActionIsError] = useState(false);
   const [addingContact, setAddingContact] = useState(false);
   const [teamIdCopied, setTeamIdCopied] = useState(false);
   const [inviteSending, setInviteSending] = useState(false);
@@ -202,46 +211,154 @@ export function ProfileTeamTab() {
     }
   }
 
+  async function ensureTeamId(): Promise<string> {
+    const existing =
+      teamView?.teamId?.trim() ||
+      profile.team.teamId?.trim() ||
+      profile.account.accountId?.trim();
+    if (existing) return existing;
+
+    const newId = generateAccountId();
+    await updateProfile({
+      account: { ...profile.account, accountId: newId },
+      team: {
+        ...profile.team,
+        enabled: true,
+        teamId: newId,
+        orgName: orgName || profile.business.name || profile.organization.name || "My Team",
+        myRole: "owner",
+      },
+    });
+    return newId;
+  }
+
+  async function lookupMemberByEmail(email: string) {
+    const normalized = email.trim().toLowerCase();
+    if (!normalized) {
+      setMemberLookup(null);
+      setMemberLookupMsg("");
+      return null;
+    }
+    setLookingUpMember(true);
+    setMemberLookupMsg("");
+    try {
+      const res = await fetch("/api/contacts/lookup", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalized }),
+      });
+      const data = await res.json() as {
+        registered?: boolean;
+        email?: string;
+        name?: string;
+        username?: string;
+        avatarUrl?: string | null;
+        error?: string;
+      };
+      if (!data.registered || !data.email || !data.name) {
+        setMemberLookup(null);
+        setMemberLookupMsg(data.error ?? "No Doc Solid account found for this email.");
+        return null;
+      }
+      const found = {
+        email: data.email,
+        name: data.name,
+        username: data.username,
+        avatarUrl: data.avatarUrl ?? null,
+      };
+      setMemberLookup(found);
+      setMemberLookupMsg("");
+      return found;
+    } catch {
+      setMemberLookup(null);
+      setMemberLookupMsg("Could not look up this email. Try again.");
+      return null;
+    } finally {
+      setLookingUpMember(false);
+    }
+  }
+
   async function handleInviteMember() {
-    if (!newMemberEmail || !newMemberName) return;
+    if (!newMemberEmail.trim()) return;
     if (displayMembers.filter((m) => m.status !== "pending").length >= teamLimit) {
       alert(`Your plan allows up to ${teamLimit} team members.`);
       return;
     }
     setInviteSending(true);
     setActionMsg("");
+    setActionIsError(false);
     try {
+      let invitee = memberLookup;
+      const normalizedEmail = newMemberEmail.trim().toLowerCase();
+      if (!invitee || invitee.email.toLowerCase() !== normalizedEmail) {
+        invitee = await lookupMemberByEmail(normalizedEmail);
+      }
+      if (!invitee) {
+        setActionIsError(true);
+        setActionMsg(memberLookupMsg || "Enter a registered Doc Solid email address.");
+        return;
+      }
+
+      const resolvedTeamId = await ensureTeamId();
       const res = await fetch("/api/team/members/invite", {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          teamId,
+          teamId: resolvedTeamId,
           orgName,
-          inviteeEmail: newMemberEmail.trim(),
-          inviteeName: newMemberName.trim(),
+          inviteeEmail: invitee.email,
           role: "editor",
         }),
       });
-      const data = (await res.json()) as { error?: string };
+      const data = (await res.json()) as {
+        error?: string;
+        emailSent?: boolean;
+        inviteLink?: string | null;
+        teamId?: string;
+        invite?: {
+          inviteeEmail?: string;
+          inviteeName?: string;
+          inviteeUsername?: string;
+          inviteeAvatarUrl?: string | null;
+        };
+      };
       if (!res.ok) throw new Error(data.error ?? "Could not send invite");
 
       const member: TeamMember = {
-        id: `tm_${Date.now()}`,
-        name: newMemberName.trim(),
-        email: newMemberEmail.trim().toLowerCase(),
+        id: `tm_${invitee.email.replace(/[^a-z0-9]/g, "_")}`,
+        name: data.invite?.inviteeName ?? invitee.name,
+        email: invitee.email,
+        username: data.invite?.inviteeUsername ?? invitee.username,
+        avatarUrl: data.invite?.inviteeAvatarUrl ?? invitee.avatarUrl,
         role: "editor",
         shareProfile: true,
         invitedAt: new Date().toISOString(),
         status: "pending",
       };
       const next = mergeTeamMembersByEmail(profile.team.members, [member]);
-      await updateProfile({ team: { ...profile.team, members: next, enabled: true, teamId } });
+      await updateProfile({
+        team: {
+          ...profile.team,
+          members: next,
+          enabled: true,
+          teamId: data.teamId ?? resolvedTeamId,
+        },
+      });
       setNewMemberEmail("");
-      setNewMemberName("");
-      setActionMsg("Request sent — they will appear on your team once they accept.");
+      setMemberLookup(null);
+      setMemberLookupMsg("");
+      if (data.emailSent) {
+        setActionMsg(`Invite email sent to ${member.name} (${member.email}).`);
+      } else if (data.inviteLink) {
+        setActionMsg(`Invite saved for ${member.name}. Email could not be sent — share this link: ${data.inviteLink}`);
+      } else {
+        setActionMsg(`${member.name} invited — they will appear on your team once they accept.`);
+      }
       await refreshTeam();
     } catch (err) {
+      setActionIsError(true);
       setActionMsg(err instanceof Error ? err.message : "Invite failed");
     } finally {
       setInviteSending(false);
@@ -291,7 +408,7 @@ export function ProfileTeamTab() {
         </button>
       </div>
 
-      {actionMsg && <p className="field-success">{actionMsg}</p>}
+      {actionMsg && <p className={actionIsError ? "field-error" : "field-success"}>{actionMsg}</p>}
 
       {!loadingTeam && onTeam && (
         <div className="team-summary-card">
@@ -427,15 +544,51 @@ export function ProfileTeamTab() {
                   </div>
                   {displayMembers.length < teamLimit && (
                     <div className="team-invite-form">
-                      <Field label="Name" value={newMemberName} onChange={setNewMemberName} />
-                      <Field label="Email" type="email" value={newMemberEmail} onChange={setNewMemberEmail} />
+                      <p className="field-help" style={{ margin: 0 }}>
+                        Enter a registered Doc Solid email — we&apos;ll pull their name and photo, then email them an accept link.
+                      </p>
+                      <Field
+                        label="Registered user email"
+                        type="email"
+                        value={newMemberEmail}
+                        onChange={(v) => {
+                          setNewMemberEmail(v);
+                          setMemberLookup(null);
+                          setMemberLookupMsg("");
+                        }}
+                      />
                       <button
                         type="button"
-                        className="btn btn-secondary"
-                        disabled={inviteSending || !newMemberEmail || !newMemberName}
+                        className="btn btn-secondary btn-sm"
+                        disabled={!newMemberEmail.trim() || lookingUpMember}
+                        onClick={() => void lookupMemberByEmail(newMemberEmail)}
+                      >
+                        {lookingUpMember ? "Looking up…" : "Look up user"}
+                      </button>
+                      {memberLookup && (
+                        <div className="team-member-row" style={{ marginTop: "0.25rem" }}>
+                          <TeamMemberIdentity
+                            recipient={{
+                              name: memberLookup.name,
+                              email: memberLookup.email,
+                              username: memberLookup.username,
+                              avatarUrl: memberLookup.avatarUrl,
+                              source: "team",
+                              role: "editor",
+                            }}
+                            profile={profile}
+                            selfEmail={selfEmail}
+                          />
+                        </div>
+                      )}
+                      {memberLookupMsg && <p className="field-error">{memberLookupMsg}</p>}
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        disabled={inviteSending || !newMemberEmail.trim() || lookingUpMember}
                         onClick={() => void handleInviteMember()}
                       >
-                        {inviteSending ? "Sending…" : "Invite Member"}
+                        {inviteSending ? "Sending…" : memberLookup ? `Send invite to ${memberLookup.name}` : "Send invite email"}
                       </button>
                     </div>
                   )}

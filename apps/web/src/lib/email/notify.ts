@@ -9,6 +9,7 @@ import {
   paymentFailedEmail,
   subscriptionCanceledEmail,
   documentSharedEmail,
+  teamMemberInviteEmail,
 } from "./templates";
 
 export async function notifySignup(payload: { name: string; email: string }): Promise<void> {
@@ -162,4 +163,32 @@ export async function sendDocumentEmail(payload: {
   }
 
   return { sent, failed };
+}
+
+export async function notifyTeamMemberInvite(payload: {
+  inviteeEmail: string;
+  inviteeName: string;
+  inviterName: string;
+  orgName: string;
+  inviteId: string;
+}): Promise<boolean> {
+  const config = getEmailConfig();
+  if (!config || !payload.inviteeEmail) return false;
+
+  const acceptUrl = `${config.appUrl.replace(/\/$/, "")}/team?invite=${encodeURIComponent(payload.inviteId)}`;
+  const signupUrl = `${config.appUrl.replace(/\/$/, "")}/signup?email=${encodeURIComponent(payload.inviteeEmail)}`;
+
+  const mail = teamMemberInviteEmail({
+    inviteeName: payload.inviteeName,
+    inviterName: payload.inviterName,
+    orgName: payload.orgName,
+    acceptUrl,
+    signupUrl,
+  });
+
+  return sendEmail({
+    to: payload.inviteeEmail,
+    subject: mail.subject,
+    html: mail.html,
+  });
 }
