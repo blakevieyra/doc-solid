@@ -86,7 +86,9 @@ export function resolveDocumentBranding(
     values.businessName?.trim() ||
     profile.business.name ||
     profile.organization.name ||
+    profile.personal.fullName ||
     profile.team.orgName ||
+    profile.account.displayName ||
     "Your Company";
 
   const tagline =
@@ -96,6 +98,81 @@ export function resolveDocumentBranding(
     "";
 
   return { logo, companyName, tagline };
+}
+
+export interface DocumentLetterhead {
+  logo: string | null;
+  companyName: string;
+  tagline: string;
+  address: string;
+  phone: string;
+  email: string;
+  website: string;
+  pocName: string;
+  pocTitle: string;
+  pocPhone: string;
+  pocEmail: string;
+}
+
+/** Full business letterhead for document headers — legal-style name, address, and POC */
+export function resolveDocumentLetterhead(
+  profile: UserProfile,
+  values: Record<string, string>
+): DocumentLetterhead {
+  const branding = resolveDocumentBranding(profile, values);
+
+  const address =
+    values.businessAddress?.trim() ||
+    formatAddress(profile.business.address) ||
+    formatAddress(profile.organization.address) ||
+    formatAddress(profile.personal.address);
+
+  const phone =
+    values.businessPhone?.trim() ||
+    profile.business.phone ||
+    profile.organization.phone ||
+    profile.personal.phone;
+
+  const email =
+    values.businessEmail?.trim() ||
+    profile.business.email ||
+    profile.organization.email ||
+    profile.personal.email ||
+    profile.account.email;
+
+  const website =
+    values.businessWebsite?.trim() ||
+    profile.business.website ||
+    profile.organization.website;
+
+  const pocName =
+    values.personName?.trim() ||
+    profile.personal.fullName ||
+    profile.account.displayName;
+
+  const pocTitle = values.personTitle?.trim() || profile.personal.title;
+
+  const pocPhone =
+    values.personPhone?.trim() ||
+    profile.personal.phone ||
+    phone;
+
+  const pocEmail =
+    values.personEmail?.trim() ||
+    profile.personal.email ||
+    email;
+
+  return {
+    ...branding,
+    address,
+    phone,
+    email,
+    website,
+    pocName,
+    pocTitle,
+    pocPhone,
+    pocEmail,
+  };
 }
 
 /** Persist org branding into saved documents so recipients see the sender's identity */
@@ -109,18 +186,49 @@ export function snapshotBrandingIntoValues(
     const logo = profile.business.logo ?? profile.organization.logo;
     if (logo) next.logo = logo;
   }
-  if (!next.businessName?.trim() && profile.business.name) {
-    next.businessName = profile.business.name;
+  if (!next.businessName?.trim()) {
+    const name =
+      profile.business.name ||
+      profile.organization.name ||
+      profile.personal.fullName ||
+      profile.team.orgName;
+    if (name) next.businessName = name;
   }
-  if (!next.businessEmail?.trim() && profile.business.email) {
-    next.businessEmail = profile.business.email;
+  if (!next.businessEmail?.trim()) {
+    const email =
+      profile.business.email ||
+      profile.organization.email ||
+      profile.personal.email;
+    if (email) next.businessEmail = email;
   }
-  if (!next.businessPhone?.trim() && profile.business.phone) {
-    next.businessPhone = profile.business.phone;
+  if (!next.businessPhone?.trim()) {
+    const phone =
+      profile.business.phone ||
+      profile.organization.phone ||
+      profile.personal.phone;
+    if (phone) next.businessPhone = phone;
+  }
+  if (!next.businessWebsite?.trim() && profile.business.website) {
+    next.businessWebsite = profile.business.website;
   }
   if (!next.businessAddress?.trim()) {
-    const addr = formatAddress(profile.business.address);
+    const addr =
+      formatAddress(profile.business.address) ||
+      formatAddress(profile.organization.address) ||
+      formatAddress(profile.personal.address);
     if (addr) next.businessAddress = addr;
+  }
+  if (!next.personName?.trim() && profile.personal.fullName) {
+    next.personName = profile.personal.fullName;
+  }
+  if (!next.personTitle?.trim() && profile.personal.title) {
+    next.personTitle = profile.personal.title;
+  }
+  if (!next.personPhone?.trim() && profile.personal.phone) {
+    next.personPhone = profile.personal.phone;
+  }
+  if (!next.personEmail?.trim() && profile.personal.email) {
+    next.personEmail = profile.personal.email;
   }
   if (!next.orgMission?.trim() && profile.organization.mission) {
     next.orgMission = profile.organization.mission;
@@ -137,8 +245,10 @@ export function buildDocumentAutofill(profile: UserProfile): Record<string, stri
     businessAddress: formatAddress(profile.business.address),
     businessPhone: profile.business.phone,
     businessEmail: profile.business.email,
+    businessWebsite: profile.business.website || profile.organization.website,
     taxId: profile.security.encryptSensitive ? "" : profile.business.taxId,
     personName: profile.personal.fullName,
+    personTitle: profile.personal.title,
     personAddress: formatAddress(profile.personal.address),
     personEmail: profile.personal.email,
     personPhone: profile.personal.phone,

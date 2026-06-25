@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
   }
 
-  const customerId = req.nextUrl.searchParams.get("customerId");
+  const requestedCustomerId = req.nextUrl.searchParams.get("customerId");
   const requestedEmail = req.nextUrl.searchParams.get("email")?.trim().toLowerCase() ?? null;
   const email = auth.user.email.trim().toLowerCase();
 
@@ -29,15 +29,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  let customerId = requestedCustomerId;
   if (customerId) {
     const owns = await verifyCustomerOwnership(customerId, email);
     if (!owns) {
-      return NextResponse.json({ error: "Subscription verification failed" }, { status: 403 });
+      customerId = null;
     }
   }
 
   try {
-    const resolved = await resolveSubscriptionFromStripe({ customerId, email });
+    const resolved = await resolveSubscriptionFromStripe({
+      customerId: customerId ?? undefined,
+      email,
+    });
     return NextResponse.json({
       subscription: resolved.subscription,
       source: resolved.source,

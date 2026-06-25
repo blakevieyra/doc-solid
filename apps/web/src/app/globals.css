@@ -407,8 +407,8 @@ button, input, select, textarea {
 }
 .doc-preview-capture .doc-preview-logo-wrap,
 .packets-export-stack .doc-preview-logo-wrap {
-  max-width: 220px;
-  height: 64px;
+  max-width: 260px;
+  height: 80px;
 }
 .doc-preview-capture .doc-preview-logo,
 .packets-export-stack .doc-preview-logo {
@@ -492,8 +492,8 @@ button, input, select, textarea {
 }
 .doc-preview-logo-wrap {
   width: 100%;
-  max-width: min(280px, 100%);
-  height: 72px;
+  max-width: min(320px, 100%);
+  height: 88px;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -516,6 +516,33 @@ button, input, select, textarea {
   overflow-wrap: break-word; word-break: normal;
 }
 .doc-preview-tagline { font-family: 'Inter', sans-serif; font-size: 0.8125rem; color: #64748b; margin-top: 0.15rem; font-style: italic; }
+.doc-preview-letterhead-line {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8125rem;
+  color: #334155;
+  margin: 0.2rem 0 0;
+  line-height: 1.45;
+  overflow-wrap: break-word;
+}
+.doc-preview-letterhead-address { white-space: pre-line; }
+.doc-preview-letterhead-website { color: var(--primary); }
+.doc-preview-letterhead-poc {
+  margin-top: 0.65rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid #e2e8f0;
+  width: 100%;
+}
+.doc-preview-letterhead-poc-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin: 0 0 0.2rem;
+}
+.doc-preview-letterhead-poc-name { font-weight: 600; color: #0f172a; }
+.doc-preview-letterhead-poc-title { font-weight: 400; color: #475569; }
 .doc-preview-meta {
   text-align: right; font-family: 'Inter', sans-serif; font-size: 0.8125rem;
   flex: 1 1 35%; min-width: 0; max-width: 100%; overflow-wrap: anywhere; word-break: break-word;

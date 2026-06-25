@@ -3,7 +3,7 @@ import {
   mergeReconciledSubscription,
   resolveSubscriptionFromStripe,
 } from "@/lib/stripe/resolve-subscription";
-import { getSubscriptionByEmail } from "@/lib/stripe/subscription-store";
+import { getSubscriptionByEmail, getSubscriptionByCustomerId } from "@/lib/stripe/subscription-store";
 import { isProActive } from "@/lib/subscription/plans";
 
 function subscriptionFromStored(record: {
@@ -36,7 +36,11 @@ export async function reconcileProfileSubscription(
   let merged = mergeReconciledSubscription(current, resolved);
 
   if (!isProActive(merged)) {
-    const cached = await getSubscriptionByEmail(email).catch(() => null);
+    const cached =
+      (await getSubscriptionByEmail(email).catch(() => null)) ??
+      (current.stripeCustomerId
+        ? await getSubscriptionByCustomerId(current.stripeCustomerId).catch(() => null)
+        : null);
     if (cached && isProActive(subscriptionFromStored(cached))) {
       merged = mergeReconciledSubscription(current, subscriptionFromStored(cached));
     }

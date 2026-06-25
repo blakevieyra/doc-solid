@@ -146,8 +146,9 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     if (!customerId && !email) return;
 
     fetchSubscriptionStatus({ customerId, email }).then(async (result) => {
+      if (!result?.subscription) return;
       setProfile((prev) => {
-        const resolved = result?.subscription ?? { plan: "free" as const, status: "none" as const };
+        const resolved = result.subscription;
         const subscription = applySubscriptionFromStripe(prev.subscription, resolved);
         if (
           subscription.plan === prev.subscription.plan &&

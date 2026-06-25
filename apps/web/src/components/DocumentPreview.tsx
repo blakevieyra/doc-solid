@@ -19,7 +19,7 @@ import {
 
 } from "@/lib/profile/signature";
 
-import { resolveDocumentBranding } from "@/lib/profile/document-branding";
+import { resolveDocumentLetterhead } from "@/lib/profile/document-branding";
 
 
 
@@ -41,8 +41,24 @@ interface DocumentPreviewProps {
 
 export function DocumentPreview({ meta, values, profile, previewId }: DocumentPreviewProps) {
 
-  const branding = resolveDocumentBranding(profile, values);
+  const letterhead = resolveDocumentLetterhead(profile, values);
   const displayNumber = extractDocumentNumberFromValues(values);
+
+  const hasPoc =
+    letterhead.pocName ||
+    letterhead.pocTitle ||
+    letterhead.pocPhone ||
+    letterhead.pocEmail;
+
+  const contactParts = [
+    letterhead.phone && `Tel: ${letterhead.phone}`,
+    letterhead.email,
+  ].filter(Boolean);
+
+  const pocContactParts = [
+    letterhead.pocPhone && `Tel: ${letterhead.pocPhone}`,
+    letterhead.pocEmail,
+  ].filter(Boolean);
 
 
 
@@ -54,11 +70,11 @@ export function DocumentPreview({ meta, values, profile, previewId }: DocumentPr
 
         <div className="doc-preview-brand">
 
-          {branding.logo && (
+          {letterhead.logo && (
 
             <div className="doc-preview-logo-wrap">
 
-              <img src={branding.logo} alt="" className="doc-preview-logo" />
+              <img src={letterhead.logo} alt="" className="doc-preview-logo" />
 
             </div>
 
@@ -66,11 +82,61 @@ export function DocumentPreview({ meta, values, profile, previewId }: DocumentPr
 
           <div className="doc-preview-brand-text">
 
-            <h1 className="doc-preview-company">{branding.companyName}</h1>
+            <h1 className="doc-preview-company">{letterhead.companyName}</h1>
 
-            {branding.tagline && (
+            {letterhead.tagline && (
 
-              <p className="doc-preview-tagline">{branding.tagline}</p>
+              <p className="doc-preview-tagline">{letterhead.tagline}</p>
+
+            )}
+
+            {letterhead.address && (
+
+              <p className="doc-preview-letterhead-line doc-preview-letterhead-address">{letterhead.address}</p>
+
+            )}
+
+            {contactParts.length > 0 && (
+
+              <p className="doc-preview-letterhead-line">{contactParts.join(" · ")}</p>
+
+            )}
+
+            {letterhead.website && (
+
+              <p className="doc-preview-letterhead-line doc-preview-letterhead-website">{letterhead.website}</p>
+
+            )}
+
+            {hasPoc && (
+
+              <div className="doc-preview-letterhead-poc">
+
+                <p className="doc-preview-letterhead-poc-label">Point of Contact</p>
+
+                {letterhead.pocName && (
+
+                  <p className="doc-preview-letterhead-line doc-preview-letterhead-poc-name">
+
+                    {letterhead.pocName}
+
+                    {letterhead.pocTitle && (
+
+                      <span className="doc-preview-letterhead-poc-title">, {letterhead.pocTitle}</span>
+
+                    )}
+
+                  </p>
+
+                )}
+
+                {pocContactParts.length > 0 && (
+
+                  <p className="doc-preview-letterhead-line">{pocContactParts.join(" · ")}</p>
+
+                )}
+
+              </div>
 
             )}
 

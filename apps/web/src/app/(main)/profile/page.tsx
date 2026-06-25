@@ -162,7 +162,11 @@ export default function ProfilePage() {
         customerId: profile.subscription.stripeCustomerId,
         email,
       });
-      const resolved = result?.subscription ?? { plan: "free" as const, status: "none" as const };
+      if (!result?.subscription) {
+        setBillingMsg("Could not refresh billing status. Try again in a moment.");
+        return;
+      }
+      const resolved = result.subscription;
       await updateProfile({
         subscription: applySubscriptionFromStripe(profile.subscription, resolved),
       });

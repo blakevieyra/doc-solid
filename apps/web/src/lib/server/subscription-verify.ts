@@ -16,12 +16,23 @@ export async function verifyCustomerOwnership(
 ): Promise<boolean> {
   const stripe = getStripe();
   if (!stripe) return false;
+  const normalized = email.trim().toLowerCase();
   try {
     const customer = await stripe.customers.retrieve(customerId);
     if (customer.deleted) return false;
-    return (
+    if (
       "email" in customer &&
-      customer.email?.trim().toLowerCase() === email.trim().toLowerCase()
+      customer.email?.trim().toLowerCase() === normalized
+    ) {
+      return true;
+    }
+    const subs = await stripe.subscriptions.list({
+      customer: customerId,
+      status: "all",
+      limit: 10,
+    });
+    return subs.data.some(
+      (sub) => sub.metadata?.email?.trim().toLowerCase() === normalized
     );
   } catch {
     return false;
