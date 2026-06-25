@@ -79,24 +79,7 @@ export default function DocumentsPage() {
 
   return (
     <AppShell title="Document Library">
-      {recommended.length > 0 && !query && domain === "all" && category === "all" && view === "all" && (
-        <RecommendedDocuments
-          documents={recommended}
-          heading={recHeading}
-          subtitle={profileSettingsHint(profile.profileType)}
-        />
-      )}
-
-      <div className="library-view-tabs no-print">
-        <button type="button" className={`library-view-tab${view === "all" ? " active" : ""}`} onClick={() => setView("all")}>
-          All documents
-        </button>
-        <button type="button" className={`library-view-tab${view === "favorites" ? " active" : ""}`} onClick={() => setView("favorites")}>
-          Favorites ({favorites.length})
-        </button>
-      </div>
-
-      <div className="doc-search-bar doc-search-bar-wide">
+      <div className="doc-search-bar doc-search-bar-wide doc-library-search-top">
         <input
           type="search"
           placeholder={`Search ${CATALOG_STATS.total}+ document types by name, tag, domain, or category…`}
@@ -118,6 +101,23 @@ export default function DocumentsPage() {
             <option key={c.id} value={c.id}>{c.label}</option>
           ))}
         </select>
+      </div>
+
+      {recommended.length > 0 && !query && domain === "all" && category === "all" && view === "all" && (
+        <RecommendedDocuments
+          documents={recommended}
+          heading={recHeading}
+          subtitle={profileSettingsHint(profile.profileType)}
+        />
+      )}
+
+      <div className="library-view-tabs no-print">
+        <button type="button" className={`library-view-tab${view === "all" ? " active" : ""}`} onClick={() => setView("all")}>
+          All documents
+        </button>
+        <button type="button" className={`library-view-tab${view === "favorites" ? " active" : ""}`} onClick={() => setView("favorites")}>
+          Favorites ({favorites.length})
+        </button>
       </div>
 
       {favMsg && <p className="field-error">{favMsg}</p>}

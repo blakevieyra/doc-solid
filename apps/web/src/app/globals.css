@@ -1798,7 +1798,8 @@ button.portal-stat-filter.active .portal-stat-value {
 .portal-title-cell a:hover { text-decoration: underline; }
 
 /* Recommended documents */
-.recommended-docs { margin-bottom: 2rem; }
+.recommended-docs { margin-bottom: 1.25rem; }
+.doc-library-search-top { margin-bottom: 1rem; }
 .recommended-docs-compact { margin-bottom: 1.25rem; }
 .recommended-docs-header {
   display: flex; justify-content: space-between; align-items: flex-start;
