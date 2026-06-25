@@ -3,7 +3,9 @@ import { prisma, isDatabaseConfigured } from "@doc-solid/database";
 import { isEmailConfigured } from "@/lib/email/config";
 import { sendDocumentEmail } from "@/lib/email/notify";
 import { isActiveProSubscriber } from "@/lib/server/subscription-verify";
+import { pushServerNotification } from "@/lib/server/share-notifications";
 import { enforceRateLimit, rejectIfBodyTooLarge } from "@/lib/server/rate-limit";
+import { requireAuth } from "@/lib/server/session";
 export const runtime = "nodejs";
 export const maxDuration = 30;
 
@@ -26,6 +28,9 @@ interface EmailDocumentRequest {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAuth(req);
+  if (!auth.ok) return auth.response;
+
   if (!isEmailConfigured()) {
     return NextResponse.json(
       { error: "Email is not configured on this server. Add SendGrid keys in Vercel." },
@@ -51,12 +56,12 @@ export async function POST(req: NextRequest) {
     if (!body.documentTitle?.trim()) {
       return NextResponse.json({ error: "Document title is required" }, { status: 400 });
     }
-    if (!body.senderName?.trim() || !body.senderEmail?.trim()) {
-      return NextResponse.json({ error: "Sender name and email are required" }, { status: 400 });
+    if (!body.senderName?.trim()) {
+      return NextResponse.json({ error: "Sender name is required" }, { status: 400 });
     }
-    if (!EMAIL_RE.test(body.senderEmail)) {
-      return NextResponse.json({ error: "Invalid sender email" }, { status: 400 });
-    }
+
+    const senderEmail = auth.user.email.trim().toLowerCase();
+    const senderName = body.senderName.trim() || auth.user.name || senderEmail;
 
     const recipients = (body.recipients ?? [])
       .filter((r) => r.email?.trim())
@@ -75,7 +80,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const senderEmail = body.senderEmail.trim().toLowerCase();
     const isPro = await isActiveProSubscriber(senderEmail);
 
     if (!isPro) {
@@ -117,7 +121,7 @@ export async function POST(req: NextRequest) {
 
     const { sent, failed } = await sendDocumentEmail({
       recipients,
-      senderName: body.senderName.trim(),
+      senderName,
       senderEmail,
       documentTitle: body.documentTitle.trim(),
       documentType: body.documentType?.trim(),
@@ -131,11 +135,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Failed to send email. Try again later." }, { status: 503 });
     }
 
+    const sentAt = new Date().toISOString();
+    for (const recipient of recipients) {
+      if (recipient.email === senderEmail) continue;
+      await pushServerNotification(recipient.email, {
+        id: `doc_email_${sentAt}_${recipient.email}_${body.documentTitle.trim().slice(0, 24).replace(/\W+/g, "_")}`,
+        type: "share",
+        title: body.documentType?.includes("Packet") ? "Packet emailed to you" : "Document emailed to you",
+        message: `${senderName} sent "${body.documentTitle.trim()}" — check your inbox (and spam folder) for the PDF.`,
+        link: "/portal",
+        createdAt: sentAt,
+      }).catch(() => null);
+    }
+
+    const recipientList = recipients.map((r) => r.email).join(", ");
     return NextResponse.json({
       success: true,
       sent,
       failed,
-      message: sent === 1 ? "Email sent" : `Sent to ${sent} recipients`,
+      message:
+        sent === 1
+          ? `Email sent to ${recipientList}. If it does not arrive in a few minutes, check spam.`
+          : `Sent to ${sent} recipients (${recipientList}). If missing, check spam folders.`,
     });
   } catch {
     return NextResponse.json({ error: "Failed to send document email" }, { status: 500 });

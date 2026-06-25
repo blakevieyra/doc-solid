@@ -115,7 +115,9 @@ export function EmailPacketModal({
         notify({
           type: "share",
           title: "Packet emailed",
-          message: data.message ?? `Sent "${packetName}" to ${data.sent} recipient(s)`,
+          message:
+            data.message ??
+            `Sent "${packetName}" to ${data.sent} recipient(s). Recipients should check inbox and spam.`,
         });
       } catch {
         /* notification is optional */

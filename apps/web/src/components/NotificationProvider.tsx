@@ -8,6 +8,7 @@ import {
   markAllRead,
   addNotification,
   checkDocumentReminders,
+  setNotificationUserKey,
   type AppNotification,
 } from "@/lib/notifications/store";
 import { processShareNotifications } from "@/lib/notifications/share-events";
@@ -74,6 +75,13 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     refresh();
   }, [authMode, profile.account.email, refresh, session?.email]);
+
+  const userNotificationKey = session?.userId ?? session?.email ?? profile.account.accountId ?? null;
+
+  useEffect(() => {
+    setNotificationUserKey(userNotificationKey);
+    refresh();
+  }, [userNotificationKey, refresh]);
 
   useEffect(() => {
     refresh();

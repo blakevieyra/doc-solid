@@ -10,19 +10,30 @@ export interface AppNotification {
   link?: string;
 }
 
-const KEY = "doc-solid-notifications";
+const KEY_PREFIX = "doc-solid-notifications";
+
+let activeUserKey: string | null = null;
+
+/** Scope in-app notifications to the signed-in user (avoids bleed across accounts on one browser). */
+export function setNotificationUserKey(userKey: string | null): void {
+  activeUserKey = userKey?.trim() || null;
+}
+
+function storageKey(): string {
+  return activeUserKey ? `${KEY_PREFIX}-${activeUserKey}` : `${KEY_PREFIX}-anonymous`;
+}
 
 function load(): AppNotification[] {
   if (typeof window === "undefined") return [];
   try {
-    return JSON.parse(localStorage.getItem(KEY) ?? "[]") as AppNotification[];
+    return JSON.parse(localStorage.getItem(storageKey()) ?? "[]") as AppNotification[];
   } catch {
     return [];
   }
 }
 
 function save(items: AppNotification[]): void {
-  localStorage.setItem(KEY, JSON.stringify(items));
+  localStorage.setItem(storageKey(), JSON.stringify(items));
 }
 
 export function getNotifications(): AppNotification[] {
@@ -58,7 +69,7 @@ export function markAllRead(): void {
 }
 
 export function clearNotifications(): void {
-  localStorage.removeItem(KEY);
+  localStorage.removeItem(storageKey());
 }
 
 export function checkDocumentReminders(

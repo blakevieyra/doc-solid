@@ -60,7 +60,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<boolean> {
 
     if (!res.ok) {
       const err = await res.text();
-      console.error("[Email] SendGrid error:", res.status, err);
+      console.error("[Email] SendGrid error:", res.status, "to:", options.to, err);
       return false;
     }
 
