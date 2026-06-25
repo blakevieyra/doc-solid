@@ -11,9 +11,13 @@ import { saveShareWithDocument } from "@/lib/team/share-document";
 import { recordDocumentShareAudit } from "@/lib/documents/share-audit";
 import { getEmailRecipients } from "@/lib/team/recipients";
 import { canUseFeature } from "@/lib/subscription/plans";
-import { emptyCounterpartySignatureFields } from "@/lib/documents/signature-access";
+import { emptyCounterpartySignatureFields, countCounterpartySignatureFields } from "@/lib/documents/signature-access";
 import { TeamMemberPickerRow } from "@/components/TeamMemberPickerRow";
 import { AddRecipientForm } from "@/components/AddRecipientForm";
+import {
+  SignatureRequestBlockedNotice,
+  type SignatureRequestBlockedReason,
+} from "@/components/SignatureRequestBlockedNotice";
 
 export interface RequestSignatureModalProps {
   documentTitle: string;
@@ -34,6 +38,8 @@ export function RequestSignatureModal({
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [availableFields, setAvailableFields] = useState<{ id: string; label: string }[]>([]);
+  const [fieldsLoading, setFieldsLoading] = useState(true);
+  const [blockedReason, setBlockedReason] = useState<SignatureRequestBlockedReason | null>(null);
   const [resolvedTemplateId, setResolvedTemplateId] = useState<string | undefined>(documentTemplateId);
   const [message, setMessage] = useState("Please review this document and add your signature.");
   const [sent, setSent] = useState(false);
@@ -48,21 +54,39 @@ export function RequestSignatureModal({
 
   useEffect(() => {
     async function loadFields() {
+      setFieldsLoading(true);
       const storage = new IndexedDBStorage();
       const doc = await storage.getDocument(documentId);
       const templateId = documentTemplateId ?? doc?.templateId;
-      if (!templateId) return;
+      if (!templateId) {
+        setFieldsLoading(false);
+        return;
+      }
       setResolvedTemplateId(templateId);
       const meta = getDocumentById(templateId);
-      if (!meta) return;
+      if (!meta) {
+        setFieldsLoading(false);
+        return;
+      }
       const template = generateTemplate(meta);
       const values = (doc?.fieldData ?? {}) as Record<string, string>;
       const empty = emptyCounterpartySignatureFields(template, values);
+      const counterpartyCount = countCounterpartySignatureFields(template);
       setAvailableFields(empty.map((f) => ({ id: f.id, label: f.label })));
       setSelectedFields(empty.map((f) => f.id));
+      if (counterpartyCount === 0) {
+        setBlockedReason("none-on-template");
+      } else if (empty.length === 0) {
+        setBlockedReason("all-complete");
+      } else {
+        setBlockedReason(null);
+      }
+      setFieldsLoading(false);
     }
     void loadFields();
   }, [documentId, documentTemplateId]);
+
+  const canRequestSignatures = teamAllowed && !fieldsLoading && availableFields.length > 0;
 
   function toggleMember(email: string) {
     setSelectedMembers((prev) =>
@@ -92,7 +116,11 @@ export function RequestSignatureModal({
       return;
     }
     if (selectedFields.length === 0) {
-      setError("Select at least one signature field for them to sign.");
+      setError(
+        blockedReason === "none-on-template"
+          ? "This document has no recipient signature fields to request."
+          : "All recipient signature fields are already signed.",
+      );
       return;
     }
 
@@ -143,7 +171,15 @@ export function RequestSignatureModal({
           </div>
         )}
 
-        {availableFields.length > 0 ? (
+        {!fieldsLoading && blockedReason && (
+          <SignatureRequestBlockedNotice
+            reason={blockedReason}
+            documentTemplateId={resolvedTemplateId}
+            documentLocalId={documentId}
+          />
+        )}
+
+        {canRequestSignatures && (
           <div className="field-group">
             <label>Signature fields to request</label>
             <ul className="team-share-list">
@@ -154,7 +190,6 @@ export function RequestSignatureModal({
                       type="checkbox"
                       checked={selectedFields.includes(f.id)}
                       onChange={() => toggleField(f.id)}
-                      disabled={!teamAllowed}
                     />
                     <div>
                       <strong>{f.label}</strong>
@@ -165,10 +200,10 @@ export function RequestSignatureModal({
               ))}
             </ul>
           </div>
-        ) : (
-          <p className="field-help">All counterparty signature fields are already signed or none are available.</p>
         )}
 
+        {canRequestSignatures && (
+          <>
         {members.length === 0 ? (
           <p className="field-help">No recipients yet — add a contact or team member below.</p>
         ) : (
@@ -182,7 +217,6 @@ export function RequestSignatureModal({
                   <TeamMemberPickerRow
                     recipient={m}
                     checked={selectedMembers.includes(m.email)}
-                    disabled={!teamAllowed}
                     onToggle={() => toggleMember(m.email)}
                     profile={profile}
                     selfEmail={selfEmail}
@@ -209,17 +243,24 @@ export function RequestSignatureModal({
             disabled={!teamAllowed}
           />
         </div>
+          </>
+        )}
+
         {error && <p className="field-error">{error}</p>}
         <div className="modal-actions">
-          <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button type="button" className="btn btn-secondary" onClick={onClose}>
+            {canRequestSignatures ? "Cancel" : "Close"}
+          </button>
+          {canRequestSignatures && (
           <button
             type="button"
             className="btn btn-primary"
-            disabled={selectedMembers.length === 0 || selectedFields.length === 0 || sent || !teamAllowed}
+            disabled={selectedMembers.length === 0 || selectedFields.length === 0 || sent}
             onClick={() => void handleSend()}
           >
             {sent ? "Sent ✓" : `Request Signature (${selectedMembers.length || 0})`}
           </button>
+          )}
         </div>
       </div>
     </div>

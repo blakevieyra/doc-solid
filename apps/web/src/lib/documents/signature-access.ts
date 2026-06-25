@@ -67,6 +67,20 @@ export function emptyCounterpartySignatureFields(
   return fields;
 }
 
+export function countCounterpartySignatureFields(
+  template: DocumentTypeDefinition,
+): number {
+  let count = 0;
+  for (const section of template.sections) {
+    for (const field of section.fields) {
+      if (field.type !== "signature") continue;
+      if (!isCounterpartySignatureField(field, template.category)) continue;
+      count++;
+    }
+  }
+  return count;
+}
+
 export function shouldAutofillOwnerSignatureForEditor(
   field: TemplateField,
   ctx: Pick<SignatureAccessContext, "isDocumentOwner" | "signingMode" | "docCategory">

@@ -11,9 +11,13 @@ import { getEmailRecipients } from "@/lib/team/recipients";
 import { saveShareWithDocument } from "@/lib/team/share-document";
 import { recordDocumentShareAudit } from "@/lib/documents/share-audit";
 import { canUseFeature } from "@/lib/subscription/plans";
-import { emptyCounterpartySignatureFields } from "@/lib/documents/signature-access";
+import { emptyCounterpartySignatureFields, countCounterpartySignatureFields } from "@/lib/documents/signature-access";
 import { TeamMemberPickerRow } from "@/components/TeamMemberPickerRow";
 import { AddRecipientForm } from "@/components/AddRecipientForm";
+import {
+  SignatureRequestBlockedNotice,
+  type SignatureRequestBlockedReason,
+} from "@/components/SignatureRequestBlockedNotice";
 
 export type SendToContactMode = "share" | "signature";
 
@@ -38,6 +42,8 @@ export function SendToContactModal({
   const [selected, setSelected] = useState<string[]>([]);
   const [selectedFields, setSelectedFields] = useState<string[]>([]);
   const [availableFields, setAvailableFields] = useState<{ id: string; label: string }[]>([]);
+  const [fieldsLoading, setFieldsLoading] = useState(mode === "signature");
+  const [blockedReason, setBlockedReason] = useState<SignatureRequestBlockedReason | null>(null);
   const [resolvedTemplateId, setResolvedTemplateId] = useState<string | undefined>(documentTemplateId);
   const [message, setMessage] = useState(
     mode === "signature"
@@ -58,21 +64,40 @@ export function SendToContactModal({
   useEffect(() => {
     if (mode !== "signature") return;
     async function loadFields() {
+      setFieldsLoading(true);
       const storage = new IndexedDBStorage();
       const doc = await storage.getDocument(documentId);
       const templateId = documentTemplateId ?? doc?.templateId;
-      if (!templateId) return;
+      if (!templateId) {
+        setFieldsLoading(false);
+        return;
+      }
       setResolvedTemplateId(templateId);
       const meta = getDocumentById(templateId);
-      if (!meta) return;
+      if (!meta) {
+        setFieldsLoading(false);
+        return;
+      }
       const template = generateTemplate(meta);
       const values = (doc?.fieldData ?? {}) as Record<string, string>;
       const empty = emptyCounterpartySignatureFields(template, values);
+      const counterpartyCount = countCounterpartySignatureFields(template);
       setAvailableFields(empty.map((f) => ({ id: f.id, label: f.label })));
       setSelectedFields(empty.map((f) => f.id));
+      if (counterpartyCount === 0) {
+        setBlockedReason("none-on-template");
+      } else if (empty.length === 0) {
+        setBlockedReason("all-complete");
+      } else {
+        setBlockedReason(null);
+      }
+      setFieldsLoading(false);
     }
     void loadFields();
   }, [documentId, documentTemplateId, mode]);
+
+  const canRequestSignatures =
+    mode !== "signature" || (teamAllowed && !fieldsLoading && availableFields.length > 0);
 
   function toggle(email: string) {
     setSelected((prev) =>
@@ -154,7 +179,15 @@ export function SendToContactModal({
           </div>
         )}
 
-        {mode === "signature" && availableFields.length > 0 && (
+        {mode === "signature" && !fieldsLoading && blockedReason && (
+          <SignatureRequestBlockedNotice
+            reason={blockedReason}
+            documentTemplateId={resolvedTemplateId}
+            documentLocalId={documentId}
+          />
+        )}
+
+        {mode === "signature" && canRequestSignatures && (
           <div className="field-group">
             <label>Signature fields to request</label>
             <ul className="team-share-list">
@@ -165,7 +198,6 @@ export function SendToContactModal({
                       type="checkbox"
                       checked={selectedFields.includes(f.id)}
                       onChange={() => toggleField(f.id)}
-                      disabled={!teamAllowed}
                     />
                     <div>
                       <strong>{f.label}</strong>
@@ -178,6 +210,8 @@ export function SendToContactModal({
           </div>
         )}
 
+        {canRequestSignatures && (
+          <>
         {recipients.length === 0 ? (
           <p className="field-help">No recipients yet — add a contact or team member below.</p>
         ) : (
@@ -217,20 +251,29 @@ export function SendToContactModal({
             disabled={!teamAllowed}
           />
         </div>
+          </>
+        )}
 
         {error && <p className="field-error">{error}</p>}
         <div className="modal-actions">
           <button type="button" className="btn btn-secondary" onClick={onClose}>
-            Cancel
+            {canRequestSignatures ? "Cancel" : "Close"}
           </button>
+          {canRequestSignatures && (
           <button
             type="button"
             className="btn btn-primary"
-            disabled={selected.length === 0 || sent || !teamAllowed}
+            disabled={
+              selected.length === 0 ||
+              sent ||
+              !teamAllowed ||
+              (mode === "signature" && selectedFields.length === 0)
+            }
             onClick={() => void handleSend()}
           >
             {sent ? "Sent ✓" : `${title} (${selected.length || 0})`}
           </button>
+          )}
         </div>
       </div>
     </div>

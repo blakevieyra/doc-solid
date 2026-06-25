@@ -1871,6 +1871,28 @@ button.portal-stat-filter.active .portal-stat-value {
 .team-send-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .email-doc-notice { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.875rem; margin-bottom: 1rem; }
 .email-doc-notice a { color: var(--primary); font-weight: 500; }
+.signature-request-blocked {
+  background: #fffbeb;
+  border: 2px solid #f59e0b;
+  border-radius: 10px;
+  padding: 1rem 1.125rem;
+  margin-bottom: 1.25rem;
+}
+.signature-request-blocked strong {
+  display: block;
+  color: #92400e;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+.signature-request-blocked p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #78350f;
+  line-height: 1.5;
+}
+.signature-request-blocked-actions {
+  margin: 0.875rem 0 0 !important;
+}
 .email-doc-inapp { margin-top: 0.75rem; }
 .email-doc-attach-note { margin-top: 0.5rem; }
 .field-success { color: var(--success); font-size: 0.875rem; margin-top: 0.5rem; }
