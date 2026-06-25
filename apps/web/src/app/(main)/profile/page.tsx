@@ -16,6 +16,7 @@ import type { SubscriptionPlan } from "@/lib/profile/types";
 import { applySubscriptionFromStripe, fetchSubscriptionStatus } from "@/lib/stripe/sync-client";
 
 import { ProfileAccountTab } from "@/components/profile/ProfileAccountTab";
+import { ProfileSaveStatus } from "@/components/profile/ProfileSaveStatus";
 import { ProfilePreferencesTab, ProfileSupportTab } from "@/components/profile/ProfilePreferencesTab";
 import { useAuth } from "@/components/AuthProvider";
 import { IndustrySelect, RecommendedDocuments } from "@/components/RecommendedDocuments";
@@ -226,8 +227,10 @@ export default function ProfilePage() {
       {!locked && (
         <AppShell title="Profile & Settings">
           <p className="page-lead">
-            Manage your account, profiles, preferences, billing, and support.
+            Manage your account, profiles, preferences, billing, and support. Edit any field below — updates save automatically.
           </p>
+
+          <ProfileSaveStatus />
 
           <div className="profile-tab-groups">
             {["Account", "Profiles", "Settings"].map((group) => (

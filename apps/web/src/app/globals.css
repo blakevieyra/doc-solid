@@ -1258,6 +1258,30 @@ a.quick-action-card { text-decoration: none; color: inherit; }
 .brand-logo-2xl .brand-logo-img { height: 192px; max-height: 192px; }
 .auth-logo .brand-logo-img { height: 160px; max-height: 160px; margin: 0 auto; }
 
+.profile-save-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  font-size: 0.875rem;
+}
+.profile-save-status-hint { color: var(--text-muted); flex: 1 1 12rem; }
+.profile-save-status-badge {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.profile-save-status-badge.saving { background: #dbeafe; color: #1d4ed8; }
+.profile-save-status-badge.saved { background: #dcfce7; color: #166534; }
+.profile-save-status-badge.local-only { background: #fef3c7; color: #92400e; }
+
 /* Security Scan */
 .sec-scan-modal { max-width: 520px; }
 .sec-scan-pro-badge {

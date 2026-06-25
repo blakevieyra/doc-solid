@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { useAuth } from "@/components/AuthProvider";
@@ -37,6 +38,7 @@ interface ProfileContextValue {
   documentProfile: UserProfile;
   loading: boolean;
   locked: boolean;
+  saveStatus: "idle" | "saving" | "saved" | "local-only";
   autofill: Record<string, string>;
   updateProfile: (updates: Partial<UserProfile> | ((p: UserProfile) => UserProfile)) => Promise<void>;
   completeOnboarding: () => Promise<void>;
@@ -84,6 +86,14 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [locked, setLocked] = useState(false);
   const [sessionPin, setSessionPin] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<ProfileContextValue["saveStatus"]>("idle");
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const markSaved = useCallback((status: "saved" | "local-only") => {
+    if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    setSaveStatus(status);
+    savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 4000);
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -176,10 +186,12 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
   const persist = useCallback(
     async (next: UserProfile, pin?: string) => {
+      setSaveStatus("saving");
       let saved: UserProfile;
       try {
         saved = await saveProfile(next, userId, pin ?? sessionPin ?? undefined);
       } catch {
+        setSaveStatus("idle");
         addNotification({
           type: "system",
           title: "Could not save profile",
@@ -197,18 +209,22 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
             final = await saveProfile(final, userId, pin ?? sessionPin ?? undefined);
           }
           void refreshTeamShared();
+          markSaved("saved");
         } else {
+          markSaved("local-only");
           addNotification({
             type: "system",
             title: "Saved on this device",
             message: synced.error,
           });
         }
+      } else {
+        markSaved("saved");
       }
 
       setProfile(final);
     },
-    [sessionPin, userId, authMode, refreshTeamShared]
+    [sessionPin, userId, authMode, refreshTeamShared, markSaved]
   );
 
   const updateProfile = useCallback(
@@ -313,6 +329,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       documentProfile,
       loading,
       locked,
+      saveStatus,
       autofill,
       updateProfile,
       completeOnboarding,
@@ -329,6 +346,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       documentProfile,
       loading,
       locked,
+      saveStatus,
       autofill,
       updateProfile,
       completeOnboarding,
