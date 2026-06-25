@@ -24,9 +24,11 @@ export function SecurityCenter() {
 
   async function handleSetPin() {
     setErr("");
-    if (newPin.length < 4) { setErr("PIN must be at least 4 digits"); return; }
-    if (newPin !== confirmPin) { setErr("PINs do not match"); return; }
-    await setPin(newPin);
+    const normalized = newPin.trim();
+    const normalizedConfirm = confirmPin.trim();
+    if (normalized.length < 4) { setErr("PIN must be at least 4 digits"); return; }
+    if (normalized !== normalizedConfirm) { setErr("PINs do not match"); return; }
+    await setPin(normalized);
     setMsg("PIN enabled successfully");
     setNewPin(""); setConfirmPin("");
   }

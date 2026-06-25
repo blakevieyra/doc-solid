@@ -118,6 +118,13 @@ export async function PUT(req: NextRequest) {
         existing?.account.accountId?.trim() ||
         generateAccountId(),
     },
+    security: {
+      ...body.profile.security,
+      pinEnabled: false,
+      pinHash: null,
+      encryptSensitive: false,
+      lastUnlockedAt: null,
+    },
     subscription: await reconcileProfileSubscription(auth.user.email, subscriptionSeed),
   };
 

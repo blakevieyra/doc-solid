@@ -31,6 +31,20 @@ function mergeUniqueStrings(a: string[], b: string[]): string[] {
   return [...new Set([...a, ...b])];
 }
 
+/** PIN lock and field encryption keys stay on this device only — never sync to cloud. */
+export function stripDeviceOnlySecurity(profile: UserProfile): UserProfile {
+  return {
+    ...profile,
+    security: {
+      ...profile.security,
+      pinEnabled: false,
+      pinHash: null,
+      encryptSensitive: false,
+      lastUnlockedAt: null,
+    },
+  };
+}
+
 export async function fetchServerProfile(): Promise<UserProfile | null> {
   const res = await fetch("/api/profile", { credentials: "include", cache: "no-store" });
   if (res.status === 401 || res.status === 503) return null;
@@ -46,7 +60,7 @@ export async function pushServerProfile(
     method: "PUT",
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ profile }),
+    body: JSON.stringify({ profile: stripDeviceOnlySecurity(profile) }),
   });
   if (res.ok) {
     const data = (await res.json()) as { profile: UserProfile };
@@ -108,7 +122,13 @@ export function mergeProfiles(local: UserProfile, server: UserProfile): UserProf
     preferences: mergeSection(primary.preferences, secondary.preferences),
     signatures: mergedSignatures,
     signature,
-    security: mergeSection(primary.security, secondary.security),
+    security: {
+      ...mergeSection(primary.security, secondary.security),
+      pinEnabled: local.security.pinEnabled,
+      pinHash: local.security.pinHash,
+      encryptSensitive: local.security.encryptSensitive,
+      lastUnlockedAt: local.security.lastUnlockedAt,
+    },
     onboardingComplete: local.onboardingComplete || server.onboardingComplete,
     subscription: mergeSubscriptions(local.subscription, server.subscription),
     team: {

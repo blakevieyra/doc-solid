@@ -127,15 +127,17 @@ export default function OnboardingPage() {
 
   async function applyPinIfNeeded() {
     if (enablePin && pin) {
-      if (pin.length < 4) {
+      const normalized = pin.trim();
+      const normalizedConfirm = pinConfirm.trim();
+      if (normalized.length < 4) {
         setPinError("PIN must be at least 4 characters");
         return false;
       }
-      if (pin !== pinConfirm) {
+      if (normalized !== normalizedConfirm) {
         setPinError("PINs do not match");
         return false;
       }
-      await setPin(pin);
+      await setPin(normalized);
     }
     setPinError("");
     return true;

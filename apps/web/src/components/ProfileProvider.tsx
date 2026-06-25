@@ -21,6 +21,7 @@ import {
   importFromCsv,
   resolveOnboardingComplete,
   ensureAccountId,
+  loadDeviceSecuritySettings,
 } from "@/lib/profile/storage";
 import {
   resolveDocumentProfile,
@@ -148,7 +149,18 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
           await pushServerProfile(local);
         }
       } else if (authMode === "server" && session) {
+        const localSecurity = local.security;
         await saveProfile(local, userId, sessionPin ?? undefined);
+        local = {
+          ...local,
+          security: {
+            ...local.security,
+            pinEnabled: localSecurity.pinEnabled,
+            pinHash: localSecurity.pinHash,
+            encryptSensitive: localSecurity.encryptSensitive,
+            lastUnlockedAt: localSecurity.lastUnlockedAt,
+          },
+        };
       }
 
       const missingAccountId = !local.account.accountId?.trim();
@@ -161,7 +173,11 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
       }
 
       setProfile(local);
-      setLocked(local.security.pinEnabled && !local.security.lastUnlockedAt);
+      setLocked(
+        local.security.pinEnabled &&
+          Boolean(local.security.pinHash) &&
+          !local.security.lastUnlockedAt,
+      );
       setLoading(false);
     }
     void load();
@@ -283,25 +299,53 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
   const unlock = useCallback(
     async (pin: string) => {
-      if (!profile.security.pinHash) return true;
-      const ok = await verifyPin(pin, profile.security.pinHash);
-      if (ok) {
-        setSessionPin(pin);
+      const normalized = pin.trim();
+      if (!normalized) return false;
+
+      const deviceSecurity = await loadDeviceSecuritySettings(userId);
+      if (!deviceSecurity.pinEnabled || !deviceSecurity.pinHash) {
         setLocked(false);
-        const decrypted = await loadProfile(userId, pin);
-        setProfile({ ...decrypted, security: { ...decrypted.security, lastUnlockedAt: new Date().toISOString() } });
+        return true;
+      }
+
+      const ok = await verifyPin(normalized, deviceSecurity.pinHash);
+      if (ok) {
+        setSessionPin(normalized);
+        setLocked(false);
+        const decrypted = await loadProfile(userId, normalized);
+        setProfile({
+          ...decrypted,
+          security: {
+            ...decrypted.security,
+            pinEnabled: true,
+            pinHash: deviceSecurity.pinHash,
+            encryptSensitive: deviceSecurity.encryptSensitive,
+            lastUnlockedAt: new Date().toISOString(),
+          },
+        });
       }
       return ok;
     },
-    [profile.security.pinHash, userId]
+    [userId]
   );
 
   const setPinFn = useCallback(
     async (pin: string) => {
-      const pinHash = await hashPin(pin);
-      setSessionPin(pin);
-      const next = { ...profile, security: { ...profile.security, pinEnabled: true, pinHash, encryptSensitive: true } };
-      await saveProfile(next, userId, pin);
+      const normalized = pin.trim();
+      if (!normalized) return;
+      const pinHash = await hashPin(normalized);
+      setSessionPin(normalized);
+      const next = {
+        ...profile,
+        security: {
+          ...profile.security,
+          pinEnabled: true,
+          pinHash,
+          encryptSensitive: true,
+          lastUnlockedAt: new Date().toISOString(),
+        },
+      };
+      await saveProfile(next, userId, normalized);
       setProfile(next);
       setLocked(false);
       if (authMode === "server") void pushServerProfile(next);

@@ -70,16 +70,31 @@ export function AppGate({ children }: { children: React.ReactNode }) {
 }
 
 export function ProfileLockScreen() {
-  const { unlock, locked } = useProfile();
+  const { unlock, removePin, locked } = useProfile();
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   if (!locked) return null;
 
   async function handleUnlock(e: React.FormEvent) {
     e.preventDefault();
-    const ok = await unlock(pin);
+    const ok = await unlock(pin.trim());
     if (!ok) setError(true);
+  }
+
+  async function handleResetPinLock() {
+    const confirmed = window.confirm(
+      "Remove PIN lock on this device? You can set a new PIN afterward in Profile → Security.",
+    );
+    if (!confirmed) return;
+    setResetting(true);
+    try {
+      await removePin();
+      setError(false);
+    } finally {
+      setResetting(false);
+    }
   }
 
   return (
@@ -91,7 +106,7 @@ export function ProfileLockScreen() {
           </svg>
         </div>
         <h2>Profile Locked</h2>
-        <p>Enter your PIN to access sensitive information</p>
+        <p>Enter your PIN to access sensitive information on this device</p>
         <input
           type="password"
           inputMode="numeric"
@@ -103,8 +118,19 @@ export function ProfileLockScreen() {
           className="lock-input"
         />
         {error && <p className="field-error">Incorrect PIN. Try again.</p>}
-        <button type="submit" className="btn btn-primary btn-block">Unlock</button>
-        <p className="lock-hint">Your data is encrypted on this device</p>
+        <button type="submit" className="btn btn-primary btn-block" disabled={resetting}>
+          Unlock
+        </button>
+        <button
+          type="button"
+          className="btn btn-secondary btn-block"
+          style={{ marginTop: "0.5rem" }}
+          disabled={resetting}
+          onClick={() => void handleResetPinLock()}
+        >
+          {resetting ? "Removing PIN…" : "Remove PIN lock on this device"}
+        </button>
+        <p className="lock-hint">Your PIN is stored only on this device and is not synced to the cloud.</p>
       </form>
     </div>
   );

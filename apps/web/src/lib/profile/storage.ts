@@ -206,6 +206,18 @@ export async function loadProfile(userId?: string | null, unlockPin?: string): P
   return profile;
 }
 
+/** Read PIN settings from on-device storage (authoritative for unlock). */
+export async function loadDeviceSecuritySettings(
+  userId?: string | null,
+): Promise<Pick<UserProfile["security"], "pinEnabled" | "pinHash" | "encryptSensitive">> {
+  const profile = await loadProfile(userId);
+  return {
+    pinEnabled: profile.security.pinEnabled,
+    pinHash: profile.security.pinHash,
+    encryptSensitive: profile.security.encryptSensitive,
+  };
+}
+
 export async function saveProfile(
   profile: UserProfile,
   userId?: string | null,
