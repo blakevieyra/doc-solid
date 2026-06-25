@@ -15,6 +15,7 @@ import { useSubscription } from "@/lib/subscription/useSubscription";
 import type { SubscriptionPlan } from "@/lib/profile/types";
 import { applySubscriptionFromStripe, fetchSubscriptionStatus } from "@/lib/stripe/sync-client";
 
+import { ProfileField, ProfileTextArea } from "@/components/profile/DeferredTextInput";
 import { ProfileAccountTab } from "@/components/profile/ProfileAccountTab";
 import { ProfileSaveStatus } from "@/components/profile/ProfileSaveStatus";
 import { ProfilePreferencesTab, ProfileSupportTab } from "@/components/profile/ProfilePreferencesTab";
@@ -281,8 +282,8 @@ export default function ProfilePage() {
                 value={profile.business.logo}
                 onChange={(logo) => updateProfile({ business: { ...profile.business, logo } })}
               />
-              <Field label="Business Name" value={profile.business.name} onChange={(v) => updateProfile({ business: { ...profile.business, name: v } })} />
-              <Field label="Tagline" value={profile.business.tagline} onChange={(v) => updateProfile({ business: { ...profile.business, tagline: v } })} />
+              <ProfileField label="Business Name" value={profile.business.name} onChange={(v) => updateProfile({ business: { ...profile.business, name: v } })} />
+              <ProfileField label="Tagline" value={profile.business.tagline} onChange={(v) => updateProfile({ business: { ...profile.business, tagline: v } })} />
               <IndustrySelect
                 value={profile.business.industry}
                 onChange={(v) => updateProfile({ business: { ...profile.business, industry: v } })}
@@ -295,10 +296,10 @@ export default function ProfilePage() {
                   compact
                 />
               )}
-              <Field label="Email" type="email" value={profile.business.email} onChange={(v) => updateProfile({ business: { ...profile.business, email: v } })} />
-              <Field label="Phone" type="tel" value={profile.business.phone} onChange={(v) => updateProfile({ business: { ...profile.business, phone: v } })} />
-              <Field label="Website" value={profile.business.website} onChange={(v) => updateProfile({ business: { ...profile.business, website: v } })} />
-              <Field label="Tax ID / EIN" value={profile.business.taxId} onChange={(v) => updateProfile({ business: { ...profile.business, taxId: v } })} sensitive />
+              <ProfileField label="Email" type="email" value={profile.business.email} onChange={(v) => updateProfile({ business: { ...profile.business, email: v } })} />
+              <ProfileField label="Phone" type="tel" value={profile.business.phone} onChange={(v) => updateProfile({ business: { ...profile.business, phone: v } })} />
+              <ProfileField label="Website" value={profile.business.website} onChange={(v) => updateProfile({ business: { ...profile.business, website: v } })} />
+              <ProfileField label="Tax ID / EIN" value={profile.business.taxId} onChange={(v) => updateProfile({ business: { ...profile.business, taxId: v } })} sensitive />
               <AddressBlock label="Business Address" address={profile.business.address} onChange={(a) => updateProfile({ business: { ...profile.business, address: a } })} />
               <OwnerSignatureSettings
                 profile={profile}
@@ -320,13 +321,13 @@ export default function ProfilePage() {
                 value={profile.personal.photo}
                 onChange={(photo) => updateProfile({ personal: { ...profile.personal, photo } })}
               />
-              <Field label="Full Name" value={profile.personal.fullName} onChange={(v) => updateProfile({ personal: { ...profile.personal, fullName: v } })} />
-              <Field label="Username (optional)" value={profile.personal.username} onChange={(v) => updateProfile({ personal: { ...profile.personal, username: v.replace(/^@/, "") } })} />
+              <ProfileField label="Full Name" value={profile.personal.fullName} onChange={(v) => updateProfile({ personal: { ...profile.personal, fullName: v } })} />
+              <ProfileField label="Username (optional)" value={profile.personal.username} transform={(v) => v.replace(/^@/, "")} onChange={(v) => updateProfile({ personal: { ...profile.personal, username: v } })} />
               <p className="field-help">Teammates see @username when adding or searching for you</p>
-              <Field label="Professional Title" value={profile.personal.title} onChange={(v) => updateProfile({ personal: { ...profile.personal, title: v } })} />
-              <Field label="Email" type="email" value={profile.personal.email} onChange={(v) => updateProfile({ personal: { ...profile.personal, email: v } })} />
-              <Field label="Phone" type="tel" value={profile.personal.phone} onChange={(v) => updateProfile({ personal: { ...profile.personal, phone: v } })} />
-              <Field label="LinkedIn" value={profile.personal.linkedin} onChange={(v) => updateProfile({ personal: { ...profile.personal, linkedin: v } })} />
+              <ProfileField label="Professional Title" value={profile.personal.title} onChange={(v) => updateProfile({ personal: { ...profile.personal, title: v } })} />
+              <ProfileField label="Email" type="email" value={profile.personal.email} onChange={(v) => updateProfile({ personal: { ...profile.personal, email: v } })} />
+              <ProfileField label="Phone" type="tel" value={profile.personal.phone} onChange={(v) => updateProfile({ personal: { ...profile.personal, phone: v } })} />
+              <ProfileField label="LinkedIn" value={profile.personal.linkedin} onChange={(v) => updateProfile({ personal: { ...profile.personal, linkedin: v } })} />
               <AddressBlock label="Personal Address" address={profile.personal.address} onChange={(a) => updateProfile({ personal: { ...profile.personal, address: a } })} />
               <OwnerSignatureSettings
                 profile={profile}
@@ -348,12 +349,12 @@ export default function ProfilePage() {
                 value={profile.organization.logo}
                 onChange={(logo) => updateProfile({ organization: { ...profile.organization, logo } })}
               />
-              <Field label="Organization Name" value={profile.organization.name} onChange={(v) => updateProfile({ organization: { ...profile.organization, name: v } })} />
-              <TextField label="Mission Statement" value={profile.organization.mission} onChange={(v) => updateProfile({ organization: { ...profile.organization, mission: v } })} />
-              <Field label="Email" type="email" value={profile.organization.email} onChange={(v) => updateProfile({ organization: { ...profile.organization, email: v } })} />
-              <Field label="Phone" type="tel" value={profile.organization.phone} onChange={(v) => updateProfile({ organization: { ...profile.organization, phone: v } })} />
-              <Field label="Website" value={profile.organization.website} onChange={(v) => updateProfile({ organization: { ...profile.organization, website: v } })} />
-              <Field label="Tax ID / EIN" value={profile.organization.taxId} onChange={(v) => updateProfile({ organization: { ...profile.organization, taxId: v } })} sensitive />
+              <ProfileField label="Organization Name" value={profile.organization.name} onChange={(v) => updateProfile({ organization: { ...profile.organization, name: v } })} />
+              <ProfileTextArea label="Mission Statement" value={profile.organization.mission} onChange={(v) => updateProfile({ organization: { ...profile.organization, mission: v } })} />
+              <ProfileField label="Email" type="email" value={profile.organization.email} onChange={(v) => updateProfile({ organization: { ...profile.organization, email: v } })} />
+              <ProfileField label="Phone" type="tel" value={profile.organization.phone} onChange={(v) => updateProfile({ organization: { ...profile.organization, phone: v } })} />
+              <ProfileField label="Website" value={profile.organization.website} onChange={(v) => updateProfile({ organization: { ...profile.organization, website: v } })} />
+              <ProfileField label="Tax ID / EIN" value={profile.organization.taxId} onChange={(v) => updateProfile({ organization: { ...profile.organization, taxId: v } })} sensitive />
               <AddressBlock label="Organization Address" address={profile.organization.address} onChange={(a) => updateProfile({ organization: { ...profile.organization, address: a } })} />
               <OwnerSignatureSettings
                 profile={profile}
@@ -518,38 +519,18 @@ export default function ProfilePage() {
   );
 }
 
-function Field({ label, value, onChange, type = "text", sensitive }: {
-  label: string; value: string; onChange: (v: string) => void; type?: string; sensitive?: boolean;
-}) {
-  return (
-    <div className="field-group">
-      <label>{label}{sensitive && " 🔒"}</label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} />
-    </div>
-  );
-}
-
-function TextField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="field-group">
-      <label>{label}</label>
-      <textarea value={value} onChange={(e) => onChange(e.target.value)} />
-    </div>
-  );
-}
-
 function AddressBlock({ label, address, onChange }: { label: string; address: Address; onChange: (a: Address) => void }) {
   const set = (key: keyof Address, val: string) => onChange({ ...address, [key]: val });
   return (
     <fieldset className="address-block">
       <legend>{label}</legend>
-      <Field label="Street" value={address.street} onChange={(v) => set("street", v)} />
+      <ProfileField label="Street" value={address.street} onChange={(v) => set("street", v)} />
       <div className="address-row">
-        <Field label="City" value={address.city} onChange={(v) => set("city", v)} />
-        <Field label="State" value={address.state} onChange={(v) => set("state", v)} />
-        <Field label="ZIP" value={address.zip} onChange={(v) => set("zip", v)} />
+        <ProfileField label="City" value={address.city} onChange={(v) => set("city", v)} />
+        <ProfileField label="State" value={address.state} onChange={(v) => set("state", v)} />
+        <ProfileField label="ZIP" value={address.zip} onChange={(v) => set("zip", v)} />
       </div>
-      <Field label="Country" value={address.country} onChange={(v) => set("country", v)} />
+      <ProfileField label="Country" value={address.country} onChange={(v) => set("country", v)} />
     </fieldset>
   );
 }

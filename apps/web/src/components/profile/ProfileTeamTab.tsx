@@ -12,6 +12,7 @@ import { canUseFeature, maxTeamMembers } from "@/lib/subscription/plans";
 import type { AppContact, TeamMember, TeamRole, UserProfile } from "@/lib/profile/types";
 import { mergeTeamMembersByEmail } from "@/lib/team/members-merge";
 import { generateAccountId } from "@/lib/support/config";
+import { ProfileField } from "@/components/profile/DeferredTextInput";
 
 function Field({
   label,
@@ -27,15 +28,13 @@ function Field({
   sensitive?: boolean;
 }) {
   return (
-    <div className="field-group">
-      <label className="field-label">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={sensitive ? "field-sensitive" : undefined}
-      />
-    </div>
+    <ProfileField
+      label={label}
+      value={value}
+      onChange={onChange}
+      type={type}
+      sensitive={sensitive}
+    />
   );
 }
 

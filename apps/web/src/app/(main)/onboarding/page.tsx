@@ -11,6 +11,7 @@ import { getPlan } from "@/lib/subscription/plans";
 import { SALES_EMAIL } from "@/lib/support/config";
 import { RecommendedDocuments, IndustrySelect } from "@/components/RecommendedDocuments";
 import { buildPreferredProfilePatch } from "@/components/profile/ProfilePreferredBanner";
+import { DeferredTextInput, DeferredTextArea } from "@/components/profile/DeferredTextInput";
 import {
   getRecommendedDocuments,
   getRecommendationHeading,
@@ -295,7 +296,7 @@ export default function OnboardingPage() {
               {selectedProfileType === "individual" && (
                 <FormBlock title="Personal">
                   <Input label="Full Name *" value={profile.personal.fullName} onChange={(v) => updateProfile({ personal: { ...profile.personal, fullName: v } })} />
-                  <Input label="Username (optional)" value={profile.personal.username} onChange={(v) => updateProfile({ personal: { ...profile.personal, username: v.replace(/^@/, "") } })} />
+                  <Input label="Username (optional)" value={profile.personal.username} transform={(v) => v.replace(/^@/, "")} onChange={(v) => updateProfile({ personal: { ...profile.personal, username: v } })} />
                   <p className="field-help">Shown when teammates search for you (@handle)</p>
                   <Input label="Professional Title" value={profile.personal.title} onChange={(v) => updateProfile({ personal: { ...profile.personal, title: v } })} />
                   <Input label="Email" type="email" value={profile.personal.email} onChange={(v) => updateProfile({ personal: { ...profile.personal, email: v } })} />
@@ -498,15 +499,22 @@ function FormBlock({ title, children }: { title: string; children: React.ReactNo
 }
 
 function Input({
-  label, value, onChange, type = "text", placeholder, sensitive,
+  label, value, onChange, type = "text", placeholder, sensitive, transform,
 }: {
   label: string; value: string; onChange: (v: string) => void;
   type?: string; placeholder?: string; sensitive?: boolean;
+  transform?: (v: string) => string;
 }) {
   return (
     <div className="field-group">
       <label>{label}{sensitive && <span className="field-sensitive-tag">Encrypted</span>}</label>
-      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
+      <DeferredTextInput
+        type={type}
+        value={value}
+        onCommit={onChange}
+        placeholder={placeholder}
+        transform={transform}
+      />
     </div>
   );
 }
@@ -515,7 +523,7 @@ function Textarea({ label, value, onChange }: { label: string; value: string; on
   return (
     <div className="field-group">
       <label>{label}</label>
-      <textarea value={value} onChange={(e) => onChange(e.target.value)} />
+      <DeferredTextArea value={value} onCommit={onChange} />
     </div>
   );
 }

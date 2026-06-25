@@ -9,6 +9,7 @@ import { getPlan } from "@/lib/subscription/plans";
 import { getAccountAge, useDocumentStats } from "@/lib/account/stats";
 import { DeleteDataModal } from "@/components/DeleteDataModal";
 import { profileSectionLabel, resolveProfileIdentityContext } from "@/lib/profile/profile-identity";
+import { ProfileField } from "@/components/profile/DeferredTextInput";
 
 interface ProfileAccountTabProps {
   onNavigate: (tab: string) => void;
@@ -45,13 +46,13 @@ export function ProfileAccountTab({ onNavigate }: ProfileAccountTabProps) {
       </div>
 
       <h3 className="section-title" style={{ marginTop: "2rem" }}>Manage Account</h3>
-      <Field
+      <ProfileField
         label="Display Name"
         value={profile.account.displayName}
         onChange={(v) => updateProfile({ account: { ...profile.account, displayName: v } })}
         help="Shown in the app header and document footers"
       />
-      <Field
+      <ProfileField
         label="Account Email"
         type="email"
         value={profile.account.email}
@@ -72,7 +73,7 @@ export function ProfileAccountTab({ onNavigate }: ProfileAccountTabProps) {
           Change this at the top of the Business, Personal, or Organization profile tabs.
         </span>
       </div>
-      <Field
+      <ProfileField
         label="Timezone"
         value={profile.account.timezone}
         onChange={(v) => updateProfile({ account: { ...profile.account, timezone: v } })}
@@ -126,33 +127,6 @@ function StatCard({ label, value }: { label: string; value: string }) {
     <div className="account-stat-card">
       <span className="account-stat-value">{value}</span>
       <span className="account-stat-label">{label}</span>
-    </div>
-  );
-}
-
-function Field({
-  label, value, onChange, type = "text", help, readOnly, as, options,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  type?: string;
-  help?: string;
-  readOnly?: boolean;
-  as?: "select";
-  options?: string[];
-}) {
-  return (
-    <div className="field-group">
-      <label>{label}</label>
-      {as === "select" ? (
-        <select value={value} onChange={(e) => onChange(e.target.value)}>
-          {options?.map((o) => <option key={o} value={o}>{o.replace(/_/g, " ")}</option>)}
-        </select>
-      ) : (
-        <input type={type} value={value} onChange={(e) => onChange(e.target.value)} readOnly={readOnly} />
-      )}
-      {help && <span className="field-help">{help}</span>}
     </div>
   );
 }
