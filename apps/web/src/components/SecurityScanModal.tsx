@@ -108,12 +108,12 @@ export function SecurityScanModal({
       <div className="modal-card sec-scan-modal" onClick={(e) => e.stopPropagation()}>
         <h2>Security Scan & Redaction</h2>
         <p className="field-help">Review sensitive data in &quot;{documentTitle}&quot; and choose what to redact.</p>
-        {isFinalDocument && (
-          <p className="field-help sec-redact-final-note">
-            This document is marked {documentStatus?.toLowerCase()}. Redaction updates flagged text fields with a blacked-out
-            &quot;REDACTED&quot; label. Signed signature fields stay intact to preserve the executed record.
-          </p>
-        )}
+        <p className="field-help sec-redact-final-note">
+          Redaction saves a <strong>new copy</strong> titled &quot;(Redacted)&quot; in My Files. Your original document is not changed.
+          {isFinalDocument
+            ? " Signed signature fields stay intact on the copy to preserve the executed record."
+            : " Flagged fields are replaced with a blacked-out REDACTED label."}
+        </p>
 
         <div className="sec-privacy-notice">
           <strong>Privacy notice</strong>
@@ -159,7 +159,7 @@ export function SecurityScanModal({
             ) : (
               <>
                 <p className="field-help sec-redact-hint">
-                  Select items to redact, then apply. Flagged fields are replaced with a blacked-out REDACTED label in the preview and PDF.
+                  Select items to redact, then apply. A new copy is created with blacked-out REDACTED labels — your original stays unchanged.
                 </p>
                 <ul className="sec-findings-list">
                   {result.findings.map((f) => (
@@ -185,7 +185,7 @@ export function SecurityScanModal({
               <p className="field-success">Scan saved to Profile → Security → Scan History</p>
             )}
             {applied && (
-              <p className="field-success">Redaction applied and saved.</p>
+              <p className="field-success">Redacted copy saved to My Files. Your original is unchanged.</p>
             )}
             {result.findings.length > 0 && onRedact && !applied && (
               <button
@@ -194,7 +194,7 @@ export function SecurityScanModal({
                 disabled={selectedCount === 0}
                 onClick={applyRedaction}
               >
-                Apply Redaction ({selectedCount} item{selectedCount !== 1 ? "s" : ""})
+                Apply Redaction — save copy ({selectedCount} item{selectedCount !== 1 ? "s" : ""})
               </button>
             )}
           </div>

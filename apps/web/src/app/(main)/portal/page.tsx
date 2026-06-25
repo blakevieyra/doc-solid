@@ -3,6 +3,7 @@
 
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -35,6 +36,7 @@ import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/components/AuthProvider";
 
 import { useProfile } from "@/components/ProfileProvider";
+import { useNotifications } from "@/components/NotificationProvider";
 
 import type { DocumentShare } from "@/lib/team/invites";
 import { isShareRecipient, isShareSender } from "@/lib/team/invites";
@@ -72,7 +74,7 @@ import { ReturnShareModal } from "@/components/ReturnShareModal";
 import { SendToContactModal } from "@/components/SendToContactModal";
 import { AddToPacketModal } from "@/components/AddToPacketModal";
 import { canUseFeature } from "@/lib/subscription/plans";
-import { archiveSavedDocument, unarchiveSavedDocument, applyDocumentRedaction } from "@/lib/documents/persist";
+import { archiveSavedDocument, unarchiveSavedDocument, createRedactedDocumentCopy } from "@/lib/documents/persist";
 import {
   getFavoriteLocalIds,
   getFavoriteTemplateIds,
@@ -88,6 +90,8 @@ export default function PortalPage() {
   const { session, authMode } = useAuth();
 
   const { profile } = useProfile();
+  const { notify } = useNotifications();
+  const router = useRouter();
 
   const [documents, setDocuments] = useState<LocalDocument[]>([]);
 
@@ -996,10 +1000,34 @@ export default function PortalPage() {
           values={scanDoc.fieldData as Record<string, string>}
           documentStatus={scanDoc.status}
           onClose={() => setScanDoc(null)}
-          onRedact={async (redacted, _scan, applied) => {
-            const { doc } = await applyDocumentRedaction(scanDoc.localId, applied, actor);
-            if (doc) {
-              setDocuments((prev) => prev.map((d) => (d.localId === doc.localId ? doc : d)));
+          onRedact={async (_redacted, _scan, applied) => {
+            const unlimitedDocs = canUseFeature(profile.subscription, "unlimitedDocs");
+            const { sourceDoc, redactedDoc, error } = await createRedactedDocumentCopy(
+              scanDoc.localId,
+              applied,
+              {
+                actor,
+                userId: session?.userId ?? null,
+                unlimitedDocs,
+                authMode: authMode ?? undefined,
+              },
+            );
+            if (error) {
+              notify({ type: "system", title: "Could not create redacted copy", message: error });
+              return;
+            }
+            if (sourceDoc) {
+              setDocuments((prev) => prev.map((d) => (d.localId === sourceDoc.localId ? sourceDoc : d)));
+            }
+            if (redactedDoc) {
+              setDocuments((prev) => [redactedDoc, ...prev]);
+              notify({
+                type: "system",
+                title: "Redacted copy saved",
+                message: `"${redactedDoc.title}" is ready in My Files. Your original is unchanged.`,
+                link: `/portal/view/${redactedDoc.localId}`,
+              });
+              router.push(`/portal/view/${redactedDoc.localId}`);
             }
             setScanDoc(null);
           }}

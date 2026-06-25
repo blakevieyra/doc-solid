@@ -30,7 +30,7 @@ import { EmailDocumentModal } from "@/components/EmailDocumentModal";
 import { SecurityScanModal } from "@/components/SecurityScanModal";
 import { DocumentComplianceBar } from "@/components/DocumentComplianceBar";
 import { SignatureField } from "@/components/SignatureField";
-import { applyDocumentRedaction, updateSavedDocumentFields, deleteSavedDocument } from "@/lib/documents/persist";
+import { createRedactedDocumentCopy, updateSavedDocumentFields, deleteSavedDocument } from "@/lib/documents/persist";
 import { isOwnerSignatureField } from "@/lib/profile/signature";
 import { canApplyOwnerSignature } from "@/lib/documents/completeness";
 import {
@@ -821,14 +821,26 @@ function DocumentEditorPageContent() {
             values={values}
             documentStatus={docStatus}
             onClose={() => setShowSecurityScan(false)}
-            onRedact={async (redacted, _scan, applied) => {
-              setValues(redacted);
-              if (savedLocalId) {
-                const { doc } = await applyDocumentRedaction(savedLocalId, applied);
-                if (doc) {
-                  setValues(doc.fieldData as Record<string, string>);
-                  setDocStatus(doc.status);
-                }
+            onRedact={async (_redacted, _scan, applied) => {
+              if (!savedLocalId) return;
+              const unlimitedDocs = canUseFeature(profile.subscription, "unlimitedDocs");
+              const { redactedDoc, error } = await createRedactedDocumentCopy(savedLocalId, applied, {
+                userId: session?.userId ?? docOwnerId,
+                unlimitedDocs,
+                authMode: authMode ?? undefined,
+              });
+              if (error) {
+                notify({ type: "system", title: "Could not create redacted copy", message: error });
+                return;
+              }
+              if (redactedDoc) {
+                notify({
+                  type: "system",
+                  title: "Redacted copy saved",
+                  message: `"${redactedDoc.title}" is ready in My Files. Your original is unchanged.`,
+                  link: `/portal/view/${redactedDoc.localId}`,
+                });
+                router.push(`/portal/view/${redactedDoc.localId}`);
               }
             }}
           />

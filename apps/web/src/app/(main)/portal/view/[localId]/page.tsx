@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { IndexedDBStorage } from "@doc-solid/storage";
 import { generateTemplate, getDocumentById } from "@doc-solid/documents";
@@ -18,8 +18,9 @@ import { useAuth } from "@/components/AuthProvider";
 import { exportDocumentPdf, documentPdfFilename } from "@/lib/pdf/exportDocument";
 import { canUseFeature } from "@/lib/subscription/plans";
 import { resolveDocumentNumber } from "@/lib/documents/document-number";
-import { applyDocumentRedaction, updateSavedDocumentFields } from "@/lib/documents/persist";
+import { createRedactedDocumentCopy, updateSavedDocumentFields } from "@/lib/documents/persist";
 import type { SecurityFinding } from "@/lib/security/document-scan";
+import { useNotifications } from "@/components/NotificationProvider";
 import { isShareSender, loadShares, getShareById } from "@/lib/team/invites";
 import {
   getShareSigningHref,
@@ -36,7 +37,9 @@ function SavedDocumentPageContent() {
   const shareId = searchParams?.get("shareId");
   const localId = params?.localId as string | undefined;
   const { profile, documentProfile } = useProfile();
-  const { session } = useAuth();
+  const { session, authMode } = useAuth();
+  const { notify } = useNotifications();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [title, setTitle] = useState("");
   const [templateId, setTemplateId] = useState("");
@@ -112,16 +115,37 @@ function SavedDocumentPageContent() {
   }, [localId, shareId, loading, userEmail, userName]);
 
   async function handleRedact(
-    redacted: Record<string, string>,
+    _redacted: Record<string, string>,
     _scan: unknown,
     applied: SecurityFinding[],
   ) {
-    setValues(redacted);
-    if (!localId || shareContext?.fieldDataSnapshot) return;
-    const { doc } = await applyDocumentRedaction(localId, applied);
-    if (doc) {
-      setValues(doc.fieldData as Record<string, string>);
-      setDocStatus(doc.status);
+    if (!localId || shareContext?.fieldDataSnapshot) {
+      notify({
+        type: "system",
+        title: "Save a copy first",
+        message: "Redaction creates a new copy in My Files. Shared previews cannot be redacted in place.",
+      });
+      return;
+    }
+    const unlimitedDocs = canUseFeature(profile.subscription, "unlimitedDocs");
+    const { redactedDoc, error } = await createRedactedDocumentCopy(localId, applied, {
+      actor: { email: userEmail, name: userName },
+      userId: session?.userId ?? null,
+      unlimitedDocs,
+      authMode: authMode ?? undefined,
+    });
+    if (error) {
+      notify({ type: "system", title: "Could not create redacted copy", message: error });
+      return;
+    }
+    if (redactedDoc) {
+      notify({
+        type: "system",
+        title: "Redacted copy saved",
+        message: `"${redactedDoc.title}" is ready in My Files. Your original is unchanged.`,
+        link: `/portal/view/${redactedDoc.localId}`,
+      });
+      router.push(`/portal/view/${redactedDoc.localId}`);
     }
   }
 
