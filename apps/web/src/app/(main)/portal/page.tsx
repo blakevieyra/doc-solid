@@ -65,7 +65,6 @@ import { DocumentAuditTrail } from "@/components/DocumentAuditTrail";
 import { ReturnShareModal } from "@/components/ReturnShareModal";
 import { SendToContactModal } from "@/components/SendToContactModal";
 import { AddToPacketModal } from "@/components/AddToPacketModal";
-import { FavoriteButton } from "@/components/FavoriteButton";
 import { canUseFeature } from "@/lib/subscription/plans";
 import { archiveSavedDocument, unarchiveSavedDocument, updateSavedDocumentFields } from "@/lib/documents/persist";
 import {
@@ -73,7 +72,6 @@ import {
   getFavoriteTemplateIds,
   getPortalFavoriteCount,
   isSavedDocFavorite,
-  toggleFavoriteLocal,
 } from "@/lib/documents/favorites";
 import { createDocumentAuditEvent } from "@/lib/documents/audit";
 
@@ -83,7 +81,7 @@ export default function PortalPage() {
 
   const { session, authMode } = useAuth();
 
-  const { profile, updateProfile } = useProfile();
+  const { profile } = useProfile();
 
   const [documents, setDocuments] = useState<LocalDocument[]>([]);
 
@@ -128,15 +126,6 @@ export default function PortalPage() {
     [documents, profile, favoriteTemplateIds, favoriteLocalIds]
   );
   const favoriteChipCount = getPortalFavoriteCount(profile, documents);
-
-  async function handleToggleFileFavorite(localId: string) {
-    const result = toggleFavoriteLocal(profile, localId);
-    await updateProfile({
-      library: { ...profile.library, favoriteLocalIds: result.favorites },
-    });
-  }
-
-
 
   useEffect(() => {
 
@@ -853,17 +842,7 @@ export default function PortalPage() {
 
             return (
 
-              <article key={doc.localId} className="card portal-file-card portal-file-card-with-fav">
-
-                <FavoriteButton
-                  active={isSavedDocFavorite(profile, doc)}
-                  size="sm"
-                  onToggle={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    void handleToggleFileFavorite(doc.localId);
-                  }}
-                />
+              <article key={doc.localId} className="card portal-file-card">
 
                 <div className="portal-file-card-head">
 

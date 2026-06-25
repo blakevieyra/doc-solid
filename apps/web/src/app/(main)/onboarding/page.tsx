@@ -9,7 +9,8 @@ import type { ProfileType, Address, UserProfile } from "@/lib/profile/types";
 import { PlanSelector, type PlanChoice } from "@/components/PlanSelector";
 import { getPlan } from "@/lib/subscription/plans";
 import { SALES_EMAIL } from "@/lib/support/config";
-import { IndustrySelect, RecommendedDocuments } from "@/components/RecommendedDocuments";
+import { RecommendedDocuments, IndustrySelect } from "@/components/RecommendedDocuments";
+import { buildPreferredProfilePatch } from "@/components/profile/ProfilePreferredBanner";
 import {
   getRecommendedDocuments,
   getRecommendationHeading,
@@ -99,7 +100,13 @@ export default function OnboardingPage() {
     setStepError("");
     setSaving(true);
     try {
-      await updateProfile({ profileType: selectedProfileType });
+      const section =
+        selectedProfileType === "individual"
+          ? "individual"
+          : selectedProfileType === "organization"
+            ? "organization"
+            : "business";
+      await updateProfile(buildPreferredProfilePatch(profile, section));
       await goToStep(2);
     } catch {
       setStepError("Could not save your selection. Please try again.");

@@ -8,8 +8,7 @@ import { useProfile } from "@/components/ProfileProvider";
 import { getPlan } from "@/lib/subscription/plans";
 import { getAccountAge, useDocumentStats } from "@/lib/account/stats";
 import { DeleteDataModal } from "@/components/DeleteDataModal";
-import type { ProfileType } from "@/lib/profile/types";
-import { syncSignatureContextForProfileType } from "@/lib/profile/signature-library";
+import { profileSectionLabel, resolveProfileIdentityContext } from "@/lib/profile/profile-identity";
 
 interface ProfileAccountTabProps {
   onNavigate: (tab: string) => void;
@@ -37,7 +36,10 @@ export function ProfileAccountTab({ onNavigate }: ProfileAccountTabProps) {
         <StatCard label="Documents saved" value={loading ? "…" : String(count)} />
         <StatCard label="Current plan" value={getPlan(profile.subscription.plan).name} />
         <StatCard label="Account age" value={getAccountAge(profile.createdAt)} />
-        <StatCard label="Profile type" value={profile.profileType} />
+        <StatCard
+          label="Preferred profile"
+          value={profileSectionLabel(resolveProfileIdentityContext(profile.profileType))}
+        />
       </div>
 
       <h3 className="section-title" style={{ marginTop: "2rem" }}>Manage Account</h3>
@@ -62,25 +64,13 @@ export function ProfileAccountTab({ onNavigate }: ProfileAccountTabProps) {
         help="Reference this ID when contacting support"
       />
       <div className="field-group">
-        <label>Profile Type</label>
-        <select
-          value={profile.profileType}
-          onChange={(e) => {
-            const profileType = e.target.value as ProfileType;
-            void updateProfile((current) => {
-              const next = { ...current, profileType };
-              const signaturePatch = syncSignatureContextForProfileType(next);
-              return signaturePatch ? { ...next, ...signaturePatch } : next;
-            });
-          }}
-        >
-          <option value="business">Business</option>
-          <option value="individual">Individual</option>
-          <option value="organization">Organization</option>
-          {profile.profileType === "mixed" && (
-            <option value="mixed">Mixed (please choose one type)</option>
-          )}
-        </select>
+        <label>Preferred profile for documents</label>
+        <p className="field-readonly-value">
+          {profileSectionLabel(resolveProfileIdentityContext(profile.profileType))}
+        </p>
+        <span className="field-help">
+          Change this at the top of the Business, Personal, or Organization profile tabs.
+        </span>
       </div>
       <Field
         label="Timezone"

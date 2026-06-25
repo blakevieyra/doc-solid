@@ -9,6 +9,25 @@ export function resolveProfileIdentityContext(profileType: ProfileType): Profile
   return "business";
 }
 
+export function signatureContextToProfileType(section: ProfileIdentityContext): ProfileType {
+  if (section === "individual") return "individual";
+  if (section === "organization") return "organization";
+  return "business";
+}
+
+export function isPreferredProfileSection(
+  profileType: ProfileType,
+  section: ProfileIdentityContext,
+): boolean {
+  return resolveProfileIdentityContext(profileType) === section;
+}
+
+export function profileSectionLabel(section: ProfileIdentityContext): string {
+  if (section === "individual") return "Personal";
+  if (section === "organization") return "Organization";
+  return "Business";
+}
+
 /** Primary name, logo, and contact block for the user's selected profile type */
 export function resolveProfileIdentity(profile: UserProfile) {
   const context = resolveProfileIdentityContext(profile.profileType);

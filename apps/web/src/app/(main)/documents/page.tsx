@@ -7,7 +7,6 @@ import {
   DOCUMENT_CATEGORIES,
   DOCUMENT_DOMAINS,
   filterCatalog,
-  getDocumentById,
   type DocumentCatalogEntry,
 } from "@doc-solid/documents";
 import { AppShell } from "@/components/AppShell";
@@ -134,7 +133,7 @@ export default function DocumentsPage() {
           </p>
         </div>
       ) : (
-        <div className="grid-3 doc-catalog-grid">
+        <div className="recommended-docs-grid doc-catalog-grid">
           {filtered.map((doc) => (
             <DocumentCard
               key={doc.id}
@@ -159,25 +158,22 @@ function DocumentCard({
   onToggleFavorite: () => void;
 }) {
   return (
-    <div className="card doc-card doc-card-with-fav">
+    <div className="card recommended-doc-card recommended-doc-card-with-actions">
       <FavoriteButton
         active={favorited}
+        size="sm"
         onToggle={(e) => {
           e.preventDefault();
           e.stopPropagation();
           onToggleFavorite();
         }}
       />
-      <Link href={`/documents/${doc.id}`} className="doc-card-link">
-        <div className="doc-card-header">
-          <h3>{doc.name}</h3>
-          <span className={`badge badge-${doc.priority}`}>{doc.priority}</span>
-        </div>
-        <p className="doc-card-desc">{doc.description}</p>
-        <div className="doc-card-tags">
+      <Link href={`/documents/${doc.id}`} className="recommended-doc-link">
+        <strong>{doc.name}</strong>
+        <span className="recommended-doc-desc">{doc.description}</span>
+        <div className="recommended-doc-tags">
           <span className="doc-tag">{doc.domain}</span>
           <span className="doc-tag">{doc.category}</span>
-          {doc.hasFullTemplate && <span className="doc-tag doc-tag-ready">Ready</span>}
         </div>
       </Link>
     </div>

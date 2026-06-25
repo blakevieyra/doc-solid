@@ -20,7 +20,9 @@ import { ProfileSaveStatus } from "@/components/profile/ProfileSaveStatus";
 import { ProfilePreferencesTab, ProfileSupportTab } from "@/components/profile/ProfilePreferencesTab";
 import { useAuth } from "@/components/AuthProvider";
 import { IndustrySelect, RecommendedDocuments } from "@/components/RecommendedDocuments";
+import { ProfilePreferredBanner } from "@/components/profile/ProfilePreferredBanner";
 import { OwnerSignatureSettings } from "@/components/SignatureField";
+import { profileSectionLabel, resolveProfileIdentityContext } from "@/lib/profile/profile-identity";
 import {
   getRecommendedDocuments,
   getRecommendationHeading,
@@ -185,6 +187,12 @@ export default function ProfilePage() {
     }
   }
 
+  const preferredLabel = profileSectionLabel(resolveProfileIdentityContext(profile.profileType));
+
+  async function applyPreferredProfile(next: import("@/lib/profile/types").UserProfile) {
+    await updateProfile(next);
+  }
+
   const recommended = getRecommendedDocuments(
     profile.profileType,
     resolveRecommendationIndustry(profile),
@@ -228,7 +236,8 @@ export default function ProfilePage() {
       {!locked && (
         <AppShell title="Profile & Settings">
           <p className="page-lead">
-            Manage your account, profiles, preferences, billing, and support. Edit any field below — updates save automatically.
+            Manage your account, profiles, preferences, billing, and support. Preferred profile:{" "}
+            <strong>{preferredLabel}</strong> — change it at the top of any profile tab below.
           </p>
 
           <ProfileSaveStatus />
@@ -263,6 +272,11 @@ export default function ProfilePage() {
 
           {tab === "business" && (
             <div className="profile-panel card">
+              <ProfilePreferredBanner
+                section="business"
+                profile={profile}
+                onApply={applyPreferredProfile}
+              />
               <LogoUploader
                 value={profile.business.logo}
                 onChange={(logo) => updateProfile({ business: { ...profile.business, logo } })}
@@ -286,11 +300,21 @@ export default function ProfilePage() {
               <Field label="Website" value={profile.business.website} onChange={(v) => updateProfile({ business: { ...profile.business, website: v } })} />
               <Field label="Tax ID / EIN" value={profile.business.taxId} onChange={(v) => updateProfile({ business: { ...profile.business, taxId: v } })} sensitive />
               <AddressBlock label="Business Address" address={profile.business.address} onChange={(a) => updateProfile({ business: { ...profile.business, address: a } })} />
+              <OwnerSignatureSettings
+                profile={profile}
+                context="business"
+                onChange={(patch) => updateProfile(patch)}
+              />
             </div>
           )}
 
           {tab === "personal" && (
             <div className="profile-panel card">
+              <ProfilePreferredBanner
+                section="individual"
+                profile={profile}
+                onApply={applyPreferredProfile}
+              />
               <LogoUploader
                 label="Profile Photo (optional)"
                 value={profile.personal.photo}
@@ -306,6 +330,7 @@ export default function ProfilePage() {
               <AddressBlock label="Personal Address" address={profile.personal.address} onChange={(a) => updateProfile({ personal: { ...profile.personal, address: a } })} />
               <OwnerSignatureSettings
                 profile={profile}
+                context="individual"
                 onChange={(patch) => updateProfile(patch)}
               />
             </div>
@@ -313,6 +338,11 @@ export default function ProfilePage() {
 
           {tab === "organization" && (
             <div className="profile-panel card">
+              <ProfilePreferredBanner
+                section="organization"
+                profile={profile}
+                onApply={applyPreferredProfile}
+              />
               <LogoUploader
                 label="Organization Logo"
                 value={profile.organization.logo}
@@ -325,6 +355,11 @@ export default function ProfilePage() {
               <Field label="Website" value={profile.organization.website} onChange={(v) => updateProfile({ organization: { ...profile.organization, website: v } })} />
               <Field label="Tax ID / EIN" value={profile.organization.taxId} onChange={(v) => updateProfile({ organization: { ...profile.organization, taxId: v } })} sensitive />
               <AddressBlock label="Organization Address" address={profile.organization.address} onChange={(a) => updateProfile({ organization: { ...profile.organization, address: a } })} />
+              <OwnerSignatureSettings
+                profile={profile}
+                context="organization"
+                onChange={(patch) => updateProfile(patch)}
+              />
             </div>
           )}
 

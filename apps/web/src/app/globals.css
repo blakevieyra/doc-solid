@@ -1894,19 +1894,28 @@ button.portal-stat-filter.active .portal-stat-value {
 @media (min-width: 1024px) {
   .portal-files-grid { grid-template-columns: repeat(3, 1fr); }
 }
+.profile-preferred-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.875rem 1rem;
+  margin-bottom: 1.25rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #f8fafc;
+}
+.profile-preferred-banner-active {
+  border-color: var(--primary);
+  background: #eef2ff;
+}
+.profile-preferred-label { margin: 0; font-size: 0.875rem; color: var(--text); }
 .portal-file-card {
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   min-width: 0;
-}
-.portal-file-card-with-fav { position: relative; padding-top: 2.25rem; }
-.portal-file-card-with-fav > .favorite-btn {
-  position: absolute;
-  top: 0.65rem;
-  right: 0.65rem;
-  z-index: 2;
 }
 .portal-file-card-head {
   display: flex;
