@@ -156,7 +156,9 @@ export function ProfileTeamTab() {
   useEffect(() => {
     setWorkspaceName(orgName);
   }, [orgName]);
-  const onTeam = profile.team.enabled || (teamView?.members.length ?? 0) > 1 || !!profile.team.myRole;
+  const activeMemberCount = displayMembers.filter((m) => m.status !== "pending").length;
+  const pendingMemberCount = displayMembers.filter((m) => m.status === "pending").length;
+  const onTeam = profile.team.enabled || activeMemberCount > 1 || pendingMemberCount > 0 || !!profile.team.myRole;
 
   const refreshTeam = useCallback(async () => {
     setLoadingTeam(true);
@@ -194,6 +196,18 @@ export function ProfileTeamTab() {
   useEffect(() => {
     if (profile.team.teamId) void refreshTeam();
   }, [profile.team.teamId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === "visible") void refreshTeam();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
+  }, [refreshTeam]);
 
   async function saveWorkspaceName(name: string) {
     const trimmed = name.trim();
@@ -536,7 +550,12 @@ export function ProfileTeamTab() {
             )}
             <div>
               <dt>Members</dt>
-              <dd>{displayMembers.length}{teamAllowed ? ` / ${teamLimit}` : ""}</dd>
+              <dd>
+                {activeMemberCount}{teamAllowed ? ` / ${teamLimit}` : ""}
+                {pendingMemberCount > 0 && (
+                  <span className="field-help"> · {pendingMemberCount} pending</span>
+                )}
+              </dd>
             </div>
             {profile.team.myRole && (
               <div>
@@ -695,7 +714,8 @@ export function ProfileTeamTab() {
       )}
 
       <h3 className="section-title" style={{ marginTop: "1.5rem" }}>
-        Members ({displayMembers.length}{teamAllowed ? `/${teamLimit}` : ""})
+        Members ({activeMemberCount}{teamAllowed ? `/${teamLimit}` : ""}
+        {pendingMemberCount > 0 ? ` · ${pendingMemberCount} pending` : ""})
       </h3>
       {displayMembers.length === 0 && (
         <p className="field-help">No team members yet. {isOwner ? "Invite colleagues to share your profile." : "Ask your team admin for an invite link."}</p>

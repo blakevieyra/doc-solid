@@ -16,6 +16,7 @@ import { IndexedDBStorage } from "@doc-solid/storage";
 import { useProfile } from "./ProfileProvider";
 import { useAuth } from "./AuthProvider";
 import { loadSharesForUser } from "@/lib/team/shares-sync";
+import { dispatchTeamRefresh } from "@/lib/team/roster-client";
 
 interface NotificationContextValue {
   notifications: AppNotification[];
@@ -50,13 +51,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           const data = (await res.json()) as {
             notifications?: Array<{
               id: string;
-              type: "share";
+              type: "share" | "team";
               title: string;
               message: string;
               link?: string;
               createdAt: string;
             }>;
           };
+          let shouldRefreshTeam = false;
           for (const n of data.notifications ?? []) {
             addNotification({
               id: n.id,
@@ -66,6 +68,15 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
               link: n.link,
               createdAt: n.createdAt,
             });
+            if (
+              n.type === "team" &&
+              (/accepted|joined/i.test(n.title) || /accepted|joined/i.test(n.message))
+            ) {
+              shouldRefreshTeam = true;
+            }
+          }
+          if (shouldRefreshTeam) {
+            dispatchTeamRefresh();
           }
         }
       } catch {

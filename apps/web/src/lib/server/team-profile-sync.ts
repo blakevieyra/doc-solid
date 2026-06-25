@@ -57,7 +57,18 @@ export function ownerProfileNeedsRosterHeal(
   members: TeamMember[]
 ): boolean {
   const rosterEmails = new Set(roster.members.map((m) => m.email.toLowerCase()));
+  const profileEmails = new Set(members.map((m) => m.email.toLowerCase()));
   const ownerKey = roster.ownerEmail.toLowerCase();
+
+  if (roster.members.some((m) => !profileEmails.has(m.email.toLowerCase()))) {
+    return true;
+  }
+
+  const activeProfileCount = members.filter((m) => m.status !== "pending").length;
+  if (roster.members.length > activeProfileCount) {
+    return true;
+  }
+
   return members.some((m) => {
     const key = m.email.toLowerCase();
     if (m.status === "pending" && rosterEmails.has(key)) return true;

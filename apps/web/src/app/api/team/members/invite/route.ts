@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/server/session";
 import { enforceRateLimit } from "@/lib/server/rate-limit";
 import { createTeamMemberInvite } from "@/lib/server/team-member-invites";
-import { getTeamRoster } from "@/lib/server/team-roster";
+import { getTeamRoster, saveTeamRoster, resolveTeamRoster, type TeamRoster } from "@/lib/server/team-roster";
 import { getUserProfile, saveUserProfile } from "@/lib/server/users";
 import { mergeTeamMembersByEmail } from "@/lib/team/members-merge";
 import { notifyTeamMemberInvite } from "@/lib/email/notify";
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     const ownerProfile = await getUserProfile(auth.user.id);
     const teamId = resolveTeamId(body.teamId, ownerProfile, auth.user.id);
 
-    const roster = await getTeamRoster(teamId);
+    const roster = await resolveTeamRoster(ownerProfile, inviterEmail);
     if (roster) {
       const isOwner = roster.ownerEmail.toLowerCase() === inviterEmail;
       const isAdmin = roster.members.some(
@@ -77,6 +77,29 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Only team owners or admins can invite members" }, { status: 403 });
       }
     }
+
+    const now = new Date().toISOString();
+    const baseRoster: TeamRoster =
+      roster ?? {
+        teamId,
+        orgName,
+        ownerEmail: inviterEmail,
+        ownerName: auth.user.name,
+        shareBusinessProfile: ownerProfile?.team.shareBusinessProfile ?? true,
+        shareOrganizationProfile: ownerProfile?.team.shareOrganizationProfile ?? true,
+        createdAt: ownerProfile?.team.createdAt ?? ownerProfile?.createdAt ?? now,
+        members: [
+          {
+            email: inviterEmail,
+            name: auth.user.name,
+            role: "owner",
+            joinedAt: ownerProfile?.createdAt ?? now,
+            userId: auth.user.id,
+          },
+        ],
+        updatedAt: now,
+      };
+    await saveTeamRoster(roster ?? baseRoster);
 
     const invite = await createTeamMemberInvite({
       teamId,

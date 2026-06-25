@@ -3,7 +3,7 @@ import { prisma } from "@doc-solid/database";
 import { requireAuth } from "@/lib/server/session";
 import { getUserProfile } from "@/lib/server/users";
 import { enforceRateLimit } from "@/lib/server/rate-limit";
-import { getTeamRoster, saveTeamRoster, mapDbRole, type TeamRoster, type TeamRosterMember } from "@/lib/server/team-roster";
+import { getTeamRoster, saveTeamRoster, mapDbRole, resolveTeamRoster, type TeamRoster, type TeamRosterMember } from "@/lib/server/team-roster";
 import { getPendingInvitesForTeam } from "@/lib/server/team-member-invites";
 import { loadPublicIdentityForEmail } from "@/lib/server/public-identity";
 import { mergeMemberRole, mergeMemberStatus } from "@/lib/team/member-merge-utils";
@@ -286,10 +286,24 @@ async function enrichMembersWithIdentity<T extends {
 }
 
 async function buildTeamView(userId: string, email: string, name: string): Promise<TeamView> {
-  const profile = (await getUserProfile(userId)) ?? null;
-  const teamId = profile?.team.teamId ?? profile?.account.accountId ?? null;
+  let profile = (await getUserProfile(userId)) ?? null;
+  const roster = await resolveTeamRoster(profile, email);
 
-  const roster = teamId ? await getTeamRoster(teamId) : null;
+  if (
+    roster &&
+    profile &&
+    roster.ownerEmail.toLowerCase() === email.toLowerCase() &&
+    ownerProfileNeedsRosterHeal(roster, profile.team.members)
+  ) {
+    await syncOwnerProfileFromRoster(roster);
+    profile = (await getUserProfile(userId)) ?? profile;
+  }
+
+  const teamId =
+    roster?.teamId ??
+    profile?.team.teamId ??
+    profile?.account.accountId ??
+    null;
   const orgView = await fromOrganization(userId, email, name);
   const profileView = profile ? fromProfileTeam(profile, email, name) : null;
 
@@ -447,8 +461,11 @@ export async function GET(req: NextRequest) {
 
   const teamWithShared = { ...team, sharedProfile };
 
-  const roster = teamWithShared.teamId ? await getTeamRoster(teamWithShared.teamId) : null;
   const ownerProfile = teamWithShared.isOwner ? await getUserProfile(auth.user.id) : null;
+  const roster = teamWithShared.teamId
+    ? (await resolveTeamRoster(ownerProfile, auth.user.email)) ??
+      (await getTeamRoster(teamWithShared.teamId))
+    : null;
   if (
     roster &&
     ownerProfile &&

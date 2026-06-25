@@ -5,7 +5,7 @@ import {
   updateTeamMemberInvite,
 } from "@/lib/server/team-member-invites";
 import { syncOwnerProfileFromRoster } from "@/lib/server/team-profile-sync";
-import { getTeamRoster, saveTeamRoster, type TeamRoster } from "@/lib/server/team-roster";
+import { getTeamRoster, saveTeamRoster, resolveTeamRoster, type TeamRoster } from "@/lib/server/team-roster";
 import { loadPublicIdentityForEmail } from "@/lib/server/public-identity";
 import { getUserProfile, saveUserProfile } from "@/lib/server/users";
 import { pushServerNotification } from "@/lib/server/share-notifications";
@@ -111,7 +111,8 @@ export async function POST(req: NextRequest) {
     }
 
     const now = new Date().toISOString();
-    let roster = await getTeamRoster(invite.teamId);
+    let roster = await resolveTeamRoster(await getUserProfile(auth.user.id), invite.inviterEmail);
+    if (!roster) roster = await getTeamRoster(invite.teamId);
     if (!roster) {
       roster = {
         teamId: invite.teamId,
