@@ -477,7 +477,7 @@ function DocumentEditorPageContent() {
 
   async function handleReturnCorrection() {
     if (!shareId || !correctionComment.trim()) {
-      window.alert("Describe what needs to be corrected before returning to the sender.");
+      window.alert("Add a comment before sending back to the sender.");
       return;
     }
     const share = getShareById(shareId);
@@ -579,10 +579,10 @@ function DocumentEditorPageContent() {
               </h2>
               <p className="field-help">
                 {showSigningFields
-                  ? "Complete the signature field(s) below, or return a comment to the sender."
+                  ? "Complete the signature field(s) below, or send remarks back to the sender."
                   : isReviewShare
-                    ? "Review this document and return a comment if anything needs to change."
-                    : "Return a comment to the sender if anything needs to change."}
+                    ? "Review this document and share any remarks with the sender."
+                    : "Share any remarks or feedback with the sender."}
               </p>
 
               {showSigningFields ? (
@@ -613,8 +613,8 @@ function DocumentEditorPageContent() {
                   onChange={(e) => setCorrectionComment(e.target.value)}
                   placeholder={
                     showSigningFields
-                      ? "Explain what needs to be changed before you can sign…"
-                      : "Share feedback or note anything that needs to change…"
+                      ? "Add remarks, questions, or notes before signing…"
+                      : "Add your remarks or feedback…"
                   }
                 />
               </div>

@@ -96,8 +96,8 @@ export function processShareNotifications(shares: DocumentShare[], userEmail: st
           addNotification({
             id: `share_${share.id}_${event.type}_${event.timestamp}`,
             type: "share",
-            title: "Returned for correction",
-            message: `${share.toName || share.toEmail} returned "${share.documentTitle}"`,
+            title: "Returned with comments",
+            message: `${share.toName || share.toEmail} returned "${share.documentTitle}" with comments`,
             link: shareLink(share),
             createdAt: event.timestamp,
           });

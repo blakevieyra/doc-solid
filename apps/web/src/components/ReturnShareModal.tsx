@@ -27,7 +27,7 @@ export function ReturnShareModal({ share, onClose, onReturned }: ReturnShareModa
   async function handleReturn() {
     setError("");
     if (!comment.trim()) {
-      setError("Describe the problem before returning to the sender.");
+      setError("Add a comment before sending back to the sender.");
       return;
     }
     const updated = await returnShareCorrection(share.id, comment, { email: userEmail, name: userName });
@@ -50,14 +50,14 @@ export function ReturnShareModal({ share, onClose, onReturned }: ReturnShareModa
       <div className="modal-card" onClick={(e) => e.stopPropagation()}>
         <h2>Return with comment</h2>
         <p className="field-help">
-          Tell {share.fromName} what needs to be fixed on &quot;{share.documentTitle}&quot;.
+          Share remarks or feedback with {share.fromName} about &quot;{share.documentTitle}&quot;.
         </p>
         <div className="field-group">
           <label>Comments</label>
           <textarea
             value={comment}
             onChange={(e) => setComment(e.target.value)}
-            placeholder="Describe the issue or correction needed…"
+            placeholder="Add your remarks or feedback…"
             rows={4}
             autoFocus
           />

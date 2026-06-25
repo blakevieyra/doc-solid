@@ -63,8 +63,8 @@ export async function fanOutShareNotifications(
       title = "Document signed";
       message = `${after.toName || after.toEmail} signed "${after.documentTitle}"`;
     } else if (event.type === "correction_requested") {
-      title = "Returned for correction";
-      message = `${after.toName || after.toEmail} returned "${after.documentTitle}"`;
+      title = "Returned with comments";
+      message = `${after.toName || after.toEmail} returned "${after.documentTitle}" with comments`;
     }
 
     if (!title || !message) continue;

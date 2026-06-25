@@ -239,7 +239,7 @@ export function getShareAuditLabel(event: ShareAuditEvent): string {
     case "completed":
       return "Completed";
     case "correction_requested":
-      return "Correction requested";
+      return "Returned with comments";
     case "kept":
       return "Kept";
     default:

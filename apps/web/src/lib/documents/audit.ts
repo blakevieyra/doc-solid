@@ -47,7 +47,7 @@ export function getDocumentAuditLabel(event: DocumentAuditEvent): string {
     case "unarchived":
       return "Unarchived";
     case "returned":
-      return "Returned for correction";
+      return "Returned with comments";
     case "emailed":
       return "Emailed";
     default:

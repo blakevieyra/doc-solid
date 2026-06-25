@@ -391,7 +391,6 @@ export default function PortalPage() {
             <span className="share-inbox-oneline">
               From {s.fromName} · {new Date(s.createdAt).toLocaleDateString()}
               {latestAudit ? ` · ${getShareAuditLabel(latestAudit)}` : ""}
-              {returnedByMe ? " · Returned" : ""}
             </span>
           </div>
 
@@ -420,7 +419,7 @@ export default function PortalPage() {
                 </button>
               ) : !archived && returnedByMe ? (
                 <span className="btn btn-secondary btn-sm" style={{ opacity: 0.45, pointerEvents: "none" }}>
-                  Returned
+                  Comment sent
                 </span>
               ) : null}
             </div>
