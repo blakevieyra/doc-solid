@@ -1,7 +1,10 @@
 "use client";
 
 import type { DocumentShare } from "@/lib/team/invites";
-import { getShareReturnComments } from "@/lib/team/share-document";
+import {
+  formatShareReturnCommentLine,
+  getShareReturnComments,
+} from "@/lib/team/share-document";
 
 export function ShareReturnCommentsPanel({
   share,
@@ -26,12 +29,8 @@ export function ShareReturnCommentsPanel({
       </strong>
       <ul className="share-return-comments-list">
         {comments.map((event, index) => (
-          <li key={`${event.timestamp}-${index}`}>
-            <p className="share-return-comments-body">{event.details}</p>
-            <span className="share-return-comments-meta">
-              {new Date(event.timestamp).toLocaleString()}
-              {event.actorName ? ` · ${event.actorName}` : ""}
-            </span>
+          <li key={`${event.timestamp}-${index}`} className="share-return-comments-line">
+            {formatShareReturnCommentLine(event)}
           </li>
         ))}
       </ul>

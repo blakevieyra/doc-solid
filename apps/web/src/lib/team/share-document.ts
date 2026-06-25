@@ -208,6 +208,13 @@ export function getShareReturnComments(share: DocumentShare): ShareAuditEvent[] 
   );
 }
 
+export function formatShareReturnCommentLine(event: ShareAuditEvent): string {
+  const when = new Date(event.timestamp).toLocaleString();
+  const name = event.actorName?.trim() || "Recipient";
+  const body = event.details?.trim() ?? "";
+  return `${when} · ${name} · ${body}`;
+}
+
 export function shareHasReturnComments(share: DocumentShare): boolean {
   return getShareReturnComments(share).length > 0;
 }

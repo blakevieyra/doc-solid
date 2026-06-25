@@ -44,6 +44,7 @@ import {
   getShareSigningHref,
   getSentShareStatusLabel,
   getShareReturnComments,
+  formatShareReturnCommentLine,
   shareWasReturnedBy,
 } from "@/lib/team/share-document";
 import { ShareReturnCommentsPanel } from "@/components/ShareReturnCommentsPanel";
@@ -559,7 +560,11 @@ export default function PortalPage() {
                     {" · "}
                     {new Date(event.timestamp).toLocaleString()}
                     {event.actorName ? ` · ${event.actorName}` : ""}
-                    {event.details && event.type !== "correction_requested" ? ` — ${event.details}` : ""}
+                    {event.details && event.type !== "correction_requested"
+                      ? ` — ${event.details}`
+                      : event.type === "correction_requested" && event.details
+                        ? ` — ${formatShareReturnCommentLine(event)}`
+                        : ""}
                   </li>
                 ))}
               </ul>
