@@ -14,7 +14,7 @@ interface TeamShareModalProps {
 }
 
 export function TeamShareModal({ documentTitle, documentId, onClose }: TeamShareModalProps) {
-  const { profile } = useProfile();
+  const { profile, documentProfile } = useProfile();
   const { session } = useAuth();
   const { notify } = useNotifications();
   const [selected, setSelected] = useState<string[]>([]);
@@ -42,7 +42,7 @@ export function TeamShareModal({ documentTitle, documentId, onClose }: TeamShare
         toName: member?.name ?? email,
         message,
         shareType: "share",
-      });
+      }, { senderProfile: documentProfile });
       notify({
         type: "share",
         title: "Document shared",

@@ -217,7 +217,12 @@ function SavedDocumentPageContent() {
       />
 
       <div className="doc-preview-sheet">
-        <DocumentPreview meta={fullTemplate} values={values} profile={documentProfile} />
+        <DocumentPreview
+          meta={fullTemplate}
+          values={values}
+          profile={documentProfile}
+          lockBranding={isSharedPreview}
+        />
       </div>
 
       {showRequestReview && localId && (

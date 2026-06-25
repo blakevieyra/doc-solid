@@ -50,7 +50,7 @@ import { completeShareSigning, markShareOpened, returnShareCorrection } from "@/
 import { useNotifications } from "@/components/NotificationProvider";
 import { peekNextDocumentNumber } from "@/lib/documents/sequencing";
 import { ensureDocumentNumber, resolveDocumentNumber } from "@/lib/documents/document-number";
-import { snapshotBrandingIntoValues } from "@/lib/profile/document-branding";
+import { snapshotBrandingIntoValues, mergeShareFieldUpdates } from "@/lib/profile/document-branding";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 
 function DocumentEditorPageContent() {
@@ -150,7 +150,12 @@ function DocumentEditorPageContent() {
         if (doc && (templateMatches || (shareId && snapshot))) {
           const allFieldIds = template!.sections.flatMap((s) => s.fields.map((f) => f.id));
           setNumberFieldId(getNumberFieldId(allFieldIds));
-          setValues(templateMatches ? (doc.fieldData as Record<string, string>) : { ...snapshot, ...doc.fieldData as Record<string, string> });
+          const docValues = doc.fieldData as Record<string, string>;
+          setValues(
+            shareId && snapshot
+              ? mergeShareFieldUpdates(snapshot, docValues)
+              : docValues,
+          );
           setSavedLocalId(doc.localId);
           setDocOwnerId(doc.userId ?? null);
           setSaved(true);
@@ -257,6 +262,8 @@ function DocumentEditorPageContent() {
   const userEmail = session?.email ?? profile.account.email ?? "";
   const userName = session?.name ?? profile.account.displayName ?? profile.personal.fullName ?? "";
   const activeShare = shareId ? getShareById(shareId) : null;
+  const shareSnapshot = activeShare?.fieldDataSnapshot as Record<string, string> | undefined;
+  const lockShareBranding = Boolean(shareSnapshot);
   const isRecipientSigning = Boolean(
     signingMode &&
     shareId &&
@@ -339,7 +346,10 @@ function DocumentEditorPageContent() {
       setAssignedNumber(documentNumber);
     }
 
-    const fieldData = snapshotBrandingIntoValues(documentProfile, numberedValues);
+    const fieldData =
+      signingMode && shareId && shareSnapshot
+        ? mergeShareFieldUpdates(shareSnapshot, numberedValues)
+        : snapshotBrandingIntoValues(documentProfile, numberedValues);
     const title = `${meta.name} #${documentNumber}`;
 
     if (savedLocalId) {
@@ -540,7 +550,12 @@ function DocumentEditorPageContent() {
                 <span>Document sent to you</span>
               </div>
               <div className="doc-preview-sheet">
-                <DocumentPreview meta={fullTemplate} values={values} profile={documentProfile} />
+                <DocumentPreview
+                  meta={fullTemplate}
+                  values={values}
+                  profile={documentProfile}
+                  lockBranding={lockShareBranding}
+                />
               </div>
             </div>
 
@@ -794,7 +809,12 @@ function DocumentEditorPageContent() {
             <span>Live Preview</span>
           </div>
           <div className="doc-preview-sheet">
-            <DocumentPreview meta={fullTemplate} values={values} profile={documentProfile} />
+            <DocumentPreview
+              meta={fullTemplate}
+              values={values}
+              profile={documentProfile}
+              lockBranding={lockShareBranding}
+            />
           </div>
         </div>
       </div>

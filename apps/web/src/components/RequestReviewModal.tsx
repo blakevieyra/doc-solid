@@ -22,7 +22,7 @@ export function RequestReviewModal({
   documentId,
   onClose,
 }: RequestReviewModalProps) {
-  const { profile } = useProfile();
+  const { profile, documentProfile } = useProfile();
   const { session } = useAuth();
   const { notify } = useNotifications();
   const [selected, setSelected] = useState<string[]>([]);
@@ -70,7 +70,7 @@ export function RequestReviewModal({
           toName: recipient?.name ?? email,
           message: message.trim() || "Review requested",
           shareType: "review_request",
-        });
+        }, { senderProfile: documentProfile });
       }
       await recordDocumentShareAudit(documentId, selected, fromEmail, fromName, "share");
 

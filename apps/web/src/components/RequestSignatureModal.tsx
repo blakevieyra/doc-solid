@@ -28,7 +28,7 @@ export function RequestSignatureModal({
   documentTemplateId,
   onClose,
 }: RequestSignatureModalProps) {
-  const { profile } = useProfile();
+  const { profile, documentProfile } = useProfile();
   const { session } = useAuth();
   const { notify } = useNotifications();
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
@@ -112,7 +112,7 @@ export function RequestSignatureModal({
         message: message.trim() || "Signature requested",
         shareType: "signature_request",
         signatureFieldIds: selectedFields,
-      });
+      }, { senderProfile: documentProfile });
     }
 
     await recordDocumentShareAudit(documentId, selectedMembers, fromEmail, fromName, "signature");

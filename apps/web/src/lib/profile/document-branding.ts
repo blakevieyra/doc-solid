@@ -24,6 +24,36 @@ export interface TeamSharedProfile {
   };
 }
 
+/** Branding keys frozen to the sender snapshot when a recipient signs or views a share */
+export const SNAPSHOT_BRANDING_KEYS = [
+  "logo",
+  "businessName",
+  "businessEmail",
+  "businessPhone",
+  "businessWebsite",
+  "businessAddress",
+  "personName",
+  "personTitle",
+  "personPhone",
+  "personEmail",
+  "orgMission",
+  "providerName",
+  "providerAddress",
+  "disclosingParty",
+] as const;
+
+/** Apply recipient edits without overwriting sender letterhead/branding fields */
+export function mergeShareFieldUpdates(
+  base: Record<string, string>,
+  updates: Record<string, string>,
+): Record<string, string> {
+  const merged = { ...base, ...updates };
+  for (const key of SNAPSHOT_BRANDING_KEYS) {
+    if (base[key]?.trim()) merged[key] = base[key];
+  }
+  return merged;
+}
+
 export function resolveDocumentProfile(
   profile: UserProfile,
   shared: TeamSharedProfile | null | undefined
@@ -115,8 +145,25 @@ export interface DocumentLetterhead {
 /** Full business letterhead for document headers — legal-style name, address, and POC */
 export function resolveDocumentLetterhead(
   profile: UserProfile,
-  values: Record<string, string>
+  values: Record<string, string>,
+  options?: { valuesOnly?: boolean },
 ): DocumentLetterhead {
+  if (options?.valuesOnly) {
+    return {
+      logo: values.logo?.trim() || null,
+      companyName: values.businessName?.trim() || "",
+      tagline: values.orgMission?.trim() || "",
+      address: values.businessAddress?.trim() || "",
+      phone: values.businessPhone?.trim() || "",
+      email: values.businessEmail?.trim() || "",
+      website: values.businessWebsite?.trim() || "",
+      pocName: values.personName?.trim() || "",
+      pocTitle: values.personTitle?.trim() || "",
+      pocPhone: values.personPhone?.trim() || "",
+      pocEmail: values.personEmail?.trim() || "",
+    };
+  }
+
   const branding = resolveDocumentBranding(profile, values);
   const identity = resolveProfileIdentity(profile);
 
@@ -171,9 +218,34 @@ export function resolveDocumentLetterhead(
 /** Persist org branding into saved documents so recipients see the sender's identity */
 export function snapshotBrandingIntoValues(
   profile: UserProfile,
-  values: Record<string, string>
+  values: Record<string, string>,
+  options?: { freezeLetterhead?: boolean },
 ): Record<string, string> {
   const next = { ...values };
+
+  if (options?.freezeLetterhead) {
+    const letterhead = resolveDocumentLetterhead(profile, values);
+    const identity = resolveProfileIdentity(profile);
+
+    if (letterhead.logo) next.logo = letterhead.logo;
+    if (letterhead.companyName) next.businessName = letterhead.companyName;
+    if (letterhead.tagline) next.orgMission = letterhead.tagline;
+    if (letterhead.address) next.businessAddress = letterhead.address;
+    if (letterhead.phone) next.businessPhone = letterhead.phone;
+    if (letterhead.email) next.businessEmail = letterhead.email;
+    if (letterhead.website) next.businessWebsite = letterhead.website;
+    if (letterhead.pocName) next.personName = letterhead.pocName;
+    if (letterhead.pocTitle) next.personTitle = letterhead.pocTitle;
+    if (letterhead.pocPhone) next.personPhone = letterhead.pocPhone;
+    if (letterhead.pocEmail) next.personEmail = letterhead.pocEmail;
+    if (identity.name) {
+      if (!next.providerName?.trim()) next.providerName = identity.name;
+      if (!next.disclosingParty?.trim()) next.disclosingParty = identity.name;
+      if (!next.providerAddress?.trim()) next.providerAddress = letterhead.address;
+    }
+    return next;
+  }
+
   const identity = resolveProfileIdentity(profile);
 
   if (!next.logo?.trim() && identity.logo) {

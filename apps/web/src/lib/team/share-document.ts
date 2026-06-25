@@ -9,9 +9,13 @@ import {
 } from "./invites";
 import { pushShareToServer } from "./shares-sync";
 
+import type { UserProfile } from "@/lib/profile/types";
+import { snapshotBrandingIntoValues } from "@/lib/profile/document-branding";
+
 export async function buildSharePayloadFromDocument(
   documentId: string,
-  documentTemplateId?: string
+  documentTemplateId?: string,
+  senderProfile?: UserProfile,
 ): Promise<{
   documentTemplateId?: string;
   fieldDataSnapshot?: Record<string, string>;
@@ -21,19 +25,23 @@ export async function buildSharePayloadFromDocument(
   if (!doc) {
     return { documentTemplateId };
   }
+  const raw = doc.fieldData as Record<string, string>;
   return {
     documentTemplateId: documentTemplateId ?? doc.templateId,
-    fieldDataSnapshot: doc.fieldData as Record<string, string>,
+    fieldDataSnapshot: senderProfile
+      ? snapshotBrandingIntoValues(senderProfile, raw, { freezeLetterhead: true })
+      : raw,
   };
 }
 
 export async function saveShareWithDocument(
   share: Omit<DocumentShare, "id" | "createdAt" | "auditLog">,
-  options?: { auditType?: ShareAuditEvent["type"] }
+  options?: { auditType?: ShareAuditEvent["type"]; senderProfile?: UserProfile },
 ): Promise<DocumentShare> {
   const snapshot = await buildSharePayloadFromDocument(
     share.documentId,
-    share.documentTemplateId
+    share.documentTemplateId,
+    options?.senderProfile,
   );
   const full = saveShare({
     ...share,

@@ -31,6 +31,9 @@ interface DocumentPreviewProps {
 
   profile: UserProfile;
 
+  /** When true, letterhead uses saved field values only (shared / sent documents) */
+  lockBranding?: boolean;
+
   /** Override default id="document-preview" for multi-doc pages like packets */
 
   previewId?: string;
@@ -39,9 +42,9 @@ interface DocumentPreviewProps {
 
 
 
-export function DocumentPreview({ meta, values, profile, previewId }: DocumentPreviewProps) {
+export function DocumentPreview({ meta, values, profile, lockBranding, previewId }: DocumentPreviewProps) {
 
-  const letterhead = resolveDocumentLetterhead(profile, values);
+  const letterhead = resolveDocumentLetterhead(profile, values, { valuesOnly: lockBranding });
   const displayNumber = extractDocumentNumberFromValues(values);
 
   const hasPoc =

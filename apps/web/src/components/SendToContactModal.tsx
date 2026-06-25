@@ -32,7 +32,7 @@ export function SendToContactModal({
   documentTemplateId,
   onClose,
 }: SendToContactModalProps) {
-  const { profile } = useProfile();
+  const { profile, documentProfile } = useProfile();
   const { session } = useAuth();
   const { notify } = useNotifications();
   const [selected, setSelected] = useState<string[]>([]);
@@ -122,7 +122,7 @@ export function SendToContactModal({
         message: message.trim() || (mode === "signature" ? "Signature requested" : "Document shared"),
         shareType: mode === "signature" ? "signature_request" : "share",
         ...(mode === "signature" ? { signatureFieldIds: selectedFields } : {}),
-      });
+      }, { senderProfile: documentProfile });
     }
 
     await recordDocumentShareAudit(documentId, selected, fromEmail, fromName, mode);

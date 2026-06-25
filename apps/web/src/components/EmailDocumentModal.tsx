@@ -33,7 +33,7 @@ export function EmailDocumentModal({
   previewElementId = "document-preview",
   onClose,
 }: EmailDocumentModalProps) {
-  const { profile } = useProfile();
+  const { profile, documentProfile } = useProfile();
   const { notify } = useNotifications();
   const { senderEmail, senderName, buildRecipientPayload } = useEmailRecipientSelection();
 
@@ -134,7 +134,7 @@ export function EmailDocumentModal({
             toName: member?.name ?? email,
             message: message.trim() || undefined,
             shareType: "share",
-          });
+          }, { senderProfile: documentProfile });
         }
       }
 
