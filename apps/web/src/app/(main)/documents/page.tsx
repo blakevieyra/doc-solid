@@ -12,7 +12,9 @@ import {
 import { AppShell } from "@/components/AppShell";
 import { RecommendedDocuments } from "@/components/RecommendedDocuments";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { GuestSignupBanner } from "@/components/GuestSignupBanner";
 import { useProfile } from "@/components/ProfileProvider";
+import { useAuth } from "@/components/AuthProvider";
 import { getFavoriteTemplateIds, isFavorite, toggleFavorite } from "@/lib/documents/favorites";
 import {
   getRecommendedDocuments,
@@ -25,6 +27,8 @@ type LibraryView = "all" | "favorites";
 
 export default function DocumentsPage() {
   const { profile, updateProfile } = useProfile();
+  const { session } = useAuth();
+  const isGuest = !session;
   const [domain, setDomain] = useState<string>("all");
   const [category, setCategory] = useState<string>("all");
   const [query, setQuery] = useState("");
@@ -63,6 +67,7 @@ export default function DocumentsPage() {
   }, [domain, category, query, view, favorites]);
 
   async function handleToggleFavorite(templateId: string) {
+    if (isGuest) return;
     setFavMsg("");
     await updateProfile((current) => {
       const result = toggleFavorite(current, templateId);
@@ -79,6 +84,8 @@ export default function DocumentsPage() {
 
   return (
     <AppShell title="Document Library">
+      <GuestSignupBanner />
+
       <div className="doc-search-bar doc-search-bar-wide doc-library-search-top">
         <input
           type="search"
@@ -115,8 +122,18 @@ export default function DocumentsPage() {
         <button type="button" className={`library-view-tab${view === "all" ? " active" : ""}`} onClick={() => setView("all")}>
           All documents
         </button>
-        <button type="button" className={`library-view-tab${view === "favorites" ? " active" : ""}`} onClick={() => setView("favorites")}>
-          Favorites ({favorites.length})
+        <button
+          type="button"
+          className={`library-view-tab${view === "favorites" ? " active" : ""}`}
+          onClick={() => {
+            if (isGuest) {
+              setFavMsg("Sign up free to save favorite templates.");
+              return;
+            }
+            setView("favorites");
+          }}
+        >
+          Favorites ({isGuest ? 0 : favorites.length})
         </button>
       </div>
 
@@ -138,7 +155,8 @@ export default function DocumentsPage() {
             <DocumentCard
               key={doc.id}
               doc={doc}
-              favorited={isFavorite(profile, doc.id)}
+              favorited={!isGuest && isFavorite(profile, doc.id)}
+              showFavorite={!isGuest}
               onToggleFavorite={() => void handleToggleFavorite(doc.id)}
             />
           ))}
@@ -151,14 +169,17 @@ export default function DocumentsPage() {
 function DocumentCard({
   doc,
   favorited,
+  showFavorite = true,
   onToggleFavorite,
 }: {
   doc: DocumentCatalogEntry;
   favorited: boolean;
+  showFavorite?: boolean;
   onToggleFavorite: () => void;
 }) {
   return (
     <div className="card recommended-doc-card recommended-doc-card-with-actions">
+      {showFavorite && (
       <FavoriteButton
         active={favorited}
         size="sm"
@@ -168,6 +189,7 @@ function DocumentCard({
           onToggleFavorite();
         }}
       />
+      )}
       <Link href={`/documents/${doc.id}`} className="recommended-doc-link">
         <strong>{doc.name}</strong>
         <span className="recommended-doc-desc">{doc.description}</span>

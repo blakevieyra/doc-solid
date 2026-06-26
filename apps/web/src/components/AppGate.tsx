@@ -5,6 +5,8 @@ import { useProfile } from "./ProfileProvider";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
+import { isGuestBrowsePath } from "@/lib/auth/guest-browse";
+
 const AUTH_PUBLIC = ["/login", "/signup", "/forgot-password", "/reset-password"];
 const APP_PUBLIC = ["/onboarding", "/onboarding/success", "/join-team"];
 const MARKETING_PUBLIC = ["/", "/help"];
@@ -24,9 +26,11 @@ export function AppGate({ children }: { children: React.ReactNode }) {
     const isPublic = APP_PUBLIC.includes(pathname) || pathname.startsWith("/legal");
     const isMarketing = MARKETING_PUBLIC.includes(pathname);
 
-    if (!session && !isAuthPage && !isPublic && !isMarketing && !pathname.startsWith("/legal")) {
+    const isBrowse = isGuestBrowsePath(pathname);
+
+    if (!session && !isAuthPage && !isPublic && !isMarketing && !isBrowse && !pathname.startsWith("/legal")) {
       redirecting.current = true;
-      router.replace("/login");
+      router.replace("/signup");
       return;
     }
     if (session && isAuthPage) {

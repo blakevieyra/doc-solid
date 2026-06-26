@@ -52,6 +52,7 @@ import { peekNextDocumentNumber } from "@/lib/documents/sequencing";
 import { ensureDocumentNumber, resolveDocumentNumber } from "@/lib/documents/document-number";
 import { snapshotBrandingIntoValues, mergeShareFieldUpdates } from "@/lib/profile/document-branding";
 import { useMediaQuery } from "@/lib/useMediaQuery";
+import { GuestSignupBanner } from "@/components/GuestSignupBanner";
 
 function DocumentEditorPageContent() {
   const params = useParams();
@@ -283,6 +284,7 @@ function DocumentEditorPageContent() {
   const signingGate = canApplyOwnerSignature(fullTemplate, values);
   const counterpartyGate = canCounterpartySign(assignedFieldIds, values);
   const userId = session?.userId ?? null;
+  const isGuest = !session;
   const userEmail = session?.email ?? profile.account.email ?? "";
   const userName = session?.name ?? profile.account.displayName ?? profile.personal.fullName ?? "";
   const activeShare = shareId ? getShareById(shareId) : null;
@@ -364,6 +366,10 @@ function DocumentEditorPageContent() {
 
   async function handleSave() {
     if (!meta) return;
+    if (isGuest) {
+      router.push("/signup");
+      return;
+    }
     const storage = new IndexedDBStorage();
     const userId = session?.userId ?? null;
     const accountCode = profile.account.accountId?.slice(0, 8) || undefined;
@@ -532,6 +538,7 @@ function DocumentEditorPageContent() {
 
   return (
     <AppShell wide>
+      {!signingMode && isGuest && <GuestSignupBanner compact />}
       <div className="editor-header">
         <Link
           href={signingMode ? "/portal" : editLocalId ? `/portal/view/${editLocalId}` : "/documents"}

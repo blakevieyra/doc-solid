@@ -18,18 +18,19 @@ export function AppShell({
   children: React.ReactNode;
   wide?: boolean;
 }) {
-  const { user, logout } = useAuth();
+  const { user, session, logout } = useAuth();
   const { profile } = useProfile();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const router = useRouter();
+  const isGuest = !session;
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
   const headerRef = useRef<HTMLDivElement>(null);
 
   const logo = profile.business.logo ?? profile.organization.logo;
-  const displayName = user?.name?.split(" ")[0] ?? "User";
-  const isPro = getEffectiveSubscription(profile.subscription).isProActive;
+  const displayName = isGuest ? "Guest" : (user?.name?.split(" ")[0] ?? "User");
+  const isPro = !isGuest && getEffectiveSubscription(profile.subscription).isProActive;
 
   useEffect(() => {
     function close(e: MouseEvent | TouchEvent) {
@@ -84,7 +85,13 @@ export function AppShell({
                 Go Pro
               </Link>
             )}
-            {menuOpen && (
+            {menuOpen && isGuest && (
+              <div className="mobile-nav-footer mobile-nav-auth">
+                <Link href="/signup" className="btn btn-primary btn-block" onClick={() => setMenuOpen(false)}>Create free account</Link>
+                <Link href="/login" className="btn btn-secondary btn-block" onClick={() => setMenuOpen(false)}>Sign in</Link>
+              </div>
+            )}
+            {menuOpen && !isGuest && (
               <div className="mobile-nav-footer">
                 <Link href="/profile?tab=security" className="btn btn-secondary btn-block" onClick={() => setMenuOpen(false)}>
                   Security Center
@@ -96,6 +103,7 @@ export function AppShell({
           {menuOpen && <button type="button" className="mobile-nav-backdrop" aria-label="Close menu" onClick={() => setMenuOpen(false)} />}
 
           <div className="app-header-actions">
+            {!isGuest && (
             <div className="notif-wrap">
               <button
                 type="button"
@@ -138,7 +146,14 @@ export function AppShell({
                 </div>
               )}
             </div>
+            )}
 
+            {isGuest ? (
+              <div className="app-header-auth-links">
+                <Link href="/login" className="btn btn-ghost btn-sm">Sign in</Link>
+                <Link href="/signup" className="btn btn-primary btn-sm">Sign up</Link>
+              </div>
+            ) : (
             <div className="user-menu-wrap">
               <button
                 type="button"
@@ -172,6 +187,7 @@ export function AppShell({
                 </div>
               )}
             </div>
+            )}
 
             <button
               type="button"

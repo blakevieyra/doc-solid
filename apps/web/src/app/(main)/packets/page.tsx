@@ -7,6 +7,7 @@ import { generateTemplate, getDocumentById } from "@doc-solid/documents";
 import { AppShell } from "@/components/AppShell";
 import { DocumentPreview } from "@/components/DocumentPreview";
 import { EmailPacketModal } from "@/components/EmailPacketModal";
+import { GuestAuthGate, GuestSignupBanner } from "@/components/GuestSignupBanner";
 import { useProfile } from "@/components/ProfileProvider";
 import { useAuth } from "@/components/AuthProvider";
 import { useSubscription } from "@/lib/subscription/useSubscription";
@@ -56,6 +57,7 @@ function buildTemplateValues(
 export default function PacketsPage() {
   const { profile, documentProfile, updateProfile, autofill } = useProfile();
   const { session } = useAuth();
+  const isGuest = !session;
   const { effective, maxPackets, maxPacketItems } = useSubscription();
   const [savedDocs, setSavedDocs] = useState<LocalDocument[]>([]);
   const [activePacketId, setActivePacketId] = useState<string | null>(null);
@@ -201,11 +203,19 @@ export default function PacketsPage() {
 
   return (
     <AppShell title="Document Packets" wide>
+      <GuestSignupBanner />
       <p className="page-lead">
         Group templates and saved files into a packet — then download one combined PDF or email it.
         {" "}{limitHint}
       </p>
 
+      {isGuest ? (
+        <GuestAuthGate
+          title="Create an account to build packets"
+          description="Sign up free to save document packets, combine templates with your files, and export or email them as one PDF."
+        />
+      ) : (
+      <>
       <div className="packets-layout">
         <aside className="card packets-sidebar">
           <h2 className="packets-sidebar-title">Your packets</h2>
@@ -586,6 +596,8 @@ export default function PacketsPage() {
           previewElementIds={exportPreviewIds}
           onClose={() => setShowEmail(false)}
         />
+      )}
+      </>
       )}
     </AppShell>
   );
