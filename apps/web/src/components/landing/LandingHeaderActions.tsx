@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { useProfile } from "@/components/ProfileProvider";
 import { getEffectiveSubscription } from "@/lib/subscription/plans";
+import { GUEST_BROWSE_ENTRY_PATH } from "@/lib/auth/guest-browse";
 
 export function LandingHeaderActions() {
   const { session } = useAuth();
@@ -26,6 +27,7 @@ export function LandingHeaderActions() {
         </Link>
       ) : (
         <>
+          <Link href={GUEST_BROWSE_ENTRY_PATH}>Take a Look</Link>
           <Link href="/login">Sign In</Link>
           <Link href="/signup" className="btn btn-primary">
             Start Free

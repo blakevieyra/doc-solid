@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { BrandLogo } from "@/components/BrandLogo";
+import { GUEST_BROWSE_ENTRY_PATH } from "@/lib/auth/guest-browse";
 
 function LoginForm() {
   const { login } = useAuth();
@@ -73,6 +74,9 @@ function LoginForm() {
         </form>
         <p className="auth-footer">
           Don&apos;t have an account? <Link href="/signup">Create one free</Link>
+        </p>
+        <p className="auth-footer auth-browse-link">
+          <Link href={GUEST_BROWSE_ENTRY_PATH}>Take a look around — no account needed</Link>
         </p>
       </div>
     </div>

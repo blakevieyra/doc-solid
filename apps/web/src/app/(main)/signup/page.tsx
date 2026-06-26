@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { BrandLogo } from "@/components/BrandLogo";
+import { GUEST_BROWSE_ENTRY_PATH } from "@/lib/auth/guest-browse";
 
 type Step = "email" | "verify" | "account";
 
@@ -225,6 +226,9 @@ export default function SignUpPage() {
 
         <p className="auth-footer">
           Already have an account? <Link href="/login">Sign in</Link>
+        </p>
+        <p className="auth-footer auth-browse-link">
+          <Link href={GUEST_BROWSE_ENTRY_PATH}>Take a look around — no account needed</Link>
         </p>
         <p className="field-help auth-legal">
           By signing up you agree to our <Link href="/legal/terms">Terms</Link> and{" "}
