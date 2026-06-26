@@ -45,11 +45,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function bootstrap() {
-      const server = await fetchServerSession();
-      if (server && isServerAuthMode(server.mode)) {
-        setSession(server.session);
-        setUser(server.user);
+      const result = await fetchServerSession();
+      if (result.kind === "session" && isServerAuthMode(result.data.mode)) {
+        setSession(result.data.session);
+        setUser(result.data.user);
         setAuthMode("server");
+        clearSession();
+        setLoading(false);
+        return;
+      }
+      if (result.kind === "unauthenticated") {
+        clearSession();
         setLoading(false);
         return;
       }

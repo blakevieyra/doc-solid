@@ -24,12 +24,17 @@ export interface SessionResponse {
   mode: "server" | "local";
 }
 
-export async function fetchServerSession(): Promise<SessionResponse | null> {
+export type FetchServerSessionResult =
+  | { kind: "session"; data: SessionResponse }
+  | { kind: "unauthenticated" }
+  | { kind: "unavailable" };
+
+export async function fetchServerSession(): Promise<FetchServerSessionResult> {
   const res = await fetch("/api/auth/session", { credentials: "include", cache: "no-store" });
-  if (res.status === 503) return null;
-  if (res.status === 401) return null;
-  if (!res.ok) return null;
-  return res.json() as Promise<SessionResponse>;
+  if (res.status === 503) return { kind: "unavailable" };
+  if (res.status === 401) return { kind: "unauthenticated" };
+  if (!res.ok) return { kind: "unavailable" };
+  return { kind: "session", data: (await res.json()) as SessionResponse };
 }
 
 export async function apiRegister(

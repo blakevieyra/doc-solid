@@ -1945,7 +1945,8 @@ button.portal-stat-filter.active .portal-stat-value {
   display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.4);
   border: none; z-index: 40;
 }
-.mobile-nav-footer { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.mobile-nav-footer { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 0.5rem; }
+.mobile-nav-signout { color: var(--text-muted); justify-content: center; }
 
 /* Email document modal */
 .email-doc-modal { max-width: 520px; max-height: 90vh; overflow-y: auto; }

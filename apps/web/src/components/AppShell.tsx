@@ -76,12 +76,20 @@ export function AppShell({
           <nav className={`app-nav${menuOpen ? " open" : ""}`} aria-label="Main">
             <Link href="/documents" onClick={() => setMenuOpen(false)}>Documents</Link>
             <Link href="/packets" onClick={() => setMenuOpen(false)}>Packets</Link>
-            <Link href="/portal" onClick={() => setMenuOpen(false)}>My Files</Link>
+            {!isGuest && (
+              <Link href="/portal" onClick={() => setMenuOpen(false)}>My Files</Link>
+            )}
             <Link href="/team" onClick={() => setMenuOpen(false)}>Team</Link>
-            <Link href="/profile" onClick={() => setMenuOpen(false)}>Profile</Link>
+            {!isGuest && (
+              <Link href="/profile" onClick={() => setMenuOpen(false)}>Profile</Link>
+            )}
             <Link href="/help" onClick={() => setMenuOpen(false)}>Help</Link>
             {!isPro && (
-              <Link href="/profile?tab=billing" onClick={() => setMenuOpen(false)} className="app-nav-go-pro">
+              <Link
+                href={isGuest ? "/signup?plan=pro" : "/profile?tab=billing"}
+                onClick={() => setMenuOpen(false)}
+                className="app-nav-go-pro"
+              >
                 Go Pro
               </Link>
             )}
@@ -96,6 +104,16 @@ export function AppShell({
                 <Link href="/profile?tab=security" className="btn btn-secondary btn-block" onClick={() => setMenuOpen(false)}>
                   Security Center
                 </Link>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-block mobile-nav-signout"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    handleLogout();
+                  }}
+                >
+                  Sign Out
+                </button>
               </div>
             )}
           </nav>
