@@ -1617,9 +1617,6 @@ a.quick-action-card { text-decoration: none; color: inherit; }
   .onboarding-card { padding: 1.25rem; margin: 0.75rem; }
   .onboarding-actions { position: sticky; bottom: 0; background: var(--surface); padding: 1rem 0; margin-top: 1rem; border-top: 1px solid var(--border); }
   .lock-card { width: min(100%, 360px); margin: 1rem; padding: 1.5rem; }
-  .lock-input { font-size: 16px; min-height: 48px; }
-  .doc-search-bar { flex-direction: column; }
-  .doc-search-input, .doc-filter-select, .industry-select { width: 100%; font-size: 16px; min-height: 44px; }
   .recommended-docs-grid { grid-template-columns: 1fr; }
   .portal-stats-row { flex-direction: column; }
   .portal-new-btn { margin-left: 0; width: 100%; }
@@ -1761,15 +1758,6 @@ a.quick-action-card { text-decoration: none; color: inherit; }
   .packets-item-actions { width: 100%; }
   .packets-item-actions .btn { flex: 1 1 calc(50% - 0.25rem); min-height: 44px; }
   .auth-inline-link { white-space: normal; }
-  .field-group input:not([type="checkbox"]):not([type="radio"]),
-  .field-group select,
-  .field-group textarea {
-    font-size: 1rem;
-    padding: 0.5rem 0.625rem;
-    line-height: 1.4;
-    min-height: unset;
-  }
-  .field-group textarea { min-height: 5rem; }
   .field-group { margin-bottom: 0.75rem; gap: 0.25rem; }
   .profile-panel,
   .editor-form.card {
@@ -1803,18 +1791,22 @@ a.quick-action-card { text-decoration: none; color: inherit; }
 .doc-search-input {
   flex: 2 1 360px;
   min-width: min(100%, 280px);
-  padding: 0.75rem 1rem;
+  padding: 0.5625rem 0.75rem;
   border-radius: 8px;
   border: 1px solid var(--border);
   font-size: 0.9375rem;
+  line-height: 1.35;
+  background: var(--surface);
 }
 .doc-filter-select {
   flex: 0 1 auto;
   min-width: 140px;
-  padding: 0.75rem;
+  padding: 0.5625rem 0.75rem;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--surface);
+  font-size: 0.9375rem;
+  line-height: 1.35;
 }
 .doc-search-meta {
   color: var(--text-muted);
@@ -1928,7 +1920,15 @@ button.portal-stat-filter.active .portal-stat-value {
 .recommended-doc-card strong { font-size: 1.125rem; font-weight: 600; line-height: 1.35; }
 .recommended-doc-desc { font-size: 0.8125rem; color: var(--text-muted); line-height: 1.4; }
 .recommended-doc-tags { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.25rem; }
-.industry-select { width: 100%; padding: 0.625rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); }
+.industry-select {
+  width: 100%;
+  padding: 0.5625rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.9375rem;
+  line-height: 1.35;
+}
 
 /* User logo in header */
 .user-logo-avatar {
@@ -2570,5 +2570,67 @@ button.portal-stat-filter.active .portal-stat-value {
 }
 @media (max-width: 768px) {
   .app-header-auth-links { display: none; }
+}
+
+/* Mobile form controls — must load last to override page-specific input rules */
+@media (max-width: 768px) {
+  .doc-search-bar {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: stretch;
+  }
+
+  .doc-search-input,
+  .doc-filter-select,
+  .industry-select,
+  .field-group input:not([type="checkbox"]):not([type="radio"]),
+  .field-group select,
+  .field-group textarea,
+  .auth-form input:not([type="checkbox"]):not([type="radio"]),
+  .auth-form select,
+  .auth-form textarea,
+  .packets-create-input,
+  .packets-rename-input,
+  .delete-confirm-input,
+  .invite-code-input,
+  .lock-input,
+  .lock-card input,
+  .line-item-table input,
+  .signature-type-input {
+    width: 100%;
+    max-width: 100%;
+    font-size: 16px;
+    padding: 0.4375rem 0.625rem;
+    line-height: 1.35;
+    min-height: unset;
+    height: auto;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .field-group textarea {
+    min-height: 4.5rem;
+  }
+
+  select.doc-filter-select,
+  .field-group select,
+  .industry-select,
+  .auth-form select {
+    background-color: var(--surface);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M2 4l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.625rem center;
+    padding-right: 2rem;
+  }
+
+  input[type="search"]::-webkit-search-decoration,
+  input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+
+  .packets-rename-input {
+    font-size: 1rem;
+    font-weight: 600;
+  }
 }
 
