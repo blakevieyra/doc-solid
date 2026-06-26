@@ -37,9 +37,9 @@ export function buildSiteMetadata(overrides?: Partial<Metadata>): Metadata {
     metadataBase: new URL(url),
     alternates: { canonical: "/" },
     icons: {
-      icon: [{ url: "/icon", type: "image/png", sizes: "512x512" }],
-      apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
-      shortcut: ["/icon"],
+      icon: [{ url: "/icon.png", type: "image/png", sizes: "512x512" }],
+      apple: [{ url: "/apple-icon.png", type: "image/png", sizes: "180x180" }],
+      shortcut: ["/icon.png"],
     },
     openGraph: {
       type: "website",
