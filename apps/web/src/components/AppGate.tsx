@@ -43,6 +43,15 @@ export function AppGate({ children }: { children: React.ReactNode }) {
     setInitialCheckDone(true);
   }, [authLoading, profileLoading, session, pathname, router]);
 
+  useEffect(() => {
+    if (!session || authLoading || profileLoading) return;
+    if (typeof window === "undefined") return;
+    const stored = sessionStorage.getItem("doc-solid-post-auth");
+    if (!stored) return;
+    sessionStorage.removeItem("doc-solid-post-auth");
+    router.replace(stored);
+  }, [session, authLoading, profileLoading, router]);
+
   if (!initialCheckDone) {
     return (
       <div className="loading-screen">

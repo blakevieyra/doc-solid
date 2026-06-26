@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import type { RecommendedDocument } from "@/lib/documents/recommendations";
 import { INDUSTRY_OPTIONS } from "@/lib/documents/recommendations";
+import { useAuth } from "@/components/AuthProvider";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { useProfile } from "@/components/ProfileProvider";
 import { getFavoriteTemplateIds, isFavorite, toggleFavorite } from "@/lib/documents/favorites";
@@ -22,12 +23,15 @@ export function RecommendedDocuments({
   /** Show favorite star on each card */
   enableActions?: boolean;
 }) {
+  const { session } = useAuth();
   const { profile, updateProfile } = useProfile();
+  const canFavorite = enableActions && Boolean(session);
   const [favMsg, setFavMsg] = useState("");
 
   if (documents.length === 0) return null;
 
   async function handleToggleFavorite(templateId: string) {
+    if (!canFavorite) return;
     setFavMsg("");
     await updateProfile((current) => {
       const result = toggleFavorite(current, templateId);
@@ -60,9 +64,9 @@ export function RecommendedDocuments({
         {documents.map((doc) => (
           <div
             key={doc.id}
-            className={`card recommended-doc-card${enableActions ? " recommended-doc-card-with-actions" : ""}`}
+            className={`card recommended-doc-card${canFavorite ? " recommended-doc-card-with-actions" : ""}`}
           >
-            {enableActions && (
+            {canFavorite && (
               <FavoriteButton
                 active={isFavorite(profile, doc.id)}
                 size="sm"
@@ -85,7 +89,7 @@ export function RecommendedDocuments({
         ))}
       </div>
 
-      {enableActions && favorites.length > 0 && (
+      {canFavorite && favorites.length > 0 && (
         <p className="field-help" style={{ marginTop: "0.75rem" }}>
           {favorites.length} favorite{favorites.length !== 1 ? "s" : ""} — find them under the{" "}
           <Link href="/documents">Favorites tab</Link> on Documents or add to{" "}

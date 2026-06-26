@@ -104,6 +104,13 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setLoading(true);
     async function load() {
+      if (!session) {
+        setProfile(structuredClone(DEFAULT_PROFILE));
+        setLocked(false);
+        setLoading(false);
+        return;
+      }
+
       let local = await loadProfile(userId);
       if (session) {
         if (!local.account.email) local.account.email = session.email;
@@ -221,6 +228,8 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
 
   const persist = useCallback(
     async (next: UserProfile, pin?: string) => {
+      if (!session) return;
+
       setSaveStatus("saving");
       let saved: UserProfile;
       try {
@@ -266,11 +275,13 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         dispatchTeamRefresh();
       }
     },
-    [sessionPin, userId, authMode, refreshTeamShared, markSaved]
+    [session, sessionPin, userId, authMode, refreshTeamShared, markSaved]
   );
 
   const updateProfile = useCallback(
     async (updates: Partial<UserProfile> | ((p: UserProfile) => UserProfile)) => {
+      if (!session) return;
+
       let nextProfile: UserProfile | null = null;
       setProfile((current) => {
         nextProfile =
@@ -283,10 +294,12 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
         await persist(nextProfile);
       }
     },
-    [persist]
+    [persist, session]
   );
 
   const completeOnboarding = useCallback(async () => {
+    if (!session) return;
+
     let nextProfile: UserProfile | null = null;
     setProfile((current) => {
       nextProfile = { ...current, onboardingComplete: true };
@@ -295,7 +308,7 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
     if (nextProfile) {
       await persist(nextProfile);
     }
-  }, [persist]);
+  }, [persist, session]);
 
   const unlock = useCallback(
     async (pin: string) => {

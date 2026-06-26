@@ -46,6 +46,7 @@ export const PLANS: PlanDefinition[] = [
       "Profile auto-fill & logo",
       "Print & local save",
       "PDF export (watermarked)",
+      "Sign documents shared with you",
       "Email to yourself only",
     ],
   },

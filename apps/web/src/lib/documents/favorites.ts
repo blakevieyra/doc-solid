@@ -67,3 +67,8 @@ export function toggleFavoriteLocal(
   }
   return { favorites: [...current, localId] };
 }
+
+/** Favorites require a signed-in account and sync to the server profile — never guest localStorage. */
+export function canManageFavorites(hasSession: boolean): boolean {
+  return hasSession;
+}

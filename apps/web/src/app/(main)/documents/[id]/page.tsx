@@ -96,6 +96,16 @@ function DocumentEditorPageContent() {
   const cloudSyncAllowed = canUseFeature(profile.subscription, "cloudSync");
 
   useEffect(() => {
+    if (!signingMode || session) return;
+    const qs = searchParams?.toString();
+    const next = qs ? `/documents/${id}?${qs}` : `/documents/${id}`;
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("doc-solid-post-auth", next);
+    }
+    router.replace("/signup");
+  }, [signingMode, session, router, id, searchParams]);
+
+  useEffect(() => {
     if (!shareId) return;
     const share = getShareById(shareId);
     if (!share?.documentTemplateId || share.documentTemplateId === id) return;

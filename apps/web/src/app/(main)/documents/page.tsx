@@ -115,6 +115,7 @@ export default function DocumentsPage() {
           documents={recommended}
           heading={recHeading}
           subtitle={profileSettingsHint(profile.profileType)}
+          enableActions={!isGuest}
         />
       )}
 
