@@ -26,6 +26,8 @@ export interface PdfExportOptions {
   scale?: number;
 }
 
+export const FREE_PLAN_WATERMARK_TEXT = "DOC SOLID FREE";
+
 type ImageFormat = "PNG" | "JPEG";
 
 function addCanvasToPdf(
@@ -81,7 +83,7 @@ function applyWatermark(pdf: jsPDF): void {
     pdf.setPage(i);
     pdf.setFontSize(48);
     pdf.setTextColor(200, 200, 200);
-    pdf.text("DOC SOLID FREE", pageWidth / 2, pageHeight / 2, {
+    pdf.text(FREE_PLAN_WATERMARK_TEXT, pageWidth / 2, pageHeight / 2, {
       align: "center",
       angle: 45,
     });

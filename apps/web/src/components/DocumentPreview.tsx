@@ -21,6 +21,7 @@ import {
 
 import { resolveDocumentLetterhead } from "@/lib/profile/document-branding";
 import { RedactedValue, isRedactedValue } from "@/components/RedactedValue";
+import { FREE_PLAN_WATERMARK_TEXT } from "@/lib/pdf/exportDocument";
 
 
 
@@ -36,14 +37,14 @@ interface DocumentPreviewProps {
   lockBranding?: boolean;
 
   /** Override default id="document-preview" for multi-doc pages like packets */
-
   previewId?: string;
-
+  /** Show diagonal watermark when printing (Free plan) */
+  watermark?: boolean;
 }
 
 
 
-export function DocumentPreview({ meta, values, profile, lockBranding, previewId }: DocumentPreviewProps) {
+export function DocumentPreview({ meta, values, profile, lockBranding, previewId, watermark }: DocumentPreviewProps) {
 
   const letterhead = resolveDocumentLetterhead(profile, values, { valuesOnly: lockBranding });
   const displayNumber = extractDocumentNumberFromValues(values);
@@ -72,6 +73,8 @@ export function DocumentPreview({ meta, values, profile, lockBranding, previewId
 
 
   return (
+
+    <>
 
     <article className="doc-preview" id={previewId ?? "document-preview"}>
 
@@ -226,6 +229,14 @@ export function DocumentPreview({ meta, values, profile, lockBranding, previewId
       </footer>
 
     </article>
+
+    {watermark && (
+      <div className="doc-preview-print-watermark" aria-hidden="true">
+        {FREE_PLAN_WATERMARK_TEXT}
+      </div>
+    )}
+
+    </>
 
   );
 

@@ -297,10 +297,10 @@ function SavedDocumentPageContent() {
               Email
             </button>
             <button type="button" className="btn btn-secondary btn-sm" onClick={handlePdfExport} disabled={exporting}>
-              {exporting ? "Exporting…" : "Download PDF"}
+              {exporting ? "Exporting…" : cleanPdf ? "Download PDF" : "Download PDF (watermarked)"}
             </button>
             <button type="button" className="btn btn-secondary btn-sm" onClick={handlePrint}>
-              Print
+              {cleanPdf ? "Print" : "Print (watermarked)"}
             </button>
           </div>
         </div>
@@ -334,6 +334,7 @@ function SavedDocumentPageContent() {
           values={values}
           profile={documentProfile}
           lockBranding={isSharedPreview}
+          watermark={!cleanPdf}
         />
       </div>
 

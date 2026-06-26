@@ -623,6 +623,7 @@ function DocumentEditorPageContent() {
                   values={values}
                   profile={documentProfile}
                   lockBranding={lockShareBranding}
+                  watermark={!cleanPdf}
                 />
               </div>
             </div>
@@ -803,7 +804,9 @@ function DocumentEditorPageContent() {
             <button type="button" className="btn btn-secondary" onClick={handlePdfExport} disabled={exporting}>
               {exporting ? "Exporting..." : cleanPdf ? "Download PDF" : "Download PDF (watermarked)"}
             </button>
-            <button type="button" className="btn btn-secondary" onClick={handlePrint}>Print</button>
+            <button type="button" className="btn btn-secondary" onClick={handlePrint}>
+              {cleanPdf ? "Print" : "Print (watermarked)"}
+            </button>
             <button type="button" className="btn btn-secondary" onClick={() => setShowEmail(true)}>
               Email
             </button>
@@ -917,6 +920,7 @@ function DocumentEditorPageContent() {
               values={values}
               profile={documentProfile}
               lockBranding={lockShareBranding}
+              watermark={!cleanPdf}
             />
           </div>
         </div>
