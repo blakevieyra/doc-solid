@@ -6,7 +6,7 @@ const BRAND_ACCENT = "#5b9fd4";
 const EMAIL_LOGO_WIDTH = 120;
 
 function emailLogoUrl(appUrl: string): string {
-  return `${appUrl.replace(/\/$/, "")}/logo.png`;
+  return `${appUrl.replace(/\/$/, "")}/icon`;
 }
 
 function emailLogoBlock(appUrl: string, width: number): string {

@@ -1,9 +1,12 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { CATALOG_STATS } from "@doc-solid/documents";
 import { BrandLogo } from "@/components/BrandLogo";
 import { LandingHeroIntro } from "@/components/landing/LandingHeroIntro";
 import { LandingHeroCta } from "@/components/landing/LandingHeroCta";
 import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions";
+import { SiteJsonLd } from "@/components/seo/SiteJsonLd";
+import { buildSiteMetadata } from "@/lib/seo/site-metadata";
 import { PLANS, getPlan, ENTERPRISE_PLAN } from "@/lib/subscription/plans";
 import { FAQ_ITEMS, SALES_EMAIL, SUPPORT_EMAIL } from "@/lib/support/config";
 import {
@@ -67,6 +70,10 @@ function buildFeatures() {
   ] as const;
 }
 
+export const metadata: Metadata = buildSiteMetadata({
+  alternates: { canonical: "/" },
+});
+
 export default function HomePage() {
   const monthly = getPlan("monthly");
   const yearly = getPlan("yearly");
@@ -74,6 +81,7 @@ export default function HomePage() {
 
   return (
     <div className="landing-page">
+      <SiteJsonLd />
       <header className="landing-header">
         <div className="container landing-header-inner">
           <BrandLogo href="/" size="sm" />
@@ -87,8 +95,8 @@ export default function HomePage() {
             <LandingHeroIntro />
             <h1>Professional documents<br />for your business</h1>
             <p>
-              Build, fill, print, email, and save {CATALOG_STATS.total}+ document types.
-              Cloud sync with offline access. Multi-user teams supported.
+              {CATALOG_STATS.total}+ templates with profile auto-fill, e-signatures, PDF & print,
+              document packets, team sharing, security scan & redaction, and cloud sync with offline access.
             </p>
             <LandingHeroCta />
           </div>

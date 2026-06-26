@@ -1,16 +1,23 @@
 {
-  "name": "DocSolid",
+  "name": "DocSolid — Documents & Forms for Business",
   "short_name": "DocSolid",
-  "description": "Build, fill, and manage business documents",
+  "description": "143+ business document templates with profile auto-fill, e-signatures, PDF export, document packets, team sharing, security scan, and cloud sync. Free to start.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f4f6f9",
   "theme_color": "#1a2744",
   "icons": [
     {
-      "src": "/icon.png",
+      "src": "/icon",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-icon",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

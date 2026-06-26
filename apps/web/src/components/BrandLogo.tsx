@@ -18,12 +18,13 @@ export function BrandLogo({
   const inner = (
     <>
       <Image
-        src="/logo.png"
+        src="/logo.svg"
         alt="DocSolid"
         width={Math.round(h * 1.15)}
         height={h}
         className="brand-logo-img"
         priority
+        unoptimized
       />
       {showWordmark && (
         <span className="brand-wordmark" aria-hidden={!showWordmark}>
