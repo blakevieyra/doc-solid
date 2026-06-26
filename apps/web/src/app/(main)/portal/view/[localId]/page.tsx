@@ -120,14 +120,14 @@ function SavedDocumentPageContent() {
     _redacted: Record<string, string>,
     _scan: unknown,
     applied: SecurityFinding[],
-  ) {
+  ): Promise<boolean> {
     if (!localId || shareContext?.fieldDataSnapshot) {
       notify({
         type: "system",
         title: "Save a copy first",
         message: "Redaction creates a new copy in My Files. Shared previews cannot be redacted in place.",
       });
-      return;
+      return false;
     }
     if (!canScanRedact) {
       notify({
@@ -136,7 +136,7 @@ function SavedDocumentPageContent() {
         message: "Security scan and redaction require a Pro plan.",
         link: "/profile?tab=billing",
       });
-      return;
+      return false;
     }
     const unlimitedDocs = canUseFeature(profile.subscription, "unlimitedDocs");
     const { redactedDoc, error } = await createRedactedDocumentCopy(localId, applied, {
@@ -149,17 +149,24 @@ function SavedDocumentPageContent() {
     });
     if (error) {
       notify({ type: "system", title: "Could not create redacted copy", message: error });
-      return;
+      return false;
     }
-    if (redactedDoc) {
+    if (!redactedDoc) {
       notify({
         type: "system",
-        title: "Redacted copy saved",
-        message: `"${redactedDoc.title}" is ready in My Files. Your original is unchanged.`,
-        link: `/portal/view/${redactedDoc.localId}`,
+        title: "Redacted copy not saved",
+        message: "Nothing was redacted. Select at least one item and try again.",
       });
-      router.push(`/portal/view/${redactedDoc.localId}`);
+      return false;
     }
+    notify({
+      type: "system",
+      title: "Redacted copy saved",
+      message: `"${redactedDoc.title}" is ready in My Files. Your original is unchanged.`,
+      link: `/portal/view/${redactedDoc.localId}`,
+    });
+    router.push(`/portal/view/${redactedDoc.localId}`);
+    return true;
   }
 
   async function handleMarkFinal() {
@@ -372,7 +379,7 @@ function SavedDocumentPageContent() {
           values={values}
           documentStatus={docStatus}
           onClose={() => setShowSecurityScan(false)}
-          onRedact={(redacted, _scan, applied) => void handleRedact(redacted, _scan, applied)}
+          onRedact={(redacted, _scan, applied) => handleRedact(redacted, _scan, applied)}
         />
       )}
 

@@ -487,6 +487,77 @@ function DocumentEditorPageContent() {
     setDocStatus("DRAFT");
   }
 
+  async function ensureSavedLocalDocument(): Promise<string | null> {
+    if (savedLocalId) return savedLocalId;
+    if (!meta || isGuest || signingMode) return null;
+
+    const storage = new IndexedDBStorage();
+    const userId = session?.userId ?? null;
+    const accountCode = profile.account.accountId?.slice(0, 8) || undefined;
+
+    const { documentNumber, fieldData: numberedValues } = ensureDocumentNumber({
+      userId,
+      templateId: meta.id,
+      accountCode,
+      fieldData: values,
+      numberFieldId,
+      existingDocumentNumber: assignedNumber,
+    });
+
+    if (numberFieldId && numberedValues[numberFieldId] !== values[numberFieldId]) {
+      setValues((prev) => ({ ...prev, [numberFieldId]: numberedValues[numberFieldId] }));
+    }
+    if (documentNumber !== assignedNumber) {
+      setAssignedNumber(documentNumber);
+    }
+
+    const fieldData = snapshotBrandingIntoValues(documentProfile, numberedValues);
+    const title = `${meta.name} #${documentNumber}`;
+
+    const unlimited = canUseFeature(profile.subscription, "unlimitedDocs");
+    const existing = await storage.getDocumentsForUser(userId);
+    const { allowed, used, limit } = canCreateDocumentThisMonth(existing, unlimited);
+    if (!allowed) {
+      notify({
+        type: "system",
+        title: "Document limit reached",
+        message: `Free plan limit reached (${used}/${limit} documents this month). Upgrade to Pro for unlimited documents.`,
+        link: "/profile?tab=billing",
+      });
+      return null;
+    }
+
+    const now = new Date().toISOString();
+    const doc: LocalDocument = {
+      localId: createLocalId(),
+      title,
+      templateId: meta.id,
+      fieldData,
+      documentNumber,
+      domain: meta.domain,
+      category: meta.category,
+      userId: userId ?? undefined,
+      status: "DRAFT",
+      createdAt: now,
+      updatedAt: now,
+      syncStatus: "LOCAL_ONLY",
+    };
+    await storage.saveDocument(doc);
+    await storage.enqueueSync({ localId: doc.localId, action: "CREATE", payload: doc, timestamp: doc.updatedAt });
+
+    if (authMode === "server" && cloudSyncAllowed) {
+      const synced = await pushCloudDocument(doc);
+      if (synced) {
+        await storage.saveDocument({ ...doc, ...synced, syncStatus: "SYNCED" });
+      }
+    }
+
+    setSavedLocalId(doc.localId);
+    setSaved(true);
+    setDocStatus("DRAFT");
+    return doc.localId;
+  }
+
   function handlePrint() {
     window.print();
   }
@@ -883,10 +954,18 @@ function DocumentEditorPageContent() {
             documentStatus={docStatus}
             onClose={() => setShowSecurityScan(false)}
             onRedact={async (_redacted, _scan, applied) => {
-              if (!savedLocalId) return;
-              if (!canScanRedact) return;
+              if (!canScanRedact) return false;
+              const localId = savedLocalId ?? (await ensureSavedLocalDocument());
+              if (!localId) {
+                notify({
+                  type: "system",
+                  title: "Save required",
+                  message: "Save your document to My Files before creating a redacted copy.",
+                });
+                return false;
+              }
               const unlimitedDocs = canUseFeature(profile.subscription, "unlimitedDocs");
-              const { redactedDoc, error } = await createRedactedDocumentCopy(savedLocalId, applied, {
+              const { redactedDoc, error } = await createRedactedDocumentCopy(localId, applied, {
                 userId: session?.userId ?? docOwnerId,
                 unlimitedDocs,
                 authMode: authMode ?? undefined,
@@ -895,17 +974,24 @@ function DocumentEditorPageContent() {
               });
               if (error) {
                 notify({ type: "system", title: "Could not create redacted copy", message: error });
-                return;
+                return false;
               }
-              if (redactedDoc) {
+              if (!redactedDoc) {
                 notify({
                   type: "system",
-                  title: "Redacted copy saved",
-                  message: `"${redactedDoc.title}" is ready in My Files. Your original is unchanged.`,
-                  link: `/portal/view/${redactedDoc.localId}`,
+                  title: "Redacted copy not saved",
+                  message: "Nothing was redacted. Select at least one item and try again.",
                 });
-                router.push(`/portal/view/${redactedDoc.localId}`);
+                return false;
               }
+              notify({
+                type: "system",
+                title: "Redacted copy saved",
+                message: `"${redactedDoc.title}" is ready in My Files. Your original is unchanged.`,
+                link: `/portal/view/${redactedDoc.localId}`,
+              });
+              router.push(`/portal/view/${redactedDoc.localId}`);
+              return true;
             }}
           />
         )}

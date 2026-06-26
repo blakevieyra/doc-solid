@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   CATALOG_STATS,
   DOCUMENT_CATEGORIES,
@@ -10,7 +10,7 @@ import {
   type DocumentCatalogEntry,
 } from "@doc-solid/documents";
 import { AppShell } from "@/components/AppShell";
-import { RecommendedDocuments } from "@/components/RecommendedDocuments";
+import { RecommendedDocuments, ALL_DOCUMENTS_SECTION_ID, scrollToAllDocumentsSection } from "@/components/RecommendedDocuments";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { GuestSignupBanner } from "@/components/GuestSignupBanner";
 import { useProfile } from "@/components/ProfileProvider";
@@ -34,6 +34,12 @@ export default function DocumentsPage() {
   const [query, setQuery] = useState("");
   const [view, setView] = useState<LibraryView>("all");
   const [favMsg, setFavMsg] = useState("");
+
+  useEffect(() => {
+    if (window.location.hash !== `#${ALL_DOCUMENTS_SECTION_ID}`) return;
+    const timer = window.setTimeout(scrollToAllDocumentsSection, 150);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const favorites = getFavoriteTemplateIds(profile);
 
@@ -119,6 +125,7 @@ export default function DocumentsPage() {
         />
       )}
 
+      <div id={ALL_DOCUMENTS_SECTION_ID} className="doc-catalog-section">
       <div className="library-view-tabs no-print">
         <button type="button" className={`library-view-tab${view === "all" ? " active" : ""}`} onClick={() => setView("all")}>
           All documents
@@ -163,6 +170,7 @@ export default function DocumentsPage() {
           ))}
         </div>
       )}
+      </div>
     </AppShell>
   );
 }

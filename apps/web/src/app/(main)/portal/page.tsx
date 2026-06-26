@@ -75,13 +75,14 @@ import { SendToContactModal } from "@/components/SendToContactModal";
 import { AddToPacketModal } from "@/components/AddToPacketModal";
 import { canUseFeature } from "@/lib/subscription/plans";
 import { archiveSavedDocument, unarchiveSavedDocument, createRedactedDocumentCopy } from "@/lib/documents/persist";
+import { createDocumentAuditEvent } from "@/lib/documents/audit";
 import {
   getFavoriteLocalIds,
   getFavoriteTemplateIds,
   getPortalFavoriteCount,
   isSavedDocFavorite,
 } from "@/lib/documents/favorites";
-import { createDocumentAuditEvent } from "@/lib/documents/audit";
+import { CollapsibleShareSection } from "@/components/portal/CollapsibleShareSection";
 
 
 
@@ -658,15 +659,16 @@ export default function PortalPage() {
           )}
 
           {(portalFilter === "all" || portalFilter === "ARCHIVED") && archivedShares.length > 0 && (
-            <>
-              <h3 className="share-inbox-subtitle share-inbox-subtitle-archived">Completed shares</h3>
-              <p className="field-help share-archived-hint">
-                Signed and reviewed documents are archived here for your records.
-              </p>
+            <CollapsibleShareSection
+              title="Completed shares"
+              count={archivedShares.length}
+              hint="Signed and reviewed documents are archived here for your records."
+              defaultOpen={false}
+            >
               <ul className="share-inbox-list">
                 {archivedShares.map((s) => renderShareItem(s, true))}
               </ul>
-            </>
+            </CollapsibleShareSection>
           )}
         </section>
       )}
@@ -697,12 +699,15 @@ export default function PortalPage() {
           )}
 
           {sentCompletedShares.length > 0 && (
-            <>
-              <h3 className="share-inbox-subtitle share-inbox-subtitle-archived">Completed & returned</h3>
+            <CollapsibleShareSection
+              title="Completed & returned"
+              count={sentCompletedShares.length}
+              defaultOpen={false}
+            >
               <ul className="share-inbox-list">
                 {sentCompletedShares.map((s) => renderSentShareItem(s))}
               </ul>
-            </>
+            </CollapsibleShareSection>
           )}
         </section>
       )}
@@ -1007,7 +1012,7 @@ export default function PortalPage() {
           documentStatus={scanDoc.status}
           onClose={() => setScanDoc(null)}
           onRedact={async (_redacted, _scan, applied) => {
-            if (!pro) return;
+            if (!pro) return false;
             const unlimitedDocs = canUseFeature(profile.subscription, "unlimitedDocs");
             const { sourceDoc, redactedDoc, error } = await createRedactedDocumentCopy(
               scanDoc.localId,
@@ -1023,22 +1028,29 @@ export default function PortalPage() {
             );
             if (error) {
               notify({ type: "system", title: "Could not create redacted copy", message: error });
-              return;
+              return false;
             }
             if (sourceDoc) {
               setDocuments((prev) => prev.map((d) => (d.localId === sourceDoc.localId ? sourceDoc : d)));
             }
-            if (redactedDoc) {
-              setDocuments((prev) => [redactedDoc, ...prev]);
+            if (!redactedDoc) {
               notify({
                 type: "system",
-                title: "Redacted copy saved",
-                message: `"${redactedDoc.title}" is ready in My Files. Your original is unchanged.`,
-                link: `/portal/view/${redactedDoc.localId}`,
+                title: "Redacted copy not saved",
+                message: "Nothing was redacted. Select at least one item and try again.",
               });
-              router.push(`/portal/view/${redactedDoc.localId}`);
+              return false;
             }
+            setDocuments((prev) => [redactedDoc, ...prev]);
+            notify({
+              type: "system",
+              title: "Redacted copy saved",
+              message: `"${redactedDoc.title}" is ready in My Files. Your original is unchanged.`,
+              link: `/portal/view/${redactedDoc.localId}`,
+            });
             setScanDoc(null);
+            router.push(`/portal/view/${redactedDoc.localId}`);
+            return true;
           }}
         />
       )}

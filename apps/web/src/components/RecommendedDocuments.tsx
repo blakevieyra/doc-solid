@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import type { RecommendedDocument } from "@/lib/documents/recommendations";
 import { INDUSTRY_OPTIONS } from "@/lib/documents/recommendations";
@@ -8,6 +9,12 @@ import { useAuth } from "@/components/AuthProvider";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { useProfile } from "@/components/ProfileProvider";
 import { getFavoriteTemplateIds, isFavorite, toggleFavorite } from "@/lib/documents/favorites";
+
+export const ALL_DOCUMENTS_SECTION_ID = "all-documents";
+
+export function scrollToAllDocumentsSection() {
+  document.getElementById(ALL_DOCUMENTS_SECTION_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 export function RecommendedDocuments({
   documents,
@@ -25,6 +32,7 @@ export function RecommendedDocuments({
 }) {
   const { session } = useAuth();
   const { profile, updateProfile } = useProfile();
+  const pathname = usePathname();
   const canFavorite = enableActions && Boolean(session);
   const [favMsg, setFavMsg] = useState("");
 
@@ -55,7 +63,18 @@ export function RecommendedDocuments({
           <h2 className="recommended-docs-title">{heading}</h2>
           {subtitle && <p className="recommended-docs-subtitle">{subtitle}</p>}
         </div>
-        <Link href="/documents" className="btn btn-secondary btn-sm">Browse all</Link>
+        <Link
+          href={`/documents#${ALL_DOCUMENTS_SECTION_ID}`}
+          className="btn btn-secondary btn-sm"
+          onClick={(e) => {
+            if (pathname !== "/documents") return;
+            e.preventDefault();
+            scrollToAllDocumentsSection();
+            window.history.replaceState(null, "", `/documents#${ALL_DOCUMENTS_SECTION_ID}`);
+          }}
+        >
+          Browse all
+        </Link>
       </div>
 
       {favMsg && <p className="field-error" style={{ marginBottom: "0.75rem" }}>{favMsg}</p>}

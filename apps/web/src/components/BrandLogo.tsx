@@ -12,15 +12,15 @@ export function BrandLogo({
   showWordmark?: boolean;
   className?: string;
 }) {
-  const heights = { xs: 24, sm: 80, md: 100, lg: 132, xl: 160, "2xl": 192 };
+  const heights = { xs: 24, sm: 72, md: 96, lg: 128, xl: 160, "2xl": 192 };
   const h = heights[size];
 
   const inner = (
     <>
       <Image
-        src="/logo.svg"
+        src="/logo.png"
         alt="DocSolid"
-        width={Math.round(h * 1.15)}
+        width={h}
         height={h}
         className="brand-logo-img"
         priority

@@ -43,7 +43,7 @@ export async function createRedactedDocumentCopy(
     return { sourceDoc: null, redactedDoc: null, skippedLockedSignatures: [] };
   }
   if (findings.length === 0) {
-    return { sourceDoc: source, redactedDoc: null, skippedLockedSignatures: [] };
+    return { sourceDoc: source, redactedDoc: null, skippedLockedSignatures: [], error: "No items selected to redact." };
   }
   if (options?.securityScanAllowed === false) {
     return {
@@ -55,6 +55,14 @@ export async function createRedactedDocumentCopy(
   }
 
   const userId = options?.userId ?? source.userId ?? null;
+  if (options?.authMode === "server" && !userId) {
+    return {
+      sourceDoc: source,
+      redactedDoc: null,
+      skippedLockedSignatures: [],
+      error: "Sign in to save redacted copies to your account.",
+    };
+  }
   if (options?.unlimitedDocs === false) {
     const existing = await storage.getDocumentsForUser(userId);
     const { allowed, used, limit } = canCreateDocumentThisMonth(existing, false);
@@ -139,7 +147,7 @@ export async function createRedactedDocumentCopy(
   await storage.saveDocument(sourceDoc);
 
   let savedRedactedDoc = redactedDoc;
-  if (options?.authMode === "server" && options?.cloudSyncAllowed) {
+  if (options?.authMode === "server") {
     const synced = await pushCloudDocument(redactedDoc);
     if (synced) {
       savedRedactedDoc = { ...redactedDoc, ...synced, syncStatus: "SYNCED" };

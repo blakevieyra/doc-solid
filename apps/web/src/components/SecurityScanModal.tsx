@@ -29,7 +29,7 @@ export function SecurityScanModal({
     redacted: Record<string, string>,
     scan: SecurityScanResult,
     applied: SecurityFinding[],
-  ) => void | Promise<void>;
+  ) => boolean | Promise<boolean>;
 }) {
   const { profile } = useProfile();
   const isPro = canUseFeature(profile.subscription, "securityScan");
@@ -37,10 +37,12 @@ export function SecurityScanModal({
 
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [applying, setApplying] = useState(false);
   const [result, setResult] = useState<SecurityScanResult | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [saved, setSaved] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [applyError, setApplyError] = useState("");
 
   useEffect(() => {
     if (!result) return;
@@ -84,14 +86,26 @@ export function SecurityScanModal({
     });
   }
 
-  function applyRedaction() {
+  async function applyRedaction() {
     if (!result || !onRedact) return;
     const toApply = result.findings.filter((f) => selectedIds.has(f.id));
     if (toApply.length === 0) return;
-    const redacted = redactDocumentFields(values, toApply, { redactEntireField: true });
-    onRedact(redacted, result, toApply);
-    setApplied(true);
-    setTimeout(onClose, 800);
+    setApplyError("");
+    setApplying(true);
+    try {
+      const redacted = redactDocumentFields(values, toApply, { redactEntireField: true });
+      const ok = await onRedact(redacted, result, toApply);
+      if (!ok) {
+        setApplyError("Could not save the redacted copy. Save your document first, then try again.");
+        return;
+      }
+      setApplied(true);
+      setTimeout(onClose, 900);
+    } catch {
+      setApplyError("Could not save the redacted copy. Please try again.");
+    } finally {
+      setApplying(false);
+    }
   }
 
   const selectedCount = result ? result.findings.filter((f) => selectedIds.has(f.id)).length : 0;
@@ -181,9 +195,10 @@ export function SecurityScanModal({
                 </ul>
               </>
             )}
-            {saved && !applied && (
+            {saved && !applied && !applyError && (
               <p className="field-success">Scan saved to Profile → Security → Scan History</p>
             )}
+            {applyError && <p className="field-error">{applyError}</p>}
             {applied && (
               <p className="field-success">Redacted copy saved to My Files. Your original is unchanged.</p>
             )}
@@ -191,10 +206,12 @@ export function SecurityScanModal({
               <button
                 type="button"
                 className="btn btn-primary btn-block"
-                disabled={selectedCount === 0}
-                onClick={applyRedaction}
+                disabled={selectedCount === 0 || applying}
+                onClick={() => void applyRedaction()}
               >
-                Apply Redaction — save copy ({selectedCount} item{selectedCount !== 1 ? "s" : ""})
+                {applying
+                  ? "Saving redacted copy…"
+                  : `Apply Redaction — save copy (${selectedCount} item${selectedCount !== 1 ? "s" : ""})`}
               </button>
             )}
           </div>
