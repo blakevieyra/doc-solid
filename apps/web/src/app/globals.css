@@ -2583,6 +2583,13 @@ button.portal-stat-filter.active .portal-stat-value {
   }
 
   .doc-search-input,
+  .doc-search-bar-wide .doc-search-input,
+  .doc-filter-select {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+
+  .doc-search-input,
   .doc-filter-select,
   .industry-select,
   .field-group input:not([type="checkbox"]):not([type="radio"]),
