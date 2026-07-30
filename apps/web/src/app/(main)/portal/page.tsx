@@ -774,19 +774,6 @@ export default function PortalPage() {
 
           </div>
 
-          {templateId === FAVORITES_FILTER && favoriteSavedDocs.length === 0 && (
-            <div className="portal-type-chips" style={{ marginTop: "0.75rem" }}>
-              {favoriteTemplateIds.map((id) => {
-                const meta = getDocumentById(id);
-                return (
-                  <Link key={id} href={`/documents/${id}`} className="portal-type-chip">
-                    + {meta?.name ?? id}
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-
         </div>
 
       )}
@@ -888,7 +875,27 @@ export default function PortalPage() {
 
         <div className="card" style={{ padding: "2rem", textAlign: "center" }}>
 
-          <p style={{ color: "var(--text-muted)" }}>No documents match your filters.</p>
+          {templateId === FAVORITES_FILTER ? (
+            <>
+              <p style={{ color: "var(--text-muted)", marginBottom: favoriteTemplateIds.length > 0 ? "1rem" : 0 }}>
+                You haven&apos;t saved any documents from your favorite types yet.
+              </p>
+              {favoriteTemplateIds.length > 0 && (
+                <div className="portal-type-chips" style={{ justifyContent: "center" }}>
+                  {favoriteTemplateIds.map((id) => {
+                    const meta = getDocumentById(id);
+                    return (
+                      <Link key={id} href={`/documents/${id}`} className="btn btn-primary btn-sm">
+                        + New {meta?.name ?? id}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          ) : (
+            <p style={{ color: "var(--text-muted)" }}>No documents match your filters.</p>
+          )}
 
         </div>
 
@@ -1069,7 +1076,10 @@ export default function PortalPage() {
           documentTitle={sendTarget.doc.title}
           documentId={sendTarget.doc.localId}
           documentTemplateId={sendTarget.doc.templateId}
-          onClose={() => setSendTarget(null)}
+          onClose={() => {
+            setSendTarget(null);
+            refreshShares();
+          }}
         />
       )}
 
