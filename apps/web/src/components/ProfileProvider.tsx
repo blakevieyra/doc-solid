@@ -22,6 +22,7 @@ import {
   resolveOnboardingComplete,
   ensureAccountId,
   loadDeviceSecuritySettings,
+  releaseSensitiveFields,
 } from "@/lib/profile/storage";
 import {
   resolveDocumentProfile,
@@ -367,13 +368,19 @@ export function ProfileProvider({ children }: { children: React.ReactNode }) {
   );
 
   const removePin = useCallback(async () => {
+    const released = profile.security.encryptSensitive
+      ? await releaseSensitiveFields(profile, sessionPin)
+      : profile;
+    const next = {
+      ...released,
+      security: { ...released.security, pinEnabled: false, pinHash: null, encryptSensitive: false },
+    };
     setSessionPin(null);
-    const next = { ...profile, security: { ...profile.security, pinEnabled: false, pinHash: null } };
     await saveProfile(next, userId);
     setProfile(next);
     setLocked(false);
     if (authMode === "server") void pushServerProfile(next);
-  }, [profile, userId, authMode]);
+  }, [profile, userId, authMode, sessionPin]);
 
   const exportDataFn = useCallback(() => exportProfile(profile), [profile]);
   const importDataFn = useCallback(async (json: string) => { await persist(importProfile(json)); }, [persist]);

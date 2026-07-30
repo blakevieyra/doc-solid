@@ -72,6 +72,36 @@ async function decryptSensitiveFields(
   return copy;
 }
 
+/**
+ * Turn off PIN encryption. If `passphrase` (the outgoing PIN) is known, sensitive
+ * fields are decrypted back to plaintext so they survive the PIN removal. If it's
+ * not known (a "forgot PIN" reset), any still-encrypted values are unrecoverable
+ * and are cleared rather than left as orphaned ciphertext under a stale
+ * `encryptSensitive: true` flag.
+ */
+export async function releaseSensitiveFields(
+  profile: UserProfile,
+  passphrase: string | null
+): Promise<UserProfile> {
+  const copy = structuredClone(profile);
+  const record = copy as unknown as Record<string, unknown>;
+  for (const path of SENSITIVE_PATHS) {
+    const val = getNestedValue(record, path);
+    if (typeof val === "string" && isEncrypted(val)) {
+      if (passphrase) {
+        try {
+          setNestedValue(record, path, await decryptValue(val, passphrase));
+          continue;
+        } catch {
+          // fall through to clearing below
+        }
+      }
+      setNestedValue(record, path, "");
+    }
+  }
+  return copy;
+}
+
 function migrateLegacyProfile(raw: string): UserProfile | null {
   try {
     const legacy = JSON.parse(raw) as {
