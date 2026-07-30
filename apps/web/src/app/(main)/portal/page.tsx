@@ -660,10 +660,11 @@ export default function PortalPage() {
 
           {(portalFilter === "all" || portalFilter === "ARCHIVED") && archivedShares.length > 0 && (
             <CollapsibleShareSection
+              key={portalFilter}
               title="Completed shares"
               count={archivedShares.length}
               hint="Signed and reviewed documents are archived here for your records."
-              defaultOpen={false}
+              defaultOpen={portalFilter === "ARCHIVED"}
             >
               <ul className="share-inbox-list">
                 {archivedShares.map((s) => renderShareItem(s, true))}
@@ -700,9 +701,10 @@ export default function PortalPage() {
 
           {sentCompletedShares.length > 0 && (
             <CollapsibleShareSection
+              key={portalFilter}
               title="Completed & returned"
               count={sentCompletedShares.length}
-              defaultOpen={false}
+              defaultOpen={portalFilter === "ARCHIVED"}
             >
               <ul className="share-inbox-list">
                 {sentCompletedShares.map((s) => renderSentShareItem(s))}
@@ -893,6 +895,11 @@ export default function PortalPage() {
                 </div>
               )}
             </>
+          ) : portalFilter === "ARCHIVED" && (archivedShares.length > 0 || sentCompletedShares.length > 0) ? (
+            <p style={{ color: "var(--text-muted)" }}>
+              You have no archived saved documents. Your {archivedShares.length + sentCompletedShares.length} completed
+              share{archivedShares.length + sentCompletedShares.length === 1 ? "" : "s"} {archivedShares.length + sentCompletedShares.length === 1 ? "is" : "are"} listed above.
+            </p>
           ) : (
             <p style={{ color: "var(--text-muted)" }}>No documents match your filters.</p>
           )}
