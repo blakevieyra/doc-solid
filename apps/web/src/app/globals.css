@@ -1,6 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap');
-
 :root {
   --bg: #f4f6f9;
   --surface: #ffffff;
@@ -25,11 +22,13 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--font-inter), 'Inter', system-ui, sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 a { color: inherit; text-decoration: none; }
@@ -407,10 +406,23 @@ button, input, select, textarea {
 }
 .doc-preview {
   background: white; border: 1px solid var(--border); border-radius: 0 0 10px 10px;
-  padding: 0.55in 0.6in; font-family: 'Georgia', 'Times New Roman', serif;
+  padding: 0.55in 0.6in;
+  font-family: var(--font-doc-serif), Georgia, 'Times New Roman', serif;
   color: #1a1a2e; line-height: 1.65; box-shadow: var(--shadow); min-height: 600px;
   width: 100%; max-width: 8.5in; margin: 0 auto; box-sizing: border-box;
   overflow-x: hidden; overflow-wrap: break-word; word-wrap: break-word;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+/* Transactional/operational documents (invoices, forms, reports) read faster
+   and align numbers better in a clean sans body than a serif one. */
+.doc-preview[data-typeface="sans"] {
+  font-family: var(--font-inter), 'Inter', sans-serif;
+}
+.doc-preview .doc-total-row,
+.doc-preview .doc-table td,
+.doc-preview-meta {
+  font-variant-numeric: tabular-nums;
 }
 /* PDF / packet export capture — one margin layer (PDF page margin only), tight wrap */
 .doc-preview-capture,
@@ -527,12 +539,12 @@ button, input, select, textarea {
 .doc-preview-logo-fallback { max-height: 72px; max-width: 280px; opacity: 0.92; }
 .doc-preview-brand-text { min-width: 0; width: 100%; }
 .doc-preview-company {
-  font-family: 'Inter', sans-serif; font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0;
+  font-family: var(--font-inter), 'Inter', sans-serif; font-size: 1.25rem; font-weight: 700; color: #0f172a; margin: 0;
   overflow-wrap: break-word; word-break: normal;
 }
-.doc-preview-tagline { font-family: 'Inter', sans-serif; font-size: 0.8125rem; color: #64748b; margin-top: 0.15rem; font-style: italic; }
+.doc-preview-tagline { font-family: var(--font-inter), 'Inter', sans-serif; font-size: 0.8125rem; color: #64748b; margin-top: 0.15rem; font-style: italic; }
 .doc-preview-letterhead-line {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-inter), 'Inter', sans-serif;
   font-size: 0.8125rem;
   color: #334155;
   margin: 0.2rem 0 0;
@@ -548,7 +560,7 @@ button, input, select, textarea {
   width: 100%;
 }
 .doc-preview-letterhead-poc-label {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-inter), 'Inter', sans-serif;
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.06em;
@@ -559,11 +571,11 @@ button, input, select, textarea {
 .doc-preview-letterhead-poc-name { font-weight: 600; color: #0f172a; }
 .doc-preview-letterhead-poc-title { font-weight: 400; color: #475569; }
 .doc-preview-meta {
-  text-align: right; font-family: 'Inter', sans-serif; font-size: 0.8125rem;
+  text-align: right; font-family: var(--font-inter), 'Inter', sans-serif; font-size: 0.8125rem;
   flex: 1 1 35%; min-width: 0; max-width: 100%; overflow-wrap: anywhere; word-break: break-word;
 }
 .doc-preview-title {
-  font-family: 'Inter', sans-serif; font-size: 0.875rem; font-weight: 700;
+  font-family: var(--font-inter), 'Inter', sans-serif; font-size: 0.875rem; font-weight: 700;
   letter-spacing: 0.08em; color: var(--primary); margin-bottom: 0.5rem;
   overflow-wrap: anywhere; word-break: break-word;
 }
@@ -572,7 +584,7 @@ button, input, select, textarea {
 .doc-preview-section { margin-bottom: 1.75rem; }
 .doc-preview-table-wrap { margin-bottom: 1.25rem; }
 .doc-preview-table-label {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-inter), 'Inter', sans-serif;
   font-size: 0.8125rem;
   font-weight: 600;
   color: #475569;
@@ -583,14 +595,14 @@ button, input, select, textarea {
 .doc-preview-list {
   margin: 0;
   padding-left: 1.25rem;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-inter), 'Inter', sans-serif;
   font-size: 0.9375rem;
   color: #1a1a2e;
 }
 .doc-preview-list li { margin: 0.25rem 0; }
-.doc-table-empty-inline { font-family: 'Inter', sans-serif; font-size: 0.875rem; color: #64748b; margin: 0; }
+.doc-table-empty-inline { font-family: var(--font-inter), 'Inter', sans-serif; font-size: 0.875rem; color: #64748b; margin: 0; }
 .doc-preview-section-title {
-  font-family: 'Inter', sans-serif; font-size: 0.75rem; font-weight: 700;
+  font-family: var(--font-inter), 'Inter', sans-serif; font-size: 0.75rem; font-weight: 700;
   text-transform: uppercase; letter-spacing: 0.08em; color: #475569;
   border-bottom: 1px solid #e2e8f0; padding-bottom: 0.35rem; margin-bottom: 0.875rem;
 }
@@ -598,10 +610,10 @@ button, input, select, textarea {
 .doc-preview-fields { display: grid; gap: 0.5rem; }
 .doc-preview-fields-single { margin-bottom: 0.5rem; }
 .doc-field { display: grid; grid-template-columns: minmax(120px, 35%) 1fr; gap: 0.75rem; font-size: 0.9rem; }
-.doc-field dt { font-family: 'Inter', sans-serif; font-weight: 600; color: #475569; font-size: 0.8125rem; }
+.doc-field dt { font-family: var(--font-inter), 'Inter', sans-serif; font-weight: 600; color: #475569; font-size: 0.8125rem; }
 .doc-field dd { margin: 0; color: #1a1a2e; overflow-wrap: anywhere; word-break: break-word; }
 .doc-table {
-  width: 100%; max-width: 100%; border-collapse: collapse; font-family: 'Inter', sans-serif;
+  width: 100%; max-width: 100%; border-collapse: collapse; font-family: var(--font-inter), 'Inter', sans-serif;
   font-size: 0.8125rem; margin-bottom: 1rem; table-layout: fixed;
 }
 .doc-table th, .doc-table td { overflow-wrap: anywhere; word-break: break-word; }
@@ -610,13 +622,13 @@ button, input, select, textarea {
 .doc-table-empty { text-align: center; color: #94a3b8; font-style: italic; padding: 1.5rem !important; }
 .doc-total-row { display: flex; justify-content: space-between; padding: 0.35rem 0; border-bottom: 1px solid #f1f5f9; }
 .doc-total-final { font-weight: 700; font-size: 1rem; border-top: 2px solid #0f172a; border-bottom: none; padding-top: 0.5rem; margin-top: 0.25rem; }
-.doc-line-items-raw { font-family: 'Inter', sans-serif; font-size: 0.8125rem; white-space: pre-wrap; background: #f8fafc; padding: 0.75rem; border-radius: 6px; }
-.doc-preview-legal { margin-top: 2rem; padding: 1rem; background: #fffbeb; border-left: 3px solid #d97706; font-size: 0.75rem; color: #78350f; font-family: 'Inter', sans-serif; }
+.doc-line-items-raw { font-family: var(--font-inter), 'Inter', sans-serif; font-size: 0.8125rem; white-space: pre-wrap; background: #f8fafc; padding: 0.75rem; border-radius: 6px; }
+.doc-preview-legal { margin-top: 2rem; padding: 1rem; background: #fffbeb; border-left: 3px solid #d97706; font-size: 0.75rem; color: #78350f; font-family: var(--font-inter), 'Inter', sans-serif; }
 .doc-preview-footer { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid #e2e8f0; }
 .doc-preview-signatures { display: flex; gap: 2rem; flex-wrap: wrap; margin-bottom: 1.5rem; max-width: 100%; }
 .doc-preview-signatures-inline { margin-top: 1.25rem; margin-bottom: 0; }
 .doc-signature-block-pending .doc-signature-pending {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-inter), 'Inter', sans-serif;
   font-size: 0.8125rem;
   color: #94a3b8;
   font-style: italic;
@@ -625,7 +637,7 @@ button, input, select, textarea {
 }
 .doc-signature-block { min-width: 0; max-width: 100%; flex: 1 1 180px; }
 .doc-signature-preview-image { max-width: 100%; height: auto; max-height: 56px; object-fit: contain; }
-.doc-totals { margin-left: auto; max-width: min(260px, 100%); width: 100%; font-family: 'Inter', sans-serif; font-size: 0.875rem; }
+.doc-totals { margin-left: auto; max-width: min(260px, 100%); width: 100%; font-family: var(--font-inter), 'Inter', sans-serif; font-size: 0.875rem; }
 .doc-preview-capture .doc-preview-signatures,
 .packets-export-stack .doc-preview-signatures { gap: 1.25rem; }
 .doc-preview-capture .doc-signature-block,
@@ -664,7 +676,7 @@ button, input, select, textarea {
   display: block;
 }
 .doc-signature-on-line-cursive {
-  font-family: 'Great Vibes', cursive;
+  font-family: var(--font-signature), 'Great Vibes', cursive;
   font-size: 1.75rem;
   color: #1a2744;
   line-height: 1;
@@ -675,13 +687,13 @@ button, input, select, textarea {
 .doc-signature-block .doc-signature-title,
 .doc-signature-block .doc-signature-entity,
 .doc-signature-block .doc-signature-date {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-inter), 'Inter', sans-serif;
   font-size: 0.75rem;
   color: #64748b;
   display: block;
 }
 .doc-signature-name { color: #1a1a2e !important; font-weight: 600; font-size: 0.875rem !important; margin-top: 0.15rem; }
-.doc-preview-generated { font-family: 'Inter', sans-serif; font-size: 0.6875rem; color: #94a3b8; text-align: center; }
+.doc-preview-generated { font-family: var(--font-inter), 'Inter', sans-serif; font-size: 0.6875rem; color: #94a3b8; text-align: center; }
 
 /* ── Print ── */
 .doc-preview-print-watermark { display: none; }
@@ -703,7 +715,7 @@ button, input, select, textarea {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) rotate(-45deg);
-    font-family: 'Inter', Helvetica, Arial, sans-serif;
+    font-family: var(--font-inter), Helvetica, Arial, sans-serif;
     font-size: 3rem;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -1095,9 +1107,9 @@ a.quick-action-card { text-decoration: none; color: inherit; }
   margin-bottom: 0.5rem;
 }
 .team-summary-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.75rem; }
-.team-summary-name { margin: 0; font-size: 1.125rem; font-family: 'Inter', sans-serif; color: #1a1a2e; }
+.team-summary-name { margin: 0; font-size: 1.125rem; font-family: var(--font-inter), 'Inter', sans-serif; color: #1a1a2e; }
 .team-role-badge {
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-inter), 'Inter', sans-serif;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -1109,7 +1121,7 @@ a.quick-action-card { text-decoration: none; color: inherit; }
   white-space: nowrap;
 }
 .team-summary-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; margin: 0; }
-.team-summary-meta dt { font-family: 'Inter', sans-serif; font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 0.15rem; }
+.team-summary-meta dt { font-family: var(--font-inter), 'Inter', sans-serif; font-size: 0.6875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 0.15rem; }
 .team-summary-meta dd { margin: 0; font-size: 0.875rem; color: #1a1a2e; }
 .team-summary-id dd { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .team-pending-invites-list { list-style: none; display: flex; flex-direction: column; gap: 0.75rem; margin: 0; padding: 0; }
@@ -2028,7 +2040,7 @@ button.portal-stat-filter.active .portal-stat-value {
 .email-recipient-toolbar .email-doc-section-title { margin: 0; }
 .email-recipient-toolbar-actions { display: flex; gap: 0.75rem; }
 .btn-link {
-  background: none; border: none; padding: 0; font-family: 'Inter', sans-serif;
+  background: none; border: none; padding: 0; font-family: var(--font-inter), 'Inter', sans-serif;
   font-size: 0.8125rem; font-weight: 600; color: var(--primary); cursor: pointer; text-decoration: underline;
 }
 .btn-link:hover { opacity: 0.85; }
@@ -2102,7 +2114,7 @@ button.portal-stat-filter.active .portal-stat-value {
   color: #94a3b8;
   border-radius: 3px;
   padding: 0.15rem 0.55rem;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-inter), 'Inter', sans-serif;
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -2305,7 +2317,7 @@ button.portal-stat-filter.active .portal-stat-value {
 .signature-draw-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .signature-type-input { width: 100%; max-width: 100%; }
 .signature-cursive-preview {
-  font-family: 'Great Vibes', cursive;
+  font-family: var(--font-signature), 'Great Vibes', cursive;
   font-size: 2rem;
   color: var(--brand-navy);
   padding: 0.5rem 0;
@@ -2315,7 +2327,7 @@ button.portal-stat-filter.active .portal-stat-value {
 .signature-preview-block { display: flex; flex-direction: column; gap: 0.25rem; }
 .signature-preview-compact { margin-top: 0.25rem; }
 .signature-preview-cursive {
-  font-family: 'Great Vibes', cursive;
+  font-family: var(--font-signature), 'Great Vibes', cursive;
   font-size: 1.75rem;
   color: var(--brand-navy);
   line-height: 1.2;

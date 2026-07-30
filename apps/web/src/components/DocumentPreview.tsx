@@ -20,6 +20,7 @@ import {
 } from "@/lib/profile/signature";
 
 import { resolveDocumentLetterhead } from "@/lib/profile/document-branding";
+import { documentTypeface } from "@/lib/documents/typography";
 import { RedactedValue, isRedactedValue } from "@/components/RedactedValue";
 import { FREE_PLAN_WATERMARK_TEXT } from "@/lib/pdf/exportDocument";
 
@@ -76,7 +77,11 @@ export function DocumentPreview({ meta, values, profile, lockBranding, previewId
 
     <>
 
-    <article className="doc-preview" id={previewId ?? "document-preview"}>
+    <article
+      className="doc-preview"
+      data-typeface={documentTypeface(meta.category)}
+      id={previewId ?? "document-preview"}
+    >
 
       <header className="doc-preview-header">
 

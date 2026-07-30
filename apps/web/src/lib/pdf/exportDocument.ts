@@ -154,6 +154,10 @@ async function captureElementCanvas(
     (options?.forEmail ? PDF_EMAIL_SCALE : PDF_DOWNLOAD_SCALE);
   const restore = prepareElementForCapture(element);
   try {
+    // Guarantee web fonts are fully loaded before rasterizing — otherwise
+    // html2canvas can capture a fallback-font frame, producing blurry or
+    // wrong-looking text in the exported PDF.
+    if (document.fonts?.ready) await document.fonts.ready;
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     return await html2canvas(element, {
       scale,
