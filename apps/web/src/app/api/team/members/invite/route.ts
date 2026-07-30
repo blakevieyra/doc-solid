@@ -8,6 +8,7 @@ import { mergeTeamMembersByEmail } from "@/lib/team/members-merge";
 import { notifyTeamMemberInvite } from "@/lib/email/notify";
 import { getEmailConfig } from "@/lib/email/config";
 import { loadPublicIdentityForEmail } from "@/lib/server/public-identity";
+import { assertTeamMemberCanBeAdded } from "@/lib/server/team-limits";
 import type { TeamMember, TeamRole } from "@/lib/profile/types";
 
 export const runtime = "nodejs";
@@ -76,6 +77,12 @@ export async function POST(req: NextRequest) {
       if (!isOwner && !isAdmin) {
         return NextResponse.json({ error: "Only team owners or admins can invite members" }, { status: 403 });
       }
+    }
+
+    const activeMemberCount = roster?.members.length ?? 1;
+    const limitCheck = await assertTeamMemberCanBeAdded(roster?.ownerEmail ?? inviterEmail, activeMemberCount);
+    if (!limitCheck.ok) {
+      return NextResponse.json({ error: limitCheck.error }, { status: 403 });
     }
 
     const now = new Date().toISOString();

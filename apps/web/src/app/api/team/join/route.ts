@@ -4,6 +4,7 @@ import { prisma } from "@doc-solid/database";
 import { requireAuth } from "@/lib/server/session";
 import { enforceRateLimit } from "@/lib/server/rate-limit";
 import { getUserProfile, saveUserProfile } from "@/lib/server/users";
+import { assertTeamMemberCanBeAdded } from "@/lib/server/team-limits";
 import type { TeamInviteRecord } from "@/app/api/team/invites/route";
 import {
   getTeamRoster,
@@ -112,6 +113,13 @@ export async function POST(req: NextRequest) {
   }
 
   const withoutSelf = roster.members.filter((m) => m.email.toLowerCase() !== email);
+  const isNewMember = withoutSelf.length === roster.members.length && email !== roster.ownerEmail.toLowerCase();
+  if (isNewMember) {
+    const limitCheck = await assertTeamMemberCanBeAdded(roster.ownerEmail, roster.members.length);
+    if (!limitCheck.ok) {
+      return NextResponse.json({ error: limitCheck.error }, { status: 403 });
+    }
+  }
   roster.members = [
     ...withoutSelf,
     {

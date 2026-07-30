@@ -9,6 +9,7 @@ import { getTeamRoster, saveTeamRoster, resolveTeamRoster, type TeamRoster } fro
 import { loadPublicIdentityForEmail } from "@/lib/server/public-identity";
 import { getUserProfile, saveUserProfile } from "@/lib/server/users";
 import { pushServerNotification } from "@/lib/server/share-notifications";
+import { assertTeamMemberCanBeAdded } from "@/lib/server/team-limits";
 import type { TeamMember, TeamMembership, TeamRole, UserProfile } from "@/lib/profile/types";
 
 export const runtime = "nodejs";
@@ -135,6 +136,13 @@ export async function POST(req: NextRequest) {
     }
 
     const withoutSelf = roster.members.filter((m) => m.email.toLowerCase() !== email);
+    const isNewMember = withoutSelf.length === roster.members.length && email !== roster.ownerEmail.toLowerCase();
+    if (isNewMember) {
+      const limitCheck = await assertTeamMemberCanBeAdded(roster.ownerEmail, roster.members.length);
+      if (!limitCheck.ok) {
+        return NextResponse.json({ error: limitCheck.error }, { status: 403 });
+      }
+    }
     roster.members = [
       ...withoutSelf,
       {

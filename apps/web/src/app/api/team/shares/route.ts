@@ -104,16 +104,19 @@ export async function POST(req: NextRequest) {
     }
 
     const userEmail = auth.user.email?.trim().toLowerCase() ?? "";
-    const isSender = share.fromEmail.trim().toLowerCase() === userEmail;
-    const isRecipient = share.toEmail.trim().toLowerCase() === userEmail;
     const existing = await readShare(share.id);
 
     if (existing) {
-      if (!isSender && !isRecipient) {
+      const isExistingSender = existing.fromEmail.trim().toLowerCase() === userEmail;
+      const isExistingRecipient = existing.toEmail.trim().toLowerCase() === userEmail;
+      if (!isExistingSender && !isExistingRecipient) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
-    } else if (!isSender) {
-      return NextResponse.json({ error: "Only the sender can create a new share" }, { status: 403 });
+    } else {
+      const isSender = share.fromEmail.trim().toLowerCase() === userEmail;
+      if (!isSender) {
+        return NextResponse.json({ error: "Only the sender can create a new share" }, { status: 403 });
+      }
     }
 
     await writeShare(share);
