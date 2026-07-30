@@ -155,6 +155,7 @@ export async function markShareComplete(
 ): Promise<DocumentShare | null> {
   const share = getShareById(shareId);
   if (!share || share.completedAt) return null;
+  if (share.toEmail.trim().toLowerCase() !== actor.email.trim().toLowerCase()) return null;
 
   updateShare(shareId, { completedAt: new Date().toISOString() });
   recordShareAudit(shareId, "completed", {

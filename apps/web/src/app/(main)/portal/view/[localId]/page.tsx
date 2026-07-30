@@ -21,7 +21,7 @@ import { resolveDocumentNumber } from "@/lib/documents/document-number";
 import { createRedactedDocumentCopy, updateSavedDocumentFields } from "@/lib/documents/persist";
 import type { SecurityFinding } from "@/lib/security/document-scan";
 import { useNotifications } from "@/components/NotificationProvider";
-import { isShareSender, loadShares, getShareById } from "@/lib/team/invites";
+import { isShareSender, isShareRecipient, loadShares, getShareById } from "@/lib/team/invites";
 import {
   getShareSigningHref,
   markShareComplete,
@@ -223,11 +223,12 @@ function SavedDocumentPageContent() {
   const signHref = relatedShare ? getShareSigningHref(relatedShare) : null;
   const returnedByMe = relatedShare ? shareWasReturnedBy(relatedShare, userEmail) : false;
   const isSenderViewing = relatedShare ? isShareSender(relatedShare, userEmail) : false;
+  const isRecipientViewing = relatedShare ? isShareRecipient(relatedShare, userEmail) : false;
   const showReturnComments =
     relatedShare && isSenderViewing && shareHasReturnComments(relatedShare);
   const canReturnWithComment = isSharedPreview && !isCompletedShare && !returnedByMe;
   const canCompleteShare =
-    isSharedPreview && !isCompletedShare && relatedShare?.shareType !== "signature_request";
+    isSharedPreview && isRecipientViewing && !isCompletedShare && relatedShare?.shareType !== "signature_request";
 
   async function handleCompleteShare() {
     if (!relatedShare || completingShare) return;
