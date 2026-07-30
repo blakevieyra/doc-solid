@@ -21,7 +21,7 @@ export async function wipeAllUserData(userId?: string): Promise<void> {
   clearSequenceRegistry(null);
   localStorage.removeItem(PROFILE_PREFIX);
   localStorage.removeItem(LEGACY_PROFILE);
-  localStorage.removeItem("doc-solid-notifications");
+  localStorage.removeItem(userId ? `doc-solid-notifications-${userId}` : "doc-solid-notifications-anonymous");
   localStorage.removeItem("doc-solid-team-invites");
   localStorage.removeItem("doc-solid-document-shares");
 

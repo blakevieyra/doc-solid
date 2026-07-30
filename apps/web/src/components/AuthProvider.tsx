@@ -54,12 +54,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
         return;
       }
-      if (result.kind === "unauthenticated") {
-        clearSession();
-        setLoading(false);
-        return;
-      }
-
+      // No valid server cookie (or the cloud backend is unreachable): fall back to
+      // any local-only session rather than assuming the user is logged out — a
+      // local account was never registered server-side, so a 401 here doesn't
+      // mean it's invalid.
       const local = getSession();
       if (local) {
         setSession(local);

@@ -6,12 +6,24 @@ function persistAllShares(shares: DocumentShare[]): void {
   localStorage.setItem("doc-solid-document-shares", JSON.stringify(shares));
 }
 
+/** Most recent known activity on a share — used to resolve local/remote merge conflicts. */
+function latestActivityAt(share: DocumentShare): number {
+  const timestamps = [
+    share.createdAt,
+    share.signedAt,
+    share.completedAt,
+    ...(share.auditLog?.map((e) => e.timestamp) ?? []),
+  ].filter((t): t is string => Boolean(t));
+  if (timestamps.length === 0) return 0;
+  return Math.max(...timestamps.map((t) => new Date(t).getTime()));
+}
+
 export function mergeShareLists(local: DocumentShare[], remote: DocumentShare[]): DocumentShare[] {
   const map = new Map<string, DocumentShare>();
   for (const s of local) map.set(s.id, s);
   for (const s of remote) {
     const existing = map.get(s.id);
-    if (!existing || (s.auditLog?.length ?? 0) >= (existing.auditLog?.length ?? 0)) {
+    if (!existing || latestActivityAt(s) >= latestActivityAt(existing)) {
       map.set(s.id, s);
     }
   }
