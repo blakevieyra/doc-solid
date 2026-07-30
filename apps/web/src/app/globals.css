@@ -709,6 +709,19 @@ button, input, select, textarea {
     border: none; box-shadow: none; padding: 0; min-height: auto;
     width: 100%; max-width: 7.8in; margin: 0 auto; overflow: hidden;
   }
+  /* Never let a page break fall in the middle of a row, field, or signature block */
+  .doc-preview tr,
+  .doc-preview .doc-total-row,
+  .doc-preview .doc-field,
+  .doc-preview .doc-signature-block,
+  .doc-preview .doc-preview-letterhead-poc {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .doc-preview .doc-preview-section-title {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
   .doc-preview-print-watermark {
     display: block !important;
     position: fixed;

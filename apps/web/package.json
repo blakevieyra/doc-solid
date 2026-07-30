@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:smoke": "tsx scripts/smoke-audit.ts"
+    "test:smoke": "tsx scripts/smoke-audit.ts",
+    "test:pdf-pagebreaks": "tsx scripts/test-pdf-pagebreaks.ts"
   },
   "dependencies": {
     "@doc-solid/database": "file:../../packages/database",

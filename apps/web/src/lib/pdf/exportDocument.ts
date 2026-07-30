@@ -5,8 +5,10 @@ import { jsPDF } from "jspdf";
 
 /** jsPDF letter size (mm). */
 const LETTER_WIDTH_MM = 215.9;
+const LETTER_HEIGHT_MM = 279.4;
 /** Page margin when placing captured content — single margin layer (preview padding is stripped on capture). */
 export const PDF_MARGIN_MM = 5;
+const PAGE_CONTENT_HEIGHT_MM = LETTER_HEIGHT_MM - PDF_MARGIN_MM * 2;
 /** Printable width in CSS px at 96dpi — capture size matches PDF content area 1:1. */
 export const LETTER_CONTENT_WIDTH_PX = Math.round(
   ((LETTER_WIDTH_MM - PDF_MARGIN_MM * 2) / 25.4) * 96
@@ -30,47 +32,124 @@ export const FREE_PLAN_WATERMARK_TEXT = "DOC SOLID FREE";
 
 type ImageFormat = "PNG" | "JPEG";
 
+/** Elements that should never be sliced in half by a page break. */
+const PAGE_BREAK_GUARD_SELECTOR =
+  "tr, .doc-total-row, .doc-field, .doc-signature-block, .doc-preview-letterhead-poc";
+
+/** Never shrink a page below this fraction of a full page just to dodge a split element. */
+const MIN_PAGE_FRACTION = 0.55;
+
+/**
+ * Choose page-break y-positions (in captured-canvas px) that land in the gaps
+ * between rows/fields/signature blocks instead of through the middle of one.
+ * Falls back to even slicing past the last guarded element.
+ */
+export interface GuardSpan {
+  top: number;
+  bottom: number;
+}
+
+/**
+ * Pure math core of the page-break search — takes guarded element spans and
+ * picks break points that never land inside one. Exported (and framework-free)
+ * so it can be unit tested without a browser/DOM.
+ */
+export function computeBreakPoints(
+  spans: GuardSpan[],
+  totalHeightPx: number,
+  pageHeightPx: number
+): number[] {
+  if (pageHeightPx <= 0 || totalHeightPx <= pageHeightPx) return [totalHeightPx];
+
+  const sorted = [...spans].sort((a, b) => a.top - b.top);
+  const breaks: number[] = [];
+  let cursor = 0;
+  let guard = 0;
+
+  while (cursor < totalHeightPx && guard < 10000) {
+    guard += 1;
+    let candidate = Math.min(cursor + pageHeightPx, totalHeightPx);
+    if (candidate < totalHeightPx) {
+      const collision = sorted.find((s) => candidate > s.top + 0.5 && candidate < s.bottom - 0.5);
+      if (collision) {
+        candidate = Math.max(collision.top, cursor + pageHeightPx * MIN_PAGE_FRACTION);
+      }
+    }
+    // Guarantee forward progress even if a pathological span layout would
+    // otherwise stall the cursor (e.g. overlapping spans taller than a page).
+    if (candidate <= cursor) candidate = Math.min(cursor + pageHeightPx, totalHeightPx);
+    breaks.push(candidate);
+    cursor = candidate;
+  }
+
+  return breaks;
+}
+
+function findSafePageBreaks(
+  element: HTMLElement,
+  canvasHeightPx: number,
+  pageHeightPx: number
+): number[] {
+  if (pageHeightPx <= 0 || canvasHeightPx <= pageHeightPx) return [canvasHeightPx];
+
+  const rect = element.getBoundingClientRect();
+  const scaleY = rect.height > 0 ? canvasHeightPx / rect.height : 1;
+
+  const spans: GuardSpan[] = [];
+  element.querySelectorAll<HTMLElement>(PAGE_BREAK_GUARD_SELECTOR).forEach((el) => {
+    const r = el.getBoundingClientRect();
+    const top = (r.top - rect.top) * scaleY;
+    const bottom = (r.bottom - rect.top) * scaleY;
+    if (bottom > top) spans.push({ top, bottom });
+  });
+
+  return computeBreakPoints(spans, canvasHeightPx, pageHeightPx);
+}
+
+/** Crop a vertical slice of a canvas onto a new white-backed canvas. */
+function sliceCanvasVertical(source: HTMLCanvasElement, yStart: number, yEnd: number): HTMLCanvasElement {
+  const height = Math.max(1, Math.round(yEnd - yStart));
+  const out = document.createElement("canvas");
+  out.width = source.width;
+  out.height = height;
+  const ctx = out.getContext("2d");
+  if (!ctx) return source;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, out.width, out.height);
+  ctx.drawImage(source, 0, Math.round(yStart), source.width, height, 0, 0, source.width, height);
+  return out;
+}
+
 function addCanvasToPdf(
   pdf: jsPDF,
   canvas: HTMLCanvasElement,
   startNewPage: boolean,
   imageFormat: ImageFormat = "PNG",
-  jpegQuality = 0.85
+  jpegQuality = 0.85,
+  pageBreaksPx?: number[]
 ): jsPDF {
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
   const margin = PDF_MARGIN_MM;
-  const contentWidth = pageWidth - margin * 2;
-  const contentHeight = pageHeight - margin * 2;
+  const contentWidth = LETTER_WIDTH_MM - margin * 2;
   const imgWidth = contentWidth;
-  const imgHeight = (canvas.height * imgWidth) / canvas.width;
-  const imgData =
-    imageFormat === "JPEG"
-      ? canvas.toDataURL("image/jpeg", jpegQuality)
-      : canvas.toDataURL("image/png");
+  const pxPerMm = canvas.width / contentWidth;
+  const breaks = pageBreaksPx?.length ? pageBreaksPx : [canvas.height];
 
   if (startNewPage && pdf.getNumberOfPages() > 0) {
     pdf.addPage();
-  }
-
-  let heightLeft = imgHeight;
-  let position = margin;
-  let pageStarted = pdf.getNumberOfPages() === 0;
-
-  if (pageStarted) {
+  } else if (pdf.getNumberOfPages() === 0) {
     pdf.addPage();
-    pageStarted = false;
   }
 
-  pdf.addImage(imgData, imageFormat, margin, position, imgWidth, imgHeight);
-  heightLeft -= contentHeight;
-
-  while (heightLeft > 0) {
-    position = heightLeft - imgHeight + margin;
-    pdf.addPage();
-    pdf.addImage(imgData, imageFormat, margin, position, imgWidth, imgHeight);
-    heightLeft -= contentHeight;
-  }
+  let yStart = 0;
+  breaks.forEach((yEnd, index) => {
+    if (index > 0) pdf.addPage();
+    const slice = yStart === 0 && yEnd === canvas.height ? canvas : sliceCanvasVertical(canvas, yStart, yEnd);
+    const sliceHeightMm = (yEnd - yStart) / pxPerMm;
+    const imgData =
+      imageFormat === "JPEG" ? slice.toDataURL("image/jpeg", jpegQuality) : slice.toDataURL("image/png");
+    pdf.addImage(imgData, imageFormat, margin, margin, imgWidth, sliceHeightMm);
+    yStart = yEnd;
+  });
 
   return pdf;
 }
@@ -145,10 +224,15 @@ function prepareCloneForCapture(clonedDoc: Document, root: HTMLElement): void {
   });
 }
 
+interface CapturedDocument {
+  canvas: HTMLCanvasElement;
+  pageBreaksPx: number[];
+}
+
 async function captureElementCanvas(
   element: HTMLElement,
   options?: PdfExportOptions
-): Promise<HTMLCanvasElement> {
+): Promise<CapturedDocument> {
   const scale =
     options?.scale ??
     (options?.forEmail ? PDF_EMAIL_SCALE : PDF_DOWNLOAD_SCALE);
@@ -159,7 +243,7 @@ async function captureElementCanvas(
     // wrong-looking text in the exported PDF.
     if (document.fonts?.ready) await document.fonts.ready;
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-    return await html2canvas(element, {
+    const canvas = await html2canvas(element, {
       scale,
       useCORS: true,
       logging: false,
@@ -171,6 +255,13 @@ async function captureElementCanvas(
         prepareCloneForCapture(clonedDoc, clonedElement);
       },
     });
+    // Measured while the element is still styled for capture (fixed width,
+    // .doc-preview-capture layout) so positions line up with the canvas.
+    const contentWidthMm = LETTER_WIDTH_MM - PDF_MARGIN_MM * 2;
+    const pxPerMm = canvas.width / contentWidthMm;
+    const pageHeightPx = PAGE_CONTENT_HEIGHT_MM * pxPerMm;
+    const pageBreaksPx = findSafePageBreaks(element, canvas.height, pageHeightPx);
+    return { canvas, pageBreaksPx };
   } finally {
     restore();
   }
@@ -179,12 +270,12 @@ async function captureElementCanvas(
 async function renderPdfBlob(elementId: string, options?: PdfExportOptions): Promise<Blob> {
   const element = resolveCaptureElement(elementId);
 
-  const canvas = await captureElementCanvas(element, options);
+  const { canvas, pageBreaksPx } = await captureElementCanvas(element, options);
   const imageFormat: ImageFormat = options?.forEmail ? "JPEG" : "PNG";
   const jpegQuality = options?.forEmail ? PDF_EMAIL_JPEG_QUALITY : 0.95;
 
   let pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
-  pdf = addCanvasToPdf(pdf, canvas, false, imageFormat, jpegQuality);
+  pdf = addCanvasToPdf(pdf, canvas, false, imageFormat, jpegQuality, pageBreaksPx);
   if (options?.watermark) applyWatermark(pdf);
   return pdf.output("blob");
 }
@@ -224,8 +315,8 @@ async function buildMultiPagePdf(elementIds: string[], options?: PdfExportOption
   try {
     for (const id of elementIds) {
       const element = resolveCaptureElement(id);
-      const canvas = await captureElementCanvas(element, options);
-      pdf = addCanvasToPdf(pdf, canvas, added, imageFormat, jpegQuality);
+      const { canvas, pageBreaksPx } = await captureElementCanvas(element, options);
+      pdf = addCanvasToPdf(pdf, canvas, added, imageFormat, jpegQuality, pageBreaksPx);
       added = true;
     }
   } finally {
