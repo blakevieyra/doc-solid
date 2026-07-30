@@ -19,13 +19,13 @@ export function createLineItem(partial?: Partial<LineItem>): LineItem {
 }
 
 export function parseLineItems(raw: string | undefined): LineItem[] {
-  if (!raw) return [createLineItem()];
+  if (!raw) return [createLineItem({ id: "li_default" })];
   try {
     const parsed = JSON.parse(raw) as LineItem[];
-    if (!Array.isArray(parsed) || parsed.length === 0) return [createLineItem()];
-    return parsed.map((item) => createLineItem(item));
+    if (!Array.isArray(parsed) || parsed.length === 0) return [createLineItem({ id: "li_default" })];
+    return parsed.map((item, index) => createLineItem({ ...item, id: item.id || `li_${index}` }));
   } catch {
-    return [createLineItem()];
+    return [createLineItem({ id: "li_default" })];
   }
 }
 

@@ -15,11 +15,19 @@ export function createStructuredRow(columns: TableColumn[]): StructuredTableRow 
   return row;
 }
 
+function createDefaultStructuredRow(columns: TableColumn[]): StructuredTableRow {
+  const row: StructuredTableRow = { id: "row_default" };
+  for (const col of columns) {
+    row[col.key] = "";
+  }
+  return row;
+}
+
 export function parseStructuredRows(raw: string | undefined, columns: TableColumn[]): StructuredTableRow[] {
-  if (!raw?.trim()) return [createStructuredRow(columns)];
+  if (!raw?.trim()) return [createDefaultStructuredRow(columns)];
   try {
     const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed) || parsed.length === 0) return [createStructuredRow(columns)];
+    if (!Array.isArray(parsed) || parsed.length === 0) return [createDefaultStructuredRow(columns)];
 
     return parsed.map((entry, index) => {
       if (typeof entry !== "object" || entry === null) {
@@ -27,7 +35,7 @@ export function parseStructuredRows(raw: string | undefined, columns: TableColum
       }
       const record = entry as Record<string, unknown>;
       const row: StructuredTableRow = {
-        id: typeof record.id === "string" && record.id ? record.id : `row_${index}_${Date.now()}`,
+        id: typeof record.id === "string" && record.id ? record.id : `row_${index}`,
       };
       for (const col of columns) {
         const val = record[col.key];
